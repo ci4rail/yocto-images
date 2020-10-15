@@ -1,0 +1,49 @@
+# ===================================================
+# mounts
+# ===================================================
+mount=yocto-build-dir:
+  bind: yocto-workdir
+  path: /workdir
+
+mount=yocto-install-dir:
+  bind: install
+  path: /install
+
+#mount=yocto-manifest-version:
+#  bind: gen/yocto-manifest-version
+#  path: /gen
+
+# ===================================================
+# images
+# ===================================================
+image=image-yocto-builder:
+  image: ci4rail/yocto-builder
+  context: docker
+  #tags: ["{env.GitVersion_BranchVersion}"]
+  #args:
+  #  yocto_BUILDER_VERSION: "{env.GitVersion_BranchVersion}"
+  annotations:
+    description: "build image-yocto-builder"
+
+# ===================================================
+# jobs
+# ===================================================
+
+# Interactive debug shell job
+job=bash-yocto-core-docker:
+  use: image-yocto-builder
+  command: bash -c 'cd ${WORK_DIR}; bash'
+  mounts:
+    - yocto-build-dir
+    - yocto-install-dir
+  interactive: true
+  env:
+    - USERID={user.uid}
+    - WORK_DIR=/workdir
+    - BUILD_DIR=build-yocto
+    - MACHINE=verdin-imx8mm
+    - TARGET=tdx-reference-minimal-image
+    - DISTRIBUTION=yocto
+    - MACHINE=verdin-imx8mm
+  annotations:
+    description: "interactive shell for building yocto-core-docker"

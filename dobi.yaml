@@ -1,49 +1,66 @@
 # ===================================================
 # mounts
 # ===================================================
+
+# Where the yocto-build happens
 mount=yocto-build-dir:
   bind: yocto-workdir
-  path: /workdir
+  path: /work
 
-mount=yocto-install-dir:
-  bind: install
-  path: /install
+# The location of the KASFILE.yaml
+mount=repo-dir:
+  bind: .
+  path: /repo
+  read-only: true
 
-#mount=yocto-manifest-version:
-#  bind: gen/yocto-manifest-version
-#  path: /gen
 
 # ===================================================
 # images
 # ===================================================
-image=image-yocto-builder:
-  image: ci4rail/yocto-builder
-  context: docker
-  #tags: ["{env.GitVersion_BranchVersion}"]
-  #args:
-  #  yocto_BUILDER_VERSION: "{env.GitVersion_BranchVersion}"
+image=image-kas:
+  image: ghcr.io/siemens/kas/kas
+  tags: ['2.2']
+  pull: always
   annotations:
-    description: "build image-yocto-builder"
+    description: "kas image"
 
 # ===================================================
 # jobs
 # ===================================================
 
-# Interactive debug shell job
-job=bash-yocto-core-docker:
-  use: image-yocto-builder
-  command: bash -c 'cd ${WORK_DIR}; bash'
+# Interactive yocto shell
+job=yocto-shell:
+  use: image-kas
+  command: shell /repo/KASFILE.yaml
   mounts:
     - yocto-build-dir
-    - yocto-install-dir
+    - repo-dir
+  working-dir: /work
   interactive: true
   env:
-    - USERID={user.uid}
-    - WORK_DIR=/workdir
-    - BUILD_DIR=build-yocto
-    - MACHINE=verdin-imx8mm
-    - TARGET=tdx-reference-minimal-image
-    - DISTRIBUTION=yocto
-    - MACHINE=verdin-imx8mm
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - TERM=xterm-256color
+    - SHELL=/bin/bash
+
   annotations:
-    description: "interactive shell for building yocto-core-docker"
+    description: "interactive shell for yocto"
+
+# Build tdx-reference-minimal-image
+job=build-minimal-image:
+  use: image-kas
+  sources: [KASFILE.yaml]
+  command: build --target tdx-reference-minimal-image /repo/KASFILE.yaml
+  mounts:
+    - yocto-build-dir
+    - repo-dir
+  working-dir: /work
+  interactive: true
+  env:
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - TERM=xterm-256color
+    - SHELL=/bin/bash
+
+  annotations:
+    description: "Build tdx-reference-minimal-image"

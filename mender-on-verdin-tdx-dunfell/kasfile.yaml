@@ -11,29 +11,16 @@ machine: verdin-imx8mm
 # The distro name as it is written into the `local.conf` of bitbake.
 distro: tdx-xwayland
 repos:
-  # This entry includes the repository where the config file is located
-  # to the bblayers.conf:
-  #meta-custom:
-  # Here we include a list of layers from the poky repository to the
-  # bblayers.conf:
-  
-  # poky:
-  #   url: "https://git.yoctoproject.org/git/poky"
-  #   refspec: ad30a6d470eca0f5be5c037ba37fad72e55a128c 
-  #   layers:
-  #       meta:
-  #       meta-poky:
-  #       meta-yocto-bsp:
 
   # from txd: base/pinned.xml
-  bitbake:
+  src/bitbake:
     url: "https://github.com/openembedded/bitbake.git"
     refspec: 838a89141fd6a75da9f982ad2b035e823b692d2a
     layers:
       # bitbake is no layer. Exclude it from bblayers.conf
       bitbake: "no"
 
-  meta-oe:
+  src/meta-oe:
     url: "https://github.com/openembedded/meta-openembedded.git"
     refspec: 654ad8bea49f142d20b2b96c0dd44810a6be233a
     layers:
@@ -46,64 +33,67 @@ repos:
       meta-multimedia:
       
 
-  meta-yocto:
+  src/meta-yocto:
     url: "https://git.yoctoproject.org/git/meta-yocto"
     refspec: 432b365f48f58ec0d9692a93607b65edd098ca1a
     layers:
       meta-yocto-bsp:
       meta-poky:
 
-  oe-core:
+  src/oe-core:
     url: "https://github.com/openembedded/openembedded-core.git"
     refspec: 0d4d0df6084cce3c3d9051db88f3199a030d3352
     layers:
       meta:
 
   # from tdx: bsp/pinned-nxp.xml
-  meta-freescale-3rdparty.git:
+  src/meta-freescale-3rdparty.git:
     url: "https://github.com/Freescale/meta-freescale-3rdparty.git"
     refspec: 83644f2ea000c1ab92fc0da1c45e2d7fb7a6060c
 
-  meta-freescale-distro:
+  src/meta-freescale-distro:
     url: "https://github.com/Freescale/meta-freescale-distro.git"
     refspec: a1821b36af7bba4f6628e4244df7fc9a038d0f34
 
-  meta-freescale:
+  src/meta-freescale:
     url: "https://github.com/Freescale/meta-freescale.git"
     refspec: bb582837c8c1ee08255b721f0bf946d6074c4773
 
   # from tdx: bsp/pinned-tdx.xml
-  meta-toradex-bsp-common:
+  src/meta-toradex-bsp-common:
     url: "https://git.toradex.com/meta-toradex-bsp-common.git"
     refspec: 51927b354280c398b11b7b6bd64c1617825f17d1
 
-  meta-toradex-nxp:
+  src/meta-toradex-nxp:
     url: "https://git.toradex.com/meta-toradex-nxp.git"
     refspec: fddb6cc10a1df717cc77b6958ce5e233cef9a80a
 
-  meta-toradex-tegra:
+  src/meta-toradex-tegra:
     url: "https://git.toradex.com/meta-toradex-tegra.git"
     refspec: 962b01390fdc261b5f86921231792daa8f6af043
 
   # from tdx: tdxref/default.xml
-  meta-qt5:
+  src/meta-qt5:
     url: "https://github.com/meta-qt5/meta-qt5.git"
     refspec: 0e7015f7a86dda995a39662edbb5c26da647c496
 
-  meta-toradex-demos:
+  src/meta-toradex-demos:
     url: "https://git.toradex.com/meta-toradex-demos.git"
     refspec: 93c179932a1a282bb56823ee202e387ced41f388
 
-  meta-toradex-distro:
+  src/meta-toradex-distro:
     url: "https://git.toradex.com/meta-toradex-distro.git"
     refspec: 1e0d10b2851ac455618ab7e4c7db86c9ad1227a0
 
 bblayers_conf_header:
-  meta-custom: |
+  src/meta-custom: |
     BBPATH = "${TOPDIR}"
     BBFILES ?= ""
 local_conf_header:
-  meta-custom: |
+  src/meta-custom: |
+    DL_DIR ?= "/downloads"
+    SSTATE_DIR ?= "/sstate-cache"
+    DEPLOY_DIR = "/install"
     PATCHRESOLVE = "noop"
     CONF_VERSION = "1"
     ACCEPT_FSL_EULA = "1"

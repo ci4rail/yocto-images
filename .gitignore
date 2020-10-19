@@ -1,3 +1,11 @@
-yocto-workdir/
 .vscode/
 .dobi/
+*/build/
+*/downloads/
+*/install/
+*/src/
+*/sstate-cache/
+
+
+
+

@@ -100,5 +100,6 @@ local_conf_header:
     PACKAGECONFIG_append_pn-qemu-system-native = " sdl"
     PACKAGECONFIG_append_pn-nativesdk-qemu = " sdl"
     INHERIT += "rm_work"
+    INHERIT += "toradex-mirrors"
     DISTRO_FEATURES_remove = "x11 opengl wayland alsa  vulkan pulseaudio"
     

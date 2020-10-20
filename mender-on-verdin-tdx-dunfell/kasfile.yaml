@@ -11,6 +11,11 @@ machine: verdin-imx8mm
 # The distro name as it is written into the `local.conf` of bitbake.
 distro: tdx-xwayland
 repos:
+  #
+  # The layer revisions were taken from https://git.toradex.com/cgit/toradex-manifest.git/ 
+  # commit 02f7d2cb155b0d662617863d4d34d45c2dcd94ce
+  # file "tdxdef/default.xml"
+  #
 
   # from txd: base/pinned.xml
   src/bitbake:

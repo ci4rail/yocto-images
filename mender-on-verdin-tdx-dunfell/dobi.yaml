@@ -38,7 +38,7 @@ mount=install-dir:
 image=image-kas:
   image: ghcr.io/siemens/kas/kas
   tags: ['2.2']
-  pull: always
+  pull: once
   annotations:
     description: "kas image"
 
@@ -63,9 +63,8 @@ job=mender-on-verdin-tdx-dunfell-yocto-shell:
     - GROUP_ID={user.gid}
     - TERM=xterm-256color
     - SHELL=/bin/bash
-
   annotations:
-    description: "interactive shell for yocto"
+    description: "mender-on-verdin-tdx-dunfell: interactive yocto shell"
 
 # Build tdx-reference-minimal-image
 job=mender-on-verdin-tdx-dunfell-build-minimal-image:
@@ -88,6 +87,25 @@ job=mender-on-verdin-tdx-dunfell-build-minimal-image:
     - GROUP_ID={user.gid}
     - TERM=xterm-256color
     - SHELL=/bin/bash
-
   annotations:
-    description: "Build tdx-reference-minimal-image"
+    description: "mender-on-verdin-tdx-dunfell: Build tdx-reference-minimal-image"
+
+# Clean 
+job=mender-on-verdin-tdx-dunfell-clean:
+  use: image-kas
+  entrypoint: rm -rf downloads/ sstate-cache/ install/ build/
+  mounts:
+    - build-dir
+    - repo-dir
+    - download-dir
+    - sstate-dir
+    - install-dir
+  working-dir: /work
+  interactive: true
+  env:
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - TERM=xterm-256color
+    - SHELL=/bin/bash
+  annotations:
+    description: "mender-on-verdin-tdx-dunfell: Cleanup"

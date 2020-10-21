@@ -3,6 +3,10 @@
 set -o errexit   # abort on nonzero exitstatus
 set -o pipefail  # don't hide errors within pipes
 
+if [ -f .env ]; then
+  source .env
+fi
+
 # check argument count
 if [ -z ${1} ]; then
     echo "no arguments!"

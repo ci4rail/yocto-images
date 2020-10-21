@@ -13,16 +13,14 @@ mount=repo-dir:
   path: /repo
   read-only: true
 
-# Yocto downloads (DL_DIR)
-# "bind" can be set to a server global directory
+# Yocto downloads DL_DIR
 mount=download-dir:
-  bind: mender-on-verdin-tdx-dunfell/downloads
+  bind: "{env.YOCTO_DOWNLOAD_DIR:downloads}"
   path: /downloads
 
-# Yocto shared state cache (SSTATE_DIR)
-# "bind" can be set to a server global directory
+# Yocto shared state cache SSTATE_DIR
 mount=sstate-dir:
-  bind: mender-on-verdin-tdx-dunfell/sstate-cache
+  bind: "{env.YOCTO_DOWNLOAD_DIR/:}mender-on-verdin-tdx-dunfell/sstate-cache"
   path: /sstate-cache
 
 # Yocto images (DEPLOY_DIR)
@@ -93,7 +91,7 @@ job=mender-on-verdin-tdx-dunfell-build-minimal-image:
 # Clean 
 job=mender-on-verdin-tdx-dunfell-clean:
   use: image-kas
-  entrypoint: rm -rf downloads/ sstate-cache/ install/ build/
+  entrypoint: rm -rf /downloads/ /sstate-cache/ /install/ /build/
   mounts:
     - build-dir
     - repo-dir

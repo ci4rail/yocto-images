@@ -32,9 +32,27 @@ To build all images:
 ./dobi.sh build-all
 ```
 
+Call ```dobi.sh list``` to see a list of all jobs. 
 
+
+### Yocto download and shared state cache
+
+By default, Yocto downloads will be placed into the *./downloads* folder, in order
+to share the downloads between all projects.
+
+By default, Yocto shared state cache will be placed into *\<project\>/sstate-cache* folder.
+
+You can override the defaults in the *.env* file (template is provided: *.env.template*), for example:
+
+```
+export YOCTO_DOWNLOAD_DIR=/opt/yocto/downloads          # Downloads go into /opt/yocto/downloads
+export YOCTO_SSTATE_CACHE_DIR=/opt/yocto/sstate-cache   # Downloads go into /opt/yocto/sstate-cache/<project>/sstate-cache
+```
+
+
+# Projects
 ## mender-on-verdin-tdx-dunfell
 
-Project to integrate mender.io layer on top of toradex layers and run it on verdin module.
+Project to integrate mender.io layer on top of toradex layers for toradex verdin module.
 
 Current status: Toradex yocto can be built (no mender integration). 

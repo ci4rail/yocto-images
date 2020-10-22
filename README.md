@@ -49,7 +49,7 @@ must be specified *with* trailing "/"
 
 ```
 export YOCTO_DOWNLOAD_DIR=/opt/yocto/downloads          # Downloads go into /opt/yocto/downloads
-export YOCTO_SSTATE_CACHE_DIR=/opt/yocto/sstate-cache/   # Downloads go into /opt/yocto/sstate-cache/<project>/sstate-cache
+export YOCTO_SSTATE_CACHE_DIR=/opt/yocto/sstate-cache/  # State cache goes into /opt/yocto/sstate-cache/<project>/sstate-cache
 ```
 
 

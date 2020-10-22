@@ -1,0 +1,9 @@
+.vscode/
+.dobi/
+gen/
+*/build/
+*/downloads/
+*/install/
+*/src/
+*/sstate-cache/
+.env

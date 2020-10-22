@@ -44,9 +44,12 @@ By default, Yocto shared state cache will be placed into *\<project\>/sstate-cac
 
 You can override the defaults in the *.env* file (template is provided: *.env.template*), for example:
 
+Note: YOCTO_DOWNLOAD_DIR must be specified without trailing "/", while YOCTO_SSTATE_CACHE_DIR
+must be specified *with* trailing "/"
+
 ```
 export YOCTO_DOWNLOAD_DIR=/opt/yocto/downloads          # Downloads go into /opt/yocto/downloads
-export YOCTO_SSTATE_CACHE_DIR=/opt/yocto/sstate-cache   # Downloads go into /opt/yocto/sstate-cache/<project>/sstate-cache
+export YOCTO_SSTATE_CACHE_DIR=/opt/yocto/sstate-cache/   # Downloads go into /opt/yocto/sstate-cache/<project>/sstate-cache
 ```
 
 

@@ -4,12 +4,9 @@ set -o errexit   # abort on nonzero exitstatus
 set -o pipefail  # don't hide errors within pipes
 
 if [ -f .env ]; then
-  SSTATE_CACHE_DIR=$(cat .env | grep YOCTO_SSTATE_CACHE_DIR)
-  if [[ ! -z "${SSTATE_CACHE_DIR}" ]]; then
-    has_trailing_slash=$(echo "${SSTATE_CACHE_DIR}" | grep -Ec "/$" || true )
-    if [ $has_trailing_slash == "1" ] ; then
-      source .env
-    else
+  source .env
+  if [[ ! -z "$YOCTO_SSTATE_CACHE_DIR" ]]; then
+    if [[ "$YOCTO_SSTATE_CACHE_DIR" != *\/ ]]; then
       echo "Error: make sure that value for YOCTO_SSTATE_CACHE_DIR ends with  '/'"
       exit 1
     fi

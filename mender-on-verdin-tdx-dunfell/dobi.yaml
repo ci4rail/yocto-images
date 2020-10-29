@@ -20,7 +20,7 @@ mount=download-dir:
 
 # Yocto shared state cache SSTATE_DIR
 mount=sstate-dir:
-  bind: "{env.YOCTO_SSTATE_CACHE_DIR:}mender-on-verdin-tdx-dunfell/sstate-cache"
+  bind: "{env.YOCTO_SSTATE_CACHE_DIR}mender-on-verdin-tdx-dunfell/sstate-cache"
   path: /sstate-cache
 
 # Yocto images (DEPLOY_DIR)

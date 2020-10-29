@@ -90,6 +90,11 @@ repos:
     url: "https://git.toradex.com/meta-toradex-distro.git"
     refspec: 1e0d10b2851ac455618ab7e4c7db86c9ad1227a0
 
+  # Ci4Rail layers
+  src/meta-ci.os:
+    url: "https://github.com/ci4rail/meta-ci.os.git"
+    refspec: as/mender
+
 bblayers_conf_header:
   src/meta-custom: |
     BBPATH = "${TOPDIR}"

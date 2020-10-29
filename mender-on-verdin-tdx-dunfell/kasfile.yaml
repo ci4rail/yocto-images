@@ -93,7 +93,7 @@ repos:
   # Ci4Rail layers
   src/meta-ci.os:
     url: "https://github.com/ci4rail/meta-ci.os.git"
-    refspec: as/mender
+    refspec: mender
 
 bblayers_conf_header:
   src/meta-custom: |

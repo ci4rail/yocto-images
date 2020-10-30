@@ -107,4 +107,5 @@ local_conf_header:
     INHERIT += "rm_work"
     INHERIT += "toradex-mirrors"
     DISTRO_FEATURES_remove = "x11 opengl wayland alsa  vulkan pulseaudio"
+    EXTRA_IMAGE_FEATURES ?= "debug-tweaks"
     

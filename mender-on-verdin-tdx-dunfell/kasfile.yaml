@@ -19,16 +19,16 @@ repos:
 
   # from txd: https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=dunfell-5.x.y
   #
-  src/bitbake:
-    url: "https://github.com/openembedded/bitbake.git"
-    refspec: "1.46"
-    layers:
-      # bitbake is no layer. Exclude it from bblayers.conf
-      bitbake: "no"
+  # src/bitbake:
+  #   url: "https://github.com/openembedded/bitbake.git"
+  #   refspec: "1.46"
+  #   layers:
+  #     # bitbake is no layer. Exclude it from bblayers.conf
+  #     bitbake: "no"
   
   src/meta-openembedded:
     url: "https://github.com/openembedded/meta-openembedded.git"
-    refspec: dunfell
+    refspec: 654ad8bea49f142d20b2b96c0dd44810a6be233a
     layers:
       meta-oe:
       meta-networking:
@@ -37,16 +37,17 @@ repos:
       meta-xfce:
       meta-gnome:
       meta-multimedia:
+      meta-initramfs:
 
   src/meta-yocto:
     url: "https://git.yoctoproject.org/git/meta-yocto.git"
-    refspec: dunfell
+    refspec: 432b365f48f58ec0d9692a93607b65edd098ca1a
     layers:
       meta-poky:
 
   src/openembedded-core:
     url: "https://github.com/openembedded/openembedded-core.git"
-    refspec: dunfell
+    refspec: 0d4d0df6084cce3c3d9051db88f3199a030d3352
     layers:
       meta:
 
@@ -92,14 +93,14 @@ repos:
   # mender, from: https://raw.githubusercontent.com/mendersoftware/meta-mender-community/dunfell/scripts/mender-no-setup-layers.xml
   src/meta-mender:
     url: "https://github.com/mendersoftware/meta-mender"
-    refspec: dunfell
+    refspec: 850a275ad65fc730b8b74c9ee9397091395ddbd6
     layers:
       meta-mender-core:
       meta-mender-demo:
 
   src/meta-mender-community:
     url: "https://github.com/mendersoftware/meta-mender-community"
-    refspec: dunfell
+    refspec: 2120d69c3d63405da5dcba2cefc678944b85a582
     layers:
       meta-mender-toradex-nxp:
 
@@ -118,13 +119,58 @@ local_conf_header:
     DL_DIR ?= "/downloads"
     SSTATE_DIR ?= "/sstate-cache"
     DEPLOY_DIR = "/install"
+    PACKAGE_CLASSES ?= "package_ipk"
     EXTRA_IMAGE_FEATURES ?= "debug-tweaks package-management"
     USER_CLASSES ?= "buildstats image-mklibs image-prelink"
     PATCHRESOLVE = "noop"
+    BB_DISKMON_DIRS ??= "\
+        STOPTASKS,${TMPDIR},1G,100K \
+        STOPTASKS,${DL_DIR},1G,100K \
+        STOPTASKS,${SSTATE_DIR},1G,100K \
+        STOPTASKS,/tmp,100M,100K \
+        ABORT,${TMPDIR},100M,1K \
+        ABORT,${DL_DIR},100M,1K \
+        ABORT,${SSTATE_DIR},100M,1K \
+        ABORT,/tmp,10M,1K"
     PACKAGECONFIG_append_pn-qemu-system-native = " sdl"
     PACKAGECONFIG_append_pn-nativesdk-qemu = " sdl"
     CONF_VERSION = "1"
     INHERIT += "rm_work"
     INHERIT += "toradex-mirrors"
-    ACCEPT_FSL_EULA = "1"
-    DISTRO_FEATURES_remove = "x11 opengl wayland alsa vulkan pulseaudio"
+    DISTRO = "tdx-xwayland"
+    include conf/machine/include/${MACHINE}.inc
+    INHERIT += "mender-full"
+    DISTRO_FEATURES_append = " systemd"
+    VIRTUAL-RUNTIME_init_manager = "systemd"
+    DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
+    VIRTUAL-RUNTIME_initscripts = ""
+    MENDER_FEATURES_ENABLE_append = " mender-uboot mender-image-sd"
+    MENDER_FEATURES_DISABLE_append = " mender-grub mender-image-uefi"
+    IMAGE_CLASSES += "image_type_mender_tezi"
+    IMAGE_FSTYPES_append = " mender_tezi"
+    IMAGE_FSTYPES_remove = " teziimg"
+    KERNEL_IMAGETYPE_aarch64_mender-grub = "Image"
+    IMAGE_BOOT_FILES = ""
+    IMAGE_BOOT_FILES_remove_mender-grub = "boot.scr-verdin-imx8mm;boot.scr"
+    OFFSET_SPL_PAYLOAD_verdin-imx8mm = ""
+    ACCEPT_FSL_EULA = "1" 
+    MENDER_SERVER_URL = "https://hosted.mender.io"
+    MENDER_TENANT_TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW5kZXIudGVuYW50IjoiNWZjZTFkZDU3MzczMjMzMDkxZmI4OTY3IiwiaXNzIjoiTWVuZGVyIiwic3ViIjoiNWZjZTFkZDU3MzczMjMzMDkxZmI4OTY3In0.VMeWoMhWA2WYIzx4o83xFjnMzoNakBo0QXJozcTNE3gmkTu7ofe5yAFJPLYu4noEsTSYPGISnxp-NLhzI0jeZ9Er6DAD26NGQ7z_0R94kgFkPexxJm3ZO1RxebU2N-C4pVjf_PtLoKj3z24TgmVgw40lJxPc9nlbSifkmkBSEHqb0b_RZUdRliQghYKvo-rp4NXF5StTDXi73LEzVcYZBfr82rpmi8eXuSaD93f1QMdys_lzVXm5LfAlGG09dYz_0tfCaIdrCgDOkNNsQA6AYAJnJQ1qnqxCOmYIQxe_zdy3DzD4AoTjhKsn7fRU1mZt8ADqsJDKT37tqBf0R0E2nw-_1nWJ5g482cJs437htGPFkYEffdwwLVjcfcOfWxSg_TqC9uHNQDOgRqePM3TBj6cFXqd1RipEyYp1ctoOPwm8aJmuclBm3Hv09WhLGeAYYYVUDtnQZB_Kb31UaoiXaGSiRXxwNww6Wz_Q1RfsnKWbvmO5xYeJU4MiysSQAbr_"
+    MENDER_ARTIFACT_NAME = "release-6_mem_inventory"
+
+# IMAGE_FEATURES_append = " read-only-rootfs"
+# IMAGE_INSTALL_append = " mender-binary-delta"
+# LICENSE_FLAGS_WHITELIST = "commercial_mender-binary-delta"
+# FILESEXTRAPATHS_prepend_pn-mender-binary-delta := "${HOME}/mender/mender-binary-delta/:"
+
+# MACHINE = "verdin-imx8mm"
+# DISTRO_FEATURES_remove = "x11 opengl wayland alsa vulkan pulseaudio"
+# EXTRA_IMAGE_FEATURES ?= "debug-tweaks package-management"
+# USER_CLASSES ?= "buildstats image-mklibs image-prelink"
+# PATCHRESOLVE = "noop"
+# PACKAGECONFIG_append_pn-qemu-system-native = " sdl"
+# PACKAGECONFIG_append_pn-nativesdk-qemu = " sdl"
+# CONF_VERSION = "1"
+# INHERIT += "rm_work"
+# INHERIT += "toradex-mirrors"
+# ACCEPT_FSL_EULA = "1"

@@ -5,8 +5,8 @@ set -o pipefail  # don't hide errors within pipes
 
 if [ -f .env ]; then
   source .env
-  if [[ ! -z "$YOCTO_SSTATE_CACHE_DIR" ]]; then
-    if [[ "$YOCTO_SSTATE_CACHE_DIR" != *\/ ]]; then
+  if [[ ! -z "${YOCTO_SSTATE_CACHE_DIR}" ]]; then
+    if [[ "${YOCTO_SSTATE_CACHE_DIR}" != *\/ ]]; then
       echo "Error: make sure that value for YOCTO_SSTATE_CACHE_DIR ends with  '/'"
       exit 1
     fi

@@ -13,45 +13,44 @@ distro: tdx-xwayland
 repos:
   #
   # The layer revisions were taken from https://git.toradex.com/cgit/toradex-manifest.git/ 
-  # commit 02f7d2cb155b0d662617863d4d34d45c2dcd94ce
+  # tag 5.0.0
   # file "tdxdef/default.xml"
   #
 
-  # from txd: base/pinned.xml
+  # from txd: https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=dunfell-5.x.y
+  #
   src/bitbake:
     url: "https://github.com/openembedded/bitbake.git"
-    refspec: 838a89141fd6a75da9f982ad2b035e823b692d2a
+    refspec: "1.46"
     layers:
       # bitbake is no layer. Exclude it from bblayers.conf
       bitbake: "no"
-
-  src/meta-oe:
+  
+  src/meta-openembedded:
     url: "https://github.com/openembedded/meta-openembedded.git"
-    refspec: 654ad8bea49f142d20b2b96c0dd44810a6be233a
+    refspec: dunfell
     layers:
       meta-oe:
       meta-networking:
       meta-filesystems:
       meta-python:
-      meta-perl:
+      meta-xfce:
       meta-gnome:
       meta-multimedia:
-      
 
   src/meta-yocto:
-    url: "https://git.yoctoproject.org/git/meta-yocto"
-    refspec: 432b365f48f58ec0d9692a93607b65edd098ca1a
+    url: "https://git.yoctoproject.org/git/meta-yocto.git"
+    refspec: dunfell
     layers:
-      meta-yocto-bsp:
       meta-poky:
 
-  src/oe-core:
+  src/openembedded-core:
     url: "https://github.com/openembedded/openembedded-core.git"
-    refspec: 0d4d0df6084cce3c3d9051db88f3199a030d3352
+    refspec: dunfell
     layers:
       meta:
 
-  # from tdx: bsp/pinned-nxp.xml
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=dunfell-5.x.y
   src/meta-freescale-3rdparty.git:
     url: "https://github.com/Freescale/meta-freescale-3rdparty.git"
     refspec: 83644f2ea000c1ab92fc0da1c45e2d7fb7a6060c
@@ -59,12 +58,12 @@ repos:
   src/meta-freescale-distro:
     url: "https://github.com/Freescale/meta-freescale-distro.git"
     refspec: a1821b36af7bba4f6628e4244df7fc9a038d0f34
-
+  
   src/meta-freescale:
     url: "https://github.com/Freescale/meta-freescale.git"
     refspec: bb582837c8c1ee08255b721f0bf946d6074c4773
 
-  # from tdx: bsp/pinned-tdx.xml
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-tdx.xml?h=dunfell-5.x.y
   src/meta-toradex-bsp-common:
     url: "https://git.toradex.com/meta-toradex-bsp-common.git"
     refspec: 51927b354280c398b11b7b6bd64c1617825f17d1
@@ -77,7 +76,7 @@ repos:
     url: "https://git.toradex.com/meta-toradex-tegra.git"
     refspec: 962b01390fdc261b5f86921231792daa8f6af043
 
-  # from tdx: tdxref/default.xml
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/tdxref/default.xml?h=dunfell-5.x.y
   src/meta-qt5:
     url: "https://github.com/meta-qt5/meta-qt5.git"
     refspec: 0e7015f7a86dda995a39662edbb5c26da647c496
@@ -90,22 +89,42 @@ repos:
     url: "https://git.toradex.com/meta-toradex-distro.git"
     refspec: 1e0d10b2851ac455618ab7e4c7db86c9ad1227a0
 
+  # mender, from: https://raw.githubusercontent.com/mendersoftware/meta-mender-community/dunfell/scripts/mender-no-setup-layers.xml
+  src/meta-mender:
+    url: "https://github.com/mendersoftware/meta-mender"
+    refspec: dunfell
+    layers:
+      meta-mender-core:
+      meta-mender-demo:
+
+  src/meta-mender-community:
+    url: "https://github.com/mendersoftware/meta-mender-community"
+    refspec: dunfell
+    layers:
+      meta-mender-toradex-nxp:
+
 bblayers_conf_header:
   src/meta-custom: |
     BBPATH = "${TOPDIR}"
     BBFILES ?= ""
+
+env:
+  MENDER_ARTIFACT_NAME: "release"
+  MENDER_SERVER_URL: "https://hosted.mender.io"
+  MENDER_TENANT_TOKEN: ""
+
 local_conf_header:
   src/meta-custom: |
     DL_DIR ?= "/downloads"
     SSTATE_DIR ?= "/sstate-cache"
     DEPLOY_DIR = "/install"
+    EXTRA_IMAGE_FEATURES ?= "debug-tweaks package-management"
+    USER_CLASSES ?= "buildstats image-mklibs image-prelink"
     PATCHRESOLVE = "noop"
-    CONF_VERSION = "1"
-    ACCEPT_FSL_EULA = "1"
     PACKAGECONFIG_append_pn-qemu-system-native = " sdl"
     PACKAGECONFIG_append_pn-nativesdk-qemu = " sdl"
+    CONF_VERSION = "1"
     INHERIT += "rm_work"
     INHERIT += "toradex-mirrors"
-    DISTRO_FEATURES_remove = "x11 opengl wayland alsa  vulkan pulseaudio"
-    EXTRA_IMAGE_FEATURES ?= "debug-tweaks"
-    
+    ACCEPT_FSL_EULA = "1"
+    DISTRO_FEATURES_remove = "x11 opengl wayland alsa vulkan pulseaudio"

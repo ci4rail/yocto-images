@@ -28,8 +28,6 @@ mount=install-dir:
   bind: mender-on-verdin-tdx-dunfell/install
   path: /install
 
-
-
 # ===================================================
 # images
 # ===================================================

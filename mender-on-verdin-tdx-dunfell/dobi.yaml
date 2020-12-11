@@ -29,11 +29,18 @@ mount=install-dir:
   path: /install
 
 # ===================================================
+# envs
+# ===================================================
+
+env=mender-on-verdin-tdx-dunfell-envs:
+    files: [mender-on-verdin-tdx-dunfell/config/mender.env]
+
+# ===================================================
 # images
 # ===================================================
 image=image-kas:
   image: ghcr.io/siemens/kas/kas
-  tags: ['2.2']
+  tags: ['2.3.3']
   pull: once
   annotations:
     description: "kas image"
@@ -45,7 +52,9 @@ image=image-kas:
 # Interactive yocto shell
 job=mender-on-verdin-tdx-dunfell-yocto-shell:
   use: image-kas
-  command: shell /repo/kasfile.yaml
+  depends: 
+    - mender-on-verdin-tdx-dunfell-envs
+  command: "shell /repo/kasfile.yaml"
   mounts:
     - build-dir
     - repo-dir
@@ -59,17 +68,22 @@ job=mender-on-verdin-tdx-dunfell-yocto-shell:
     - GROUP_ID={user.gid}
     - TERM=xterm-256color
     - SHELL=/bin/bash
+    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
+    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
+    - MENDER_ARTIFACT_NAME={env.MENDER_ARTIFACT_NAME}
   annotations:
     description: "mender-on-verdin-tdx-dunfell: interactive yocto shell"
 
 # Build tdx-reference-minimal-image
 job=mender-on-verdin-tdx-dunfell-build-minimal-image:
   use: image-kas
+  depends: 
+    - mender-on-verdin-tdx-dunfell-envs
   sources: 
     - mender-on-verdin-tdx-dunfell/kasfile.yaml
   artifact:
     - mender-on-verdin-tdx-dunfell/install/images/
-  command: build --target tdx-reference-minimal-image /repo/kasfile.yaml
+  command: "build /repo/kasfile.yaml"
   mounts:
     - build-dir
     - repo-dir
@@ -83,6 +97,9 @@ job=mender-on-verdin-tdx-dunfell-build-minimal-image:
     - GROUP_ID={user.gid}
     - TERM=xterm-256color
     - SHELL=/bin/bash
+    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
+    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
+    - MENDER_ARTIFACT_NAME={env.MENDER_ARTIFACT_NAME}
   annotations:
     description: "mender-on-verdin-tdx-dunfell: Build tdx-reference-minimal-image"
 

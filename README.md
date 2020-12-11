@@ -78,4 +78,3 @@ IMAGE_NAME_SUFFIX=-dev
 Project to integrate mender.io layer on top of toradex layers for toradex verdin module.
 
 Current status: Toradex yocto can be built with mender integration. 
-Before building this you need to enter your your mender specific data into `mender-on-verdin/config/mender.env`.

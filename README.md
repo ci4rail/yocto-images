@@ -59,3 +59,6 @@ export YOCTO_SSTATE_CACHE_DIR=/opt/yocto/sstate-cache/  # State cache goes into 
 Project to integrate mender.io layer on top of toradex layers for toradex verdin module.
 
 Current status: Toradex yocto can be built with mender integration. 
+Before building this you need to enter your your mender specific data into `mender-on-verdin-tdx-dunfell/config/mender.env`.
+
+*Note: please follow [mender-on-verdin-tdx-dunfell/mender/README.md](mender-on-verdin-tdx-dunfell/mender/README.md) in order to build!*

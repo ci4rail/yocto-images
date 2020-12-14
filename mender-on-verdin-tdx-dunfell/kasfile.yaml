@@ -88,12 +88,18 @@ repos:
     layers:
       meta-mender-core:
       meta-mender-demo:
+      meta-mender-commercial:
 
   src/meta-mender-community:
     url: "https://github.com/mendersoftware/meta-mender-community"
     refspec: 2120d69c3d63405da5dcba2cefc678944b85a582
     layers:
       meta-mender-toradex-nxp:
+
+  # ci4rail
+  src/meta-ci.os:
+    url: https://github.com/ci4rail/meta-ci.os.git
+    refspec: mender_delta_update
 
 bblayers_conf_header:
   src/meta-custom: |
@@ -144,4 +150,10 @@ local_conf_header:
     IMAGE_BOOT_FILES = ""
     IMAGE_BOOT_FILES_remove_mender-grub = "boot.scr-verdin-imx8mm;boot.scr"
     OFFSET_SPL_PAYLOAD_verdin-imx8mm = ""
-    ACCEPT_FSL_EULA = "1" 
+    ACCEPT_FSL_EULA = "1"
+    IMAGE_FEATURES_append = " read-only-rootfs"
+    IMAGE_INSTALL_append = " mender-binary-delta nano"
+    LICENSE_FLAGS_WHITELIST = "commercial_mender-binary-delta"
+    FILESEXTRAPATHS_prepend_pn-mender-binary-delta := "/mender/mender-binary-delta/:"
+    MENDER_UPDATE_POLL_INTERVAL_SECONDS ?= "20"
+    MENDER_INVENTORY_POLL_INTERVAL_SECONDS ?= "20"

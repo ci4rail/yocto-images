@@ -5,11 +5,16 @@
 meta:
   project: ci.os.lmp
   include:
+    - version.yaml
     - mender-on-verdin-tdx-dunfell/dobi.yaml
 
 # ===================================================
 # alias
 # ===================================================
+
+alias=version:
+  tasks:
+    - buildingblock-version
 
 alias=mvtd-yocto-shell:
   tasks:

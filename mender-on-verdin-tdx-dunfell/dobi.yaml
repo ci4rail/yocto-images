@@ -106,7 +106,7 @@ job=mender-on-verdin-tdx-dunfell-build-minimal-image:
     - SHELL=/bin/bash
     - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
     - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
-    - MENDER_ARTIFACT_NAME={env.MENDER_ARTIFACT_NAME}
+    - MENDER_ARTIFACT_NAME="{env.GitVersion_BranchVersion}{env.MENDER_ARTIFACT_DEV_SUFFIX}"
   annotations:
     description: "mender-on-verdin-tdx-dunfell: Build tdx-reference-minimal-image"
 

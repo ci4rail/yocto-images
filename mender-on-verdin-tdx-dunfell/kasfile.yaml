@@ -99,7 +99,7 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: mender_delta_update
+    refspec: dunfell
 
 bblayers_conf_header:
   src/meta-custom: |

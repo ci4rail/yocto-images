@@ -1,1 +1,2 @@
-mender-binary-delta
+mender-binary-delta*
+*.tar.xz

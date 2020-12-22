@@ -6,6 +6,7 @@ meta:
   project: ci.os.lmp
   include:
     - version.yaml
+    - tools/curl/dobi.yaml
     - mender-on-verdin-tdx-dunfell/dobi.yaml
 
 # ===================================================
@@ -15,18 +16,6 @@ meta:
 alias=version:
   tasks:
     - buildingblock-version
-
-alias=mvtd-yocto-shell:
-  tasks:
-    - mender-on-verdin-tdx-dunfell-yocto-shell
-  annotations:
-    description: "[alias] mender-on-verdin-tdx-dunfell-yocot-shell"
-
-alias=mvtd-build-min:
-  tasks:
-    - mender-on-verdin-tdx-dunfell-build-minimal-image
-  annotations:
-    description: "[alias] mender-on-verdin-tdx-dunfell-build-minimal-image"
 
 alias=build-all:
   tasks:

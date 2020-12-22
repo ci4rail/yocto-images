@@ -47,8 +47,6 @@ image=image-kas:
   image: ghcr.io/siemens/kas/kas
   tags: ['2.3.3']
   pull: once
-  annotations:
-    description: "kas image"
 
 # ===================================================
 # jobs
@@ -57,7 +55,7 @@ image=image-kas:
 # Interactive yocto shell
 job=mender-on-verdin-tdx-dunfell-yocto-shell:
   use: image-kas
-  depends: 
+  depends:
     - mender-on-verdin-tdx-dunfell-envs
   command: "shell /repo/kasfile.yaml"
   mounts:
@@ -81,13 +79,16 @@ job=mender-on-verdin-tdx-dunfell-yocto-shell:
     - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
   annotations:
     description: "mender-on-verdin-tdx-dunfell: interactive yocto shell"
+    tags:
+      - verdin
 
 # Build tdx-reference-minimal-image
 job=mender-on-verdin-tdx-dunfell-build-minimal-image:
   use: image-kas
-  depends: 
+  depends:
     - mender-on-verdin-tdx-dunfell-envs
-  sources: 
+    - mender-on-verdin-tdx-dunfell-download-mender-delta-update
+  sources:
     - mender-on-verdin-tdx-dunfell/kasfile.yaml
   artifact:
     - mender-on-verdin-tdx-dunfell/install/images/
@@ -113,17 +114,46 @@ job=mender-on-verdin-tdx-dunfell-build-minimal-image:
     - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
   annotations:
     description: "mender-on-verdin-tdx-dunfell: Build tdx-reference-minimal-image"
+    tags:
+      - verdin
+
+job=mender-on-verdin-tdx-dunfell-download-mender-delta-update:
+  use: image-curl
+  depends:
+    - mender-on-verdin-tdx-dunfell-envs
+  command: sh -c "cd /mender &&
+                  curl -u ${HOSTED_MENDER_USER_EMAIL}:${HOSTED_MENDER_PASSWORD} -O ${MENDER_BINARY_DELTA_URI} &&
+                  rm -rf mender-binary-delta &&
+                  tar xf *.tar.xz &&
+                  rm *.tar.xz &&
+                  mkdir mender-binary-delta &&
+                  mv mender-binary-delta-*/* mender-binary-delta &&
+                  rm -rf mender-binary-delta-*"
+  mounts:
+    - mender-dir
+  interactive: true
+  env:
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - HOSTED_MENDER_USER_EMAIL={env.HOSTED_MENDER_USER_EMAIL}
+    - HOSTED_MENDER_PASSWORD={env.HOSTED_MENDER_PASSWORD}
+    - MENDER_BINARY_DELTA_URI={env.MENDER_BINARY_DELTA_URI}
+  annotations:
+    description: "mender-on-verdin-tdx-dunfell: download mender-binary-delta"
+    tags:
+      - verdin
 
 # Clean 
 job=mender-on-verdin-tdx-dunfell-clean:
   use: image-kas
-  entrypoint: rm -rf /downloads/ /sstate-cache/ /install/ /build/
+  entrypoint: rm -rf /downloads/ /sstate-cache/ /install/ /build/ /mender
   mounts:
     - build-dir
     - repo-dir
     - download-dir
     - sstate-dir
     - install-dir
+    - mender-dir
   working-dir: /work
   interactive: true
   env:
@@ -133,3 +163,5 @@ job=mender-on-verdin-tdx-dunfell-clean:
     - SHELL=/bin/bash
   annotations:
     description: "mender-on-verdin-tdx-dunfell: Cleanup"
+    tags:
+      - verdin

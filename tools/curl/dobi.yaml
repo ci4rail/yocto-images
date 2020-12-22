@@ -1,0 +1,9 @@
+# ===================================================
+# images
+# ===================================================
+
+image=image-curl:
+  image: "{env.DOCKER_NAMESPACE:ci4rail}/tools/curl"
+  context: tools/curl
+  tags:
+    - latest

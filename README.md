@@ -3,7 +3,7 @@
 Build definitions and scripts for ci.os.lmp platform.
 
 This repo can host several projects (with different Yocto versions, machines etc.). Each project
-has a subdirectory in that repo, currently *mender-on-verdin-tdx-dunfell*.
+has a subdirectory in that repo, currently *mender-on-verdin*.
 
 Yocto builds are performed using kas: https://github.com/siemens/kas
 
@@ -14,13 +14,13 @@ Developer builds are executed via dobi.
 
 Examples:
 
-To build the minimal image in mender-on-verdin-tdx-dunfell
+To build the minimal image in mender-on-verdin
 
 ```bash
 ./dobi.sh mvtd-build-min
 ```
 
-To run interactive yocto shell in mender-on-verdin-tdx-dunfell
+To run interactive yocto shell in mender-on-verdin
 
 ```bash
 ./dobi.sh mvtd-yocto-shell
@@ -54,9 +54,9 @@ export YOCTO_SSTATE_CACHE_DIR=/opt/yocto/sstate-cache/  # State cache goes into 
 
 
 # Projects
-## mender-on-verdin-tdx-dunfell
+## mender-on-verdin
 
 Project to integrate mender.io layer on top of toradex layers for toradex verdin module.
 
 Current status: Toradex yocto can be built with mender integration. 
-Before building this you need to enter your your mender specific data into `mender-on-verdin-tdx-dunfell/config/mender.env`.
+Before building this you need to enter your your mender specific data into `mender-on-verdin/config/mender.env`.

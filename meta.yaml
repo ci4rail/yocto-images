@@ -7,7 +7,7 @@ meta:
   include:
     - version.yaml
     - tools/curl/dobi.yaml
-    - mender-on-verdin-tdx-dunfell/dobi.yaml
+    - mender-on-verdin/dobi.yaml
 
 # ===================================================
 # alias

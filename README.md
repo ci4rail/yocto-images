@@ -3,7 +3,7 @@
 Build definitions and scripts for ci.os.lmp platform.
 
 This repo can host several projects (with different Yocto versions, machines etc.). Each project
-has a subdirectory in that repo, currently *mender-on-verdin*.
+has a subdirectory in that repo, e.g. `mender-on-verdin`.
 
 Yocto builds are performed using kas: https://github.com/siemens/kas
 
@@ -14,13 +14,13 @@ Developer builds are executed via dobi.
 
 Examples:
 
-To build the minimal image in mender-on-verdin
+To build the minimal image for `mender-on-verdin`
 
 ```bash
 ./dobi.sh mender-on-verdin-build-minimal-image
 ```
 
-To run interactive yocto shell in mender-on-verdin
+To run an interactive yocto shell for `mender-on-verdin`
 
 ```bash
 ./dobi.sh mender-on-verdin-yocto-shell

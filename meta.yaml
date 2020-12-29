@@ -6,6 +6,7 @@ meta:
   project: ci.os.lmp
   include:
     - version.yaml
+    - dobi.yaml
     - tools/curl/dobi.yaml
     - mender-on-verdin/dobi.yaml
 

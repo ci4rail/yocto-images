@@ -9,7 +9,7 @@ name: mender-on-verdin
 ## Specify the git repository to work with
 git_source: git@github.com:ci4rail/ci.os.lmp.git
 ## Specify the git branch to work with
-git_branch: master
+git_branch: main
 ## Specify the git paths to monitor
 git_paths:
   - mender-on-verdin

@@ -173,3 +173,4 @@ local_conf_header:
     FILESEXTRAPATHS_prepend_pn-mender-binary-delta := "/mender/mender-binary-delta/:"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS ?= "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS ?= "20"
+    MENDER_STORAGE_TOTAL_SIZE_MB = "4096"

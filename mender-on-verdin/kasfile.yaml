@@ -96,6 +96,20 @@ repos:
     layers:
       meta-mender-toradex-nxp:
 
+  # Azure IotEdge
+  src/meta-iotedge:
+    url: https://github.com/Azure/meta-iotedge.git
+    refspec: dunfell
+
+  # Azure IotEdge dependencies
+  src/meta-rust:
+    url: git://github.com/meta-rust/meta-rust.git
+    refspec: e4d25b98083bcecb94df6ee189a165d63ede7f3d
+
+  src/meta-virtualization:
+    url: git://git.yoctoproject.org/meta-virtualization
+    refspec: dunfell
+
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
@@ -139,7 +153,7 @@ local_conf_header:
     DISTRO = "tdx-xwayland"
     include conf/machine/include/${MACHINE}.inc
     INHERIT += "mender-full"
-    DISTRO_FEATURES_append = " systemd"
+    DISTRO_FEATURES_append = " systemd virtualization"
     VIRTUAL-RUNTIME_init_manager = "systemd"
     DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
     VIRTUAL-RUNTIME_initscripts = ""
@@ -154,7 +168,7 @@ local_conf_header:
     OFFSET_SPL_PAYLOAD_verdin-imx8mm = ""
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
-    IMAGE_INSTALL_append = " mender-binary-delta nano"
+    IMAGE_INSTALL_append = " mender-binary-delta nano iotedge-daemon iotedge-cli docker docker-contrib ca-certificates connman connman-client"
     LICENSE_FLAGS_WHITELIST = "commercial_mender-binary-delta"
     FILESEXTRAPATHS_prepend_pn-mender-binary-delta := "/mender/mender-binary-delta/:"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS ?= "20"

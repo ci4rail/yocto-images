@@ -171,6 +171,6 @@ local_conf_header:
     IMAGE_INSTALL_append = " mender-binary-delta nano iotedge-daemon iotedge-cli docker ca-certificates connman connman-client"
     LICENSE_FLAGS_WHITELIST = "commercial_mender-binary-delta"
     FILESEXTRAPATHS_prepend_pn-mender-binary-delta := "/mender/mender-binary-delta/:"
-    MENDER_UPDATE_POLL_INTERVAL_SECONDS ?= "20"
-    MENDER_INVENTORY_POLL_INTERVAL_SECONDS ?= "20"
+    MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
+    MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     MENDER_STORAGE_TOTAL_SIZE_MB = "4096"

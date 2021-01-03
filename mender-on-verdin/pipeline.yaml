@@ -145,16 +145,15 @@ jobs:
               - -c
               - |
                 echo Generating build environment variables:
-                echo MENDER_ARTIFACT_NAME=$(cat s3-gitversion/gitversion/plain/BranchVersion) > build-envs/env
+                echo MENDER_ARTIFACT_DEV_SUFFIX=((MENDER_ARTIFACT_DEV_SUFFIX)) > build-envs/env
+                echo IMAGE_NAME_SUFFIX=((IMAGE_NAME_SUFFIX)) >> build-envs/env
+                echo MENDER_ARTIFACT_NAME=$(cat s3-gitversion/gitversion/plain/BranchVersion)${MENDER_ARTIFACT_DEV_SUFFIX} >> build-envs/env
                 echo MENDER_SERVER_URL=((MENDER_SERVER_URL)) >> build-envs/env
                 echo MENDER_TENANT_TOKEN=((MENDER_TENANT_TOKEN)) >> build-envs/env
                 echo HOSTED_MENDER_USER_EMAIL=((HOSTED_MENDER_USER_EMAIL)) >> build-envs/env
                 echo HOSTED_MENDER_PASSWORD=((HOSTED_MENDER_PASSWORD)) >> build-envs/env
                 echo MENDER_BINARY_DELTA_URI=((MENDER_BINARY_DELTA_URI)) >> build-envs/env
-                echo MENDER_ARTIFACT_DEV_SUFFIX= >> build-envs/env
-                echo IMAGE_NAME_SUFFIX= >> build-envs/env
-                echo MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME}${MENDER_ARTIFACT_DEV_SUFFIX} >> build-envs/env
-
+                echo IMAGE_GIT_VERSION=$(cat s3-gitversion/gitversion/plain/BranchVersion) >> build-envs/env
       - task: download-mender-delta-update-tools
         image: image-bash-utils
         config:
@@ -201,7 +200,7 @@ jobs:
                 chown -R ${USER_ID}:${GROUP_ID} /install /sstate-cache /downloads /mender source build-envs mender-delta-update-tools
                 cp -r ${ROOT}/mender-delta-update-tools/* /mender
                 set -o allexport; source ${ROOT}/build-envs/env; set +o allexport
-                cd ${ROOT}/source/mender-on-verdin 
+                cd ${ROOT}/source/mender-on-verdin
                 /kas/container-entrypoint build kasfile.yaml
                 cp -r /install/images/verdin-imx8mm/Verdin-iMX8MM_Reference-Minimal-Image_CI.OS.LMP*.mender_tezi.tar ${ROOT}/install
                 cp -r /install/images/verdin-imx8mm/Verdin-iMX8MM_Reference-Minimal-Image_CI.OS.LMP*.mender ${ROOT}/install

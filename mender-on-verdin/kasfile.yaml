@@ -113,7 +113,7 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: dunfell
+    refspec: feature/iotedge
 
 bblayers_conf_header:
   src/meta-custom: |
@@ -153,7 +153,7 @@ local_conf_header:
     DISTRO = "tdx-xwayland"
     include conf/machine/include/${MACHINE}.inc
     INHERIT += "mender-full"
-    DISTRO_FEATURES_append = " systemd virtualization"
+    DISTRO_FEATURES_append = " systemd virtualization aufs"
     VIRTUAL-RUNTIME_init_manager = "systemd"
     DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
     VIRTUAL-RUNTIME_initscripts = ""

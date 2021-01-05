@@ -7,3 +7,4 @@ gen/
 */src/
 */sstate-cache/
 .env
+downloads

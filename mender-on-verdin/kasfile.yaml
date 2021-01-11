@@ -88,7 +88,6 @@ repos:
     layers:
       meta-mender-core:
       meta-mender-demo:
-      meta-mender-commercial:
 
   src/meta-mender-community:
     url: "https://github.com/mendersoftware/meta-mender-community"
@@ -168,9 +167,7 @@ local_conf_header:
     OFFSET_SPL_PAYLOAD_verdin-imx8mm = ""
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
-    IMAGE_INSTALL_append = " mender-binary-delta nano iotedge-daemon iotedge-cli docker ca-certificates connman connman-client"
-    LICENSE_FLAGS_WHITELIST = "commercial_mender-binary-delta"
-    FILESEXTRAPATHS_prepend_pn-mender-binary-delta := "/mender/mender-binary-delta/:"
+    IMAGE_INSTALL_append = " nano"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     MENDER_STORAGE_TOTAL_SIZE_MB = "4096"

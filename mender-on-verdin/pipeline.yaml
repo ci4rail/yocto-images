@@ -152,31 +152,7 @@ jobs:
                 echo MENDER_TENANT_TOKEN=((MENDER_TENANT_TOKEN)) >> build-envs/env
                 echo HOSTED_MENDER_USER_EMAIL=((HOSTED_MENDER_USER_EMAIL)) >> build-envs/env
                 echo HOSTED_MENDER_PASSWORD=((HOSTED_MENDER_PASSWORD)) >> build-envs/env
-                echo MENDER_BINARY_DELTA_URI=((MENDER_BINARY_DELTA_URI)) >> build-envs/env
                 echo IMAGE_GIT_VERSION=$(cat s3-gitversion/gitversion/plain/BranchVersion) >> build-envs/env
-      - task: download-mender-delta-update-tools
-        image: image-bash-utils
-        config:
-          platform: linux
-          inputs:
-            - name: build-envs
-          outputs:
-            - name: mender-delta-update-tools
-          run:
-            path: /bin/bash
-            args:
-              - -c
-              - |
-                ROOT=$(pwd)
-                set -o allexport; source ${ROOT}/build-envs/env; set +o allexport
-                cd mender-delta-update-tools
-                curl -u ((HOSTED_MENDER_USER_EMAIL)):((HOSTED_MENDER_PASSWORD)) -O ((MENDER_BINARY_DELTA_URI))
-                rm -rf mender-binary-delta
-                tar xf *.tar.xz
-                rm *.tar.xz
-                mkdir mender-binary-delta
-                mv mender-binary-delta-*/* mender-binary-delta
-                rm -rf mender-binary-delta-*
 
       - task: build-tezi-file
         image: image-kas
@@ -185,7 +161,6 @@ jobs:
           inputs:
             - name: source
             - name: build-envs
-            - name: mender-delta-update-tools
           outputs:
             - name: install
           run:
@@ -197,8 +172,6 @@ jobs:
                 mkdir -p /install /sstate-cache /mender /downloads
                 USER_ID=30000
                 GROUP_ID=30000
-                chown -R ${USER_ID}:${GROUP_ID} /install /sstate-cache /downloads /mender source build-envs mender-delta-update-tools
-                cp -r ${ROOT}/mender-delta-update-tools/* /mender
                 set -o allexport; source ${ROOT}/build-envs/env; set +o allexport
                 cd ${ROOT}/source/mender-on-verdin
                 /kas/container-entrypoint build kasfile.yaml

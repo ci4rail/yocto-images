@@ -27,8 +27,6 @@ s3_skip_ssl_verification: false
 # --------------------
 # This is the address the mender service is reachable
 MENDER_SERVER_URL: https://hosted.mender.io
-# This is the URI for the mender-binary-delta tool that gets downloaded during build
-MENDER_BINARY_DELTA_URI: https://download.mender.io/hosted/content/mender-binary-delta/1.1.0/mender-binary-delta-1.1.0.tar.xz
 # Specify a name suffixes if needed, e.g. `-dev` for development builds
 # The mender artifact name suffix 
 MENDER_ARTIFACT_DEV_SUFFIX: ""

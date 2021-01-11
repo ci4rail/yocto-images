@@ -169,9 +169,10 @@ jobs:
               - -ec
               - |
                 ROOT=$(pwd)
-                mkdir -p /install /sstate-cache /mender /downloads
+                mkdir -p /install /sstate-cache /downloads
                 USER_ID=30000
                 GROUP_ID=30000
+                chown -R ${USER_ID}:${GROUP_ID} /install /sstate-cache /downloads source
                 set -o allexport; source ${ROOT}/build-envs/env; set +o allexport
                 cd ${ROOT}/source/mender-on-verdin
                 /kas/container-entrypoint build kasfile.yaml

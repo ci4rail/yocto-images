@@ -28,25 +28,12 @@ mount=install-dir:
   bind: mender-on-verdin/install
   path: /install
 
-# Mender files (mender-binary-delta)
-mount=mender-dir:
-  bind: mender-on-verdin/mender
-  path: /mender
-
 # ===================================================
 # envs
 # ===================================================
 
 env=mender-on-verdin-envs:
     files: [mender-on-verdin/config/mender.env]
-
-# ===================================================
-# images
-# ===================================================
-image=image-kas:
-  image: ghcr.io/siemens/kas/kas
-  tags: ['2.3.3']
-  pull: once
 
 # ===================================================
 # jobs
@@ -64,7 +51,6 @@ job=mender-on-verdin-yocto-shell:
     - download-dir
     - sstate-dir
     - install-dir
-    - mender-dir
   working-dir: /work
   interactive: true
   env:
@@ -87,7 +73,6 @@ job=mender-on-verdin-build-minimal-image:
   use: image-kas
   depends:
     - mender-on-verdin-envs
-    - mender-on-verdin-download-mender-delta-update
   sources:
     - mender-on-verdin/kasfile.yaml
   artifact:
@@ -99,7 +84,6 @@ job=mender-on-verdin-build-minimal-image:
     - download-dir
     - sstate-dir
     - install-dir
-    - mender-dir
   working-dir: /work
   interactive: true
   env:
@@ -117,43 +101,16 @@ job=mender-on-verdin-build-minimal-image:
     tags:
       - verdin
 
-job=mender-on-verdin-download-mender-delta-update:
-  use: image-curl
-  depends:
-    - mender-on-verdin-envs
-  command: sh -c "cd /mender &&
-                  curl -u ${HOSTED_MENDER_USER_EMAIL}:${HOSTED_MENDER_PASSWORD} -O ${MENDER_BINARY_DELTA_URI} &&
-                  rm -rf mender-binary-delta &&
-                  tar xf *.tar.xz &&
-                  rm *.tar.xz &&
-                  mkdir mender-binary-delta &&
-                  mv mender-binary-delta-*/* mender-binary-delta &&
-                  rm -rf mender-binary-delta-*"
-  mounts:
-    - mender-dir
-  interactive: true
-  env:
-    - USER_ID={user.uid}
-    - GROUP_ID={user.gid}
-    - HOSTED_MENDER_USER_EMAIL={env.HOSTED_MENDER_USER_EMAIL}
-    - HOSTED_MENDER_PASSWORD={env.HOSTED_MENDER_PASSWORD}
-    - MENDER_BINARY_DELTA_URI={env.MENDER_BINARY_DELTA_URI}
-  annotations:
-    description: "download mender-binary-delta"
-    tags:
-      - verdin
-
 # Clean 
 job=mender-on-verdin-clean:
   use: image-kas
-  entrypoint: rm -rf /downloads/ /sstate-cache/ /install/ /build/ /mender
+  entrypoint: rm -rf /downloads/ /sstate-cache/ /install/ /build/
   mounts:
     - build-dir
     - repo-dir
     - download-dir
     - sstate-dir
     - install-dir
-    - mender-dir
   working-dir: /work
   interactive: true
   env:

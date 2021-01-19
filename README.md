@@ -7,12 +7,21 @@ has a subdirectory in that repo, e.g. `mender-on-verdin`.
 
 Yocto builds are performed using kas: https://github.com/siemens/kas
 
+# Projects
+## mender-on-verdin
+![CI](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/mender-on-verdin/jobs/build-mender-on-verdin/badge)
 
-## Running developer builds
+Project to integrate mender.io layer on top of toradex layers for toradex verdin module. It can be either build locally using dobi or via Concourse CI.
 
-Developer builds are executed via dobi. 
+See [CI/CD Readme](mender-on-verdin/README.md) for information about the CI/CD build.
+Before building this locally using dobiyou need to enter your your mender specific data into `mender-on-verdin/config/mender.env`.
 
-Examples:
+**Current status:** Toradex yocto can be built with mender integration. 
+
+
+## Running developer builds locally
+
+Developer builds are executed via dobi, e.g. for `mender-on-verdin`. 
 
 To build the minimal image for `mender-on-verdin`
 
@@ -34,8 +43,7 @@ To build all images:
 
 Call `./dobi.sh list` to see a list of all jobs. 
 
-
-### Yocto download and shared state cache
+#### Yocto download and shared state cache
 
 By default, Yocto downloads will be placed into the *./downloads* folder, in order
 to share the downloads between all projects.
@@ -46,8 +54,8 @@ You can set default environment variables in the *default.env* file (template is
 
 **Note:**
 
-`YOCTO_DOWNLOAD_DIR must be specified without trailing "/", while
-YOCTO_SSTATE_CACHE_DIR must be specified *with* trailing "/"`
+**YOCTO_DOWNLOAD_DIR must be specified without trailing "/", while
+YOCTO_SSTATE_CACHE_DIR must be specified *with* trailing "/"**
 
 ```
 # Version of dobi to download, if not in $PATH
@@ -72,10 +80,31 @@ MENDER_ARTIFACT_DEV_SUFFIX=-dev
 IMAGE_NAME_SUFFIX=-dev
 ```
 
-# Projects
-## mender-on-verdin
+## CI/CD configuration
 
-Project to integrate mender.io layer on top of toradex layers for toradex verdin module.
+### General perparations
 
-Current status: Toradex yocto can be built with mender integration. 
-Before building this you need to enter your your mender specific data into `mender-on-verdin/config/mender.env`.
+First download `fly` from your concourse server. The production concourse server that is reachable at https://concourse.ci4rail.com.
+
+```bash
+sudo wget https://concourse.ci4rail.com/api/v1/cli?arch=amd64&platform=linux -O /usr/local/bin/fly
+sudo chmod +x /usr/local/bin/
+```
+
+Then login to your concourse instance.
+
+```bash
+fly --target prod login --concourse-url https://concourse.ci4rail.com
+```
+
+The following steps are performed for each project in this repo e.g. `mender-on-verdin`.
+Copy and adapt `ci/credentials.template.yaml` it to your needs. 
+
+```bash
+cp ci/credentials.template.yaml ci/credentials-prod.yaml
+```
+
+*Note: `ci/config-prod.yaml` is the production configuration. It monitors the directory `mender-on-verdin` on `master` branch for changes and triggeres a build. Under normal circumstances no modifications are needed in this file. If you want to test something out you can modify and use `ci/config-dev.yaml`*
+
+*Note: `ci/credentials-prod.yaml` and `ci/credentials.yaml` are ignored by git. In this file you can store access credentials and keys that won't be checked in. If you are using some third party vault for credentials that integrates well into concourse, you won't need this file.*
+

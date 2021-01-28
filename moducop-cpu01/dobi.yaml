@@ -1,0 +1,124 @@
+# ===================================================
+# mounts
+# ===================================================
+
+# Where the yocto-build happens
+mount=build-dir-cpu01:
+  bind: moducop-cpu01
+  path: /work
+
+# The location of kasfile.yaml (kas expects it in /repo)
+mount=repo-dir-cpu01:
+  bind: moducop-cpu01
+  path: /repo
+  read-only: true
+
+# Yocto downloads DL_DIR
+mount=download-dir-cpu01:
+  bind: "{env.YOCTO_DOWNLOAD_DIR:downloads}"
+  path: /downloads
+
+# Yocto shared state cache SSTATE_DIR
+mount=sstate-dir-cpu01:
+  bind: "{env.YOCTO_SSTATE_CACHE_DIR:}moducop-cpu01/sstate-cache"
+  path: /sstate-cache
+
+# Yocto images (DEPLOY_DIR)
+mount=install-dir-cpu01:
+  bind: moducop-cpu01/install
+  path: /install
+
+# ===================================================
+# envs
+# ===================================================
+
+env=moducop-cpu01-envs:
+    files: [moducop-cpu01/config/mender.env]
+
+# ===================================================
+# jobs
+# ===================================================
+
+# Interactive yocto shell
+job=moducop-cpu01-yocto-shell:
+  use: image-kas
+  depends:
+    - moducop-cpu01-envs
+  command: "shell /repo/kasfile.yaml"
+  mounts:
+    - build-dir-cpu01
+    - repo-dir-cpu01
+    - download-dir-cpu01
+    - sstate-dir-cpu01
+    - install-dir-cpu01
+  working-dir: /work
+  interactive: true
+  env:
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - TERM=xterm-256color
+    - SHELL=/bin/bash
+    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
+    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
+    - MENDER_ARTIFACT_NAME={env.GitVersion_BranchVersion}{env.MENDER_ARTIFACT_DEV_SUFFIX}
+    - IMAGE_GIT_VERSION={env.GitVersion_BranchVersion}
+    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
+  annotations:
+    description: "interactive yocto shell"
+    tags:
+      - verdin
+
+# Build tdx-reference-minimal-image
+job=moducop-cpu01-build-minimal-image:
+  use: image-kas
+  depends:
+    - moducop-cpu01-envs
+  sources:
+    - moducop-cpu01/kasfile.yaml
+  artifact:
+    - moducop-cpu01/install/images/
+  command: "build /repo/kasfile.yaml"
+  mounts:
+    - build-dir-cpu01
+    - repo-dir-cpu01
+    - download-dir-cpu01
+    - sstate-dir-cpu01
+    - install-dir-cpu01
+  working-dir: /work
+  interactive: true
+  env:
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - TERM=xterm-256color
+    - SHELL=/bin/bash
+    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
+    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
+    - MENDER_ARTIFACT_NAME={env.GitVersion_BranchVersion}{env.MENDER_ARTIFACT_DEV_SUFFIX}
+    - IMAGE_GIT_VERSION={env.GitVersion_BranchVersion}
+    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
+  annotations:
+    description: "Build tdx-reference-minimal-image"
+    tags:
+      - verdin
+
+# Clean 
+job=moducop-cpu01-clean:
+  use: image-kas
+  entrypoint: rm -rf /downloads/ /sstate-cache/ /install/ /build/
+  mounts:
+    - build-dir-cpu01
+    - repo-dir-cpu01
+    - download-dir-cpu01
+    - sstate-dir-cpu01
+    - install-dir-cpu01
+  working-dir: /work
+  interactive: true
+  env:
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - TERM=xterm-256color
+    - SHELL=/bin/bash
+  annotations:
+    description: "Cleanup"
+    tags:
+      - verdin

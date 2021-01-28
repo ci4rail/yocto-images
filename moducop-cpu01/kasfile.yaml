@@ -98,7 +98,7 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: dunfell
+    refspec: feature/moducop
 
 bblayers_conf_header:
   src/meta-custom: |
@@ -153,7 +153,7 @@ local_conf_header:
     OFFSET_SPL_PAYLOAD_verdin-imx8mm = ""
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
-    IMAGE_INSTALL_append = " nano"
+    IMAGE_INSTALL_append = " nano pciutils minicom"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     MENDER_STORAGE_TOTAL_SIZE_MB = "4096"

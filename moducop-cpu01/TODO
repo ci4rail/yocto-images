@@ -1,0 +1,8 @@
+Remove
+    alsa
+    ina2xx
+    wm8904
+    mcp25xxfd
+Add
+    ethtool
+    lan74xx

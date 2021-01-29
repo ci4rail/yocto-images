@@ -94,6 +94,11 @@ repos:
     refspec: 2120d69c3d63405da5dcba2cefc678944b85a582
     layers:
       meta-mender-toradex-nxp:
+  
+  # docker
+  src/meta-virtualization:
+    url: git://git.yoctoproject.org/meta-virtualization
+    refspec: dunfell
 
   # ci4rail
   src/meta-ci.os:
@@ -137,8 +142,7 @@ local_conf_header:
     INHERIT += "toradex-mirrors"
     DISTRO = "tdx-xwayland"
     include conf/machine/include/${MACHINE}.inc
-    INHERIT += "mender-full"
-    DISTRO_FEATURES_append = " systemd"
+    INHERIT += "mender-full-with-docker-overlay"
     VIRTUAL-RUNTIME_init_manager = "systemd"
     DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
     VIRTUAL-RUNTIME_initscripts = ""
@@ -153,7 +157,8 @@ local_conf_header:
     OFFSET_SPL_PAYLOAD_verdin-imx8mm = ""
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
-    IMAGE_INSTALL_append = " nano"
+    DISTRO_FEATURES_append = " systemd virtualization"
+    IMAGE_INSTALL_append = " nano docker-ce ca-certificates"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     MENDER_STORAGE_TOTAL_SIZE_MB = "4096"

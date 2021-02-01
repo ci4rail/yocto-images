@@ -114,7 +114,7 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: dunfell
+    refspec: feature/docker
 
 bblayers_conf_header:
   src/meta-custom: |

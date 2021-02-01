@@ -100,10 +100,21 @@ repos:
     url: git://git.yoctoproject.org/meta-virtualization
     refspec: dunfell
 
+  # iotedge and dependencies (rust)
+  # fixed revision 6840cf2a from branch `dunfell`
+  src/meta-iotedge:
+    url: https://github.com/Azure/meta-iotedge.git
+    refspec: 6840cf2afb51b4f2c535a05d5635736652f664f7
+    
+  src/meta-rust:
+  # fixed revision e4d25b98 from branch `master`
+    url: git://github.com/meta-rust/meta-rust.git
+    refspec: e4d25b98083bcecb94df6ee189a165d63ede7f3d
+    
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: dunfell
+    refspec: feature/docker
 
 bblayers_conf_header:
   src/meta-custom: |
@@ -142,7 +153,7 @@ local_conf_header:
     INHERIT += "toradex-mirrors"
     DISTRO = "tdx-xwayland"
     include conf/machine/include/${MACHINE}.inc
-    INHERIT += "mender-full-with-docker-overlay"
+    INHERIT += "mender-full"
     VIRTUAL-RUNTIME_init_manager = "systemd"
     DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
     VIRTUAL-RUNTIME_initscripts = ""
@@ -158,7 +169,7 @@ local_conf_header:
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
     DISTRO_FEATURES_append = " systemd virtualization"
-    IMAGE_INSTALL_append = " nano docker-ce ca-certificates"
+    IMAGE_INSTALL_append = " nano docker-ce ca-certificates iotedge-daemon iotedge-cli overlay-directories"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     MENDER_STORAGE_TOTAL_SIZE_MB = "4096"

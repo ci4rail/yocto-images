@@ -81,10 +81,10 @@ repos:
     url: "https://git.toradex.com/meta-toradex-distro.git"
     refspec: 1e0d10b2851ac455618ab7e4c7db86c9ad1227a0
 
-  # mender, from: https://raw.githubusercontent.com/mendersoftware/meta-mender-community/dunfell/scripts/mender-no-setup-layers.xml
+  # mender
   src/meta-mender:
     url: "https://github.com/mendersoftware/meta-mender"
-    refspec: 850a275ad65fc730b8b74c9ee9397091395ddbd6
+    refspec: f5864bfb32906b87cc24d5b84e74805994f0ef3e
     layers:
       meta-mender-core:
       meta-mender-demo:

@@ -98,7 +98,7 @@ repos:
   # docker
   src/meta-virtualization:
     url: git://git.yoctoproject.org/meta-virtualization
-    refspec: dunfell
+    refspec: 92cd3467502bd27b98a76862ca6525ce425a8479
 
   # iotedge and dependencies (rust)
   # fixed revision 6840cf2a from branch `dunfell`

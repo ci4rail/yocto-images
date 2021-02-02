@@ -169,7 +169,7 @@ local_conf_header:
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
     DISTRO_FEATURES_append = " systemd virtualization"
-    IMAGE_INSTALL_append = " nano docker-ce ca-certificates iotedge-daemon iotedge-cli overlay-directories"
+    IMAGE_INSTALL_append = " nano docker-ce ca-certificates iotedge-daemon iotedge-cli overlay-directories persistent-journald"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     MENDER_STORAGE_TOTAL_SIZE_MB = "4096"

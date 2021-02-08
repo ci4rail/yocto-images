@@ -1,0 +1,190 @@
+resources:
+  # Upstream docker images
+  - name: image-bb-gitversion-tool
+    type: docker-image
+    source:
+      repository: elbb/bb-gitversion
+      tag: 0.7.0
+
+  - name: image-aws-cli
+    type: docker-image
+    source:
+      repository: amazon/aws-cli
+      tag: 2.0.22
+
+  - name: image-bash-utils
+    type: docker-image
+    source:
+      repository: cfmanteiga/alpine-bash-curl-jq
+      tag: latest
+
+  - name: image-kas
+    type: docker-image
+    source:
+      repository: ghcr.io/siemens/kas/kas
+      tag: 2.3.3
+
+  # S3 buckets
+  - name: s3-gitversion
+    type: s3
+    source:
+      bucket: ((name))
+      endpoint: ((s3_endpoint))
+      regexp: ((name))/gitversion/gitversion-(.*).tar.gz
+      access_key_id: ((s3_access_key))
+      secret_access_key: ((s3_secret_key))
+      disable_ssl: ((s3_skip_ssl_verification))
+
+  - name: s3-tezi-file
+    type: s3
+    source:
+      bucket: ((name))
+      regexp: ((name))/Verdin-IMX8MM_Bringup-Image_CI.OS.LMP-(.*).mender_tezi.tar
+      access_key_id: ((s3_access_key))
+      secret_access_key: ((s3_secret_key))
+      endpoint: ((s3_endpoint))
+      disable_ssl: ((s3_skip_ssl_verification))
+  
+  - name: s3-mender-artifact
+    type: s3
+    source:
+      bucket: ((name))
+      regexp: ((name))/Verdin-IMX8MM_Bringup-Image_CI.OS.LMP-(.*).mender
+      access_key_id: ((s3_access_key))
+      secret_access_key: ((s3_secret_key))
+      endpoint: ((s3_endpoint))
+      disable_ssl: ((s3_skip_ssl_verification))
+
+  # Git sources
+  - name: source
+    type: git
+    source:
+      uri: ((git_source))
+      private_key: ((privatekey))
+      branch: ((git_branch))
+      paths: ((git_paths))
+      skip_ssl_verification: ((git_skip_ssl_verification))
+
+jobs:
+  - name: generate-gitversion-and-put-it-on-s3
+    public: true
+    plan:
+      - in_parallel:
+          - get: image-bb-gitversion-tool
+          - get: source
+            trigger: true
+          - get: image-aws-cli
+      - task: generate-version
+        image: image-bb-gitversion-tool
+        config:
+          platform: linux
+          inputs:
+            - name: source
+          outputs:
+            - name: gitversion
+          run:
+            path: /bin/bash
+            args:
+              - -exc
+              - |
+                entrypoint.sh && 
+                jq empty gitversion/json/gitversion.json &&
+                cat gitversion/json/gitversion.json &&
+                tar cvfz gitversion/gitversion-$(cat gitversion/plain/BranchVersion).tar.gz gitversion/*
+          params:
+            GIT_PATH: source
+            GEN_PATH: gitversion
+      - task: check-or-create-bucket-for-((name))-on-s3
+        image: image-aws-cli
+        config:
+          platform: linux
+          run:
+            path: /bin/bash
+            args:
+              - -xc
+              - |
+                mkdir -p ~/.aws
+                # hide setting credentials in plain text in concourse ui
+                set +x
+                export TERM="xterm-256color"
+                echo "[default]" > ~/.aws/credentials
+                echo "aws_access_key_id=((s3_access_key))" >> ~/.aws/credentials
+                echo "aws_secret_access_key=((s3_secret_key))" >> ~/.aws/credentials
+                set -x
+                # check if bucket exists on s3 endpoint. If not create one
+                aws --endpoint-url ((s3_endpoint)) s3api head-bucket --bucket ((name)) 2> /dev/null
+                if [ $? != 0 ]; then aws s3 mb s3://((name)) --endpoint-url ((s3_endpoint)); fi
+      - put: s3-gitversion
+        params:
+          file: gitversion/gitversion-*.tar.gz
+          acl: public-read
+
+  - name: build-((name))
+    public: true
+    plan:
+      - in_parallel:
+          - get: source
+          - get: s3-gitversion
+            passed: [generate-gitversion-and-put-it-on-s3]
+            trigger: true
+            params:
+              unpack: true
+          - get: image-bash-utils
+          - get: image-kas
+      - task: prepare-build-environment-variables
+        image: image-bash-utils
+        config:
+          platform: linux
+          inputs:
+            - name: s3-gitversion
+          outputs:
+            - name: build-envs
+          run:
+            path: /bin/bash
+            args:
+              - -c
+              - |
+                echo Generating build environment variables:
+                echo MENDER_ARTIFACT_DEV_SUFFIX=((MENDER_ARTIFACT_DEV_SUFFIX)) > build-envs/env
+                echo IMAGE_NAME_SUFFIX=((IMAGE_NAME_SUFFIX)) >> build-envs/env
+                echo MENDER_ARTIFACT_NAME=$(cat s3-gitversion/gitversion/plain/BranchVersion)${MENDER_ARTIFACT_DEV_SUFFIX} >> build-envs/env
+                echo MENDER_SERVER_URL=((MENDER_SERVER_URL)) >> build-envs/env
+                echo MENDER_TENANT_TOKEN=((MENDER_TENANT_TOKEN)) >> build-envs/env
+                echo HOSTED_MENDER_USER_EMAIL=((HOSTED_MENDER_USER_EMAIL)) >> build-envs/env
+                echo HOSTED_MENDER_PASSWORD=((HOSTED_MENDER_PASSWORD)) >> build-envs/env
+                echo IMAGE_GIT_VERSION=$(cat s3-gitversion/gitversion/plain/BranchVersion) >> build-envs/env
+
+      - task: build-tezi-file
+        image: image-kas
+        config:
+          platform: linux
+          inputs:
+            - name: source
+            - name: build-envs
+          outputs:
+            - name: install
+          run:
+            path: /bin/bash
+            args:
+              - -ec
+              - |
+                ROOT=$(pwd)
+                mkdir -p /install /sstate-cache /downloads
+                USER_ID=30000
+                GROUP_ID=30000
+                chown -R ${USER_ID}:${GROUP_ID} /install /sstate-cache /downloads source
+                set -o allexport; source ${ROOT}/build-envs/env; set +o allexport
+                cd ${ROOT}/source/mender-on-verdin
+                /kas/container-entrypoint build kasfile.yaml
+                cp -r /install/images/Moducop-CPU01/Verdin-IMX8MM_Bringup-Image_CI.OS.LMP*.mender_tezi.tar ${ROOT}/install
+                cp -r /install/images/Moducop-CPU01/Verdin-IMX8MM_Bringup-Image_CI.OS.LMP*.mender ${ROOT}/install
+
+      - put: s3-tezi-file
+        params:
+          file: install/Verdin-IMX8MM_Bringup-Image_CI.OS.LMP-*.mender_tezi.tar
+          acl: public-read
+          
+      - put: s3-mender-artifact
+        params:
+          file: install/Verdin-IMX8MM_Bringup-Image_CI.OS.LMP-*.mender
+          acl: public-read

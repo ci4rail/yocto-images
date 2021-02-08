@@ -8,8 +8,8 @@ meta:
     - version.yaml
     - dobi.yaml
     - tools/curl/dobi.yaml
-    - mender-on-verdin/dobi.yaml
     - moducop-cpu01/dobi.yaml
+    - verdindevboard/dobi.yaml
 
 # ===================================================
 # alias
@@ -21,7 +21,8 @@ alias=version:
 
 alias=build-all:
   tasks:
-    - mender-on-verdin-build-minimal-image
+    - verdindevboard-build-bringup-image
+    - moducop-cpu01-build-bringup-image
   annotations:
     description: "[alias] build all images"
 

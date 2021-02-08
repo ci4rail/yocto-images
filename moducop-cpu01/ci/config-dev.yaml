@@ -2,7 +2,7 @@
 # Project configuration
 # -----------------------------
 ## Defines the name for the project
-name: mender-on-verdin
+name: moducop-cpu01
 
 # Git configuration
 # -----------------
@@ -12,7 +12,7 @@ git_source: git@github.com:ci4rail/ci.os.lmp.git
 git_branch: main
 ## Specify the git paths to monitor
 git_paths:
-  - mender-on-verdin
+  - moducop-cpu01
 ## This enables/disables ssl verification of the git resource
 git_skip_ssl_verification: false
 

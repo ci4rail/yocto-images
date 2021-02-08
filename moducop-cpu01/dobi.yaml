@@ -68,8 +68,8 @@ job=moducop-cpu01-yocto-shell:
     tags:
       - verdin
 
-# Build tdx-reference-minimal-image
-job=moducop-cpu01-build-minimal-image:
+# Build bringup-image
+job=moducop-cpu01-build-bringup-image:
   use: image-kas
   depends:
     - moducop-cpu01-envs
@@ -97,7 +97,7 @@ job=moducop-cpu01-build-minimal-image:
     - IMAGE_GIT_VERSION={env.GitVersion_BranchVersion}
     - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
   annotations:
-    description: "Build tdx-reference-minimal-image"
+    description: "Build ci4rail-bringup-image"
     tags:
       - verdin
 

@@ -5,7 +5,7 @@ machine: moducop-cpu01
 # The distro name as it is written into the `local.conf` of bitbake.
 distro: tdx-xwayland
 # The target that is built by bitbake
-target: tdx-reference-minimal-image
+target: ci4rail-bringup-image
 
 repos:
   # from txd: https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=dunfell-5.x.y

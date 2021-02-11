@@ -14,9 +14,13 @@ Yocto builds are performed using kas: https://github.com/siemens/kas
 Project to integrate mender.io layer on top of toradex layers for toradex verdin module. It can be either build locally using dobi or via Concourse CI.
 
 See [CI/CD Readme](mender-on-verdin/README.md) for information about the CI/CD build.
-Before building this locally using dobiyou need to enter your your mender specific data into `mender-on-verdin/config/mender.env`.
+Before building this locally using dobi you need to enter your your mender specific data into `mender-on-verdin/config/mender.env`.
 
-**Current status:** Toradex yocto can be built with mender integration. 
+## moducop-cpu01
+
+Project to build images for Moducop CPU01
+
+You need to enter your your mender specific data into `moducop-cpu01/config/mender.env`.
 
 
 ## Running developer builds locally

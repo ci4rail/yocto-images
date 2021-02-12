@@ -8,24 +8,24 @@ distro: tdx-xwayland
 target: ci4rail-bringup-image
 
 repos:
-  # from txd: https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=dunfell-5.x.y
+  # from https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=5.1.0
   #
   src/bitbake:
     url: "https://github.com/openembedded/bitbake.git"
-    refspec: 838a89141fd6a75da9f982ad2b035e823b692d2a
+    refspec: 89fc9450abefd682266efcbfa031d1ef115ff1a7
     layers:
       # bitbake is no layer. Exclude it from bblayers.conf
       bitbake: "no"
   
   src/openembedded-core:
     url: "https://github.com/openembedded/openembedded-core.git"
-    refspec: 0d4d0df6084cce3c3d9051db88f3199a030d3352
+    refspec: b885888df67eb5cdb3b82f4f0a07369a449e223b
     layers:
       meta:
 
   src/meta-openembedded:
     url: "https://github.com/openembedded/meta-openembedded.git"
-    refspec: 654ad8bea49f142d20b2b96c0dd44810a6be233a
+    refspec: f2d02cb71eaff8eb285a1997b30be52486c160ae
     layers:
       meta-oe:
       meta-networking:
@@ -38,48 +38,48 @@ repos:
 
   src/meta-yocto:
     url: "https://git.yoctoproject.org/git/meta-yocto.git"
-    refspec: 432b365f48f58ec0d9692a93607b65edd098ca1a
+    refspec: c1c79c1a122b053fb3ce0187b3cc89df1bb3bdd6
     layers:
       meta-poky:
 
-  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=dunfell-5.x.y
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=5.1.0
   src/meta-freescale-3rdparty.git:
     url: "https://github.com/Freescale/meta-freescale-3rdparty.git"
-    refspec: 83644f2ea000c1ab92fc0da1c45e2d7fb7a6060c
+    refspec: 05b1746a4adc240b690fe965ac5b8a043d9b9d03
 
   src/meta-freescale-distro:
     url: "https://github.com/Freescale/meta-freescale-distro.git"
-    refspec: a1821b36af7bba4f6628e4244df7fc9a038d0f34
+    refspec: 5d882cdf079b3bde0bd9869ce3ca3db411acbf3b
   
   src/meta-freescale:
     url: "https://github.com/Freescale/meta-freescale.git"
-    refspec: bb582837c8c1ee08255b721f0bf946d6074c4773
+    refspec: 46f54fdc5ad854a22bf759aac7fd65db1d1bb574
 
   # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-tdx.xml?h=dunfell-5.x.y
   src/meta-toradex-bsp-common:
     url: "https://git.toradex.com/meta-toradex-bsp-common.git"
-    refspec: 51927b354280c398b11b7b6bd64c1617825f17d1
+    refspec: cdbfe017be9096adbbfb4d3bbea0421e44f54cf3
 
   src/meta-toradex-nxp:
     url: "https://git.toradex.com/meta-toradex-nxp.git"
-    refspec: fddb6cc10a1df717cc77b6958ce5e233cef9a80a
+    refspec: 8e762e3c8ec5c84f76254f442f37c70dfb7e1b68
 
   src/meta-toradex-tegra:
     url: "https://git.toradex.com/meta-toradex-tegra.git"
-    refspec: 962b01390fdc261b5f86921231792daa8f6af043
+    refspec: b214067b27204f471cf405a1e3997d3da233a8f9
 
-  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/tdxref/default.xml?h=dunfell-5.x.y
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/tdxref/default.xml?h=5.1.0
   src/meta-qt5:
     url: "https://github.com/meta-qt5/meta-qt5.git"
-    refspec: 0e7015f7a86dda995a39662edbb5c26da647c496
+    refspec: 0d8eb956015acdea7e77cd6672d08dce18061510
 
   src/meta-toradex-demos:
     url: "https://git.toradex.com/meta-toradex-demos.git"
-    refspec: 93c179932a1a282bb56823ee202e387ced41f388
+    refspec: 38705bdc1ff671597680c5a9c9d1a76822bb5620
 
   src/meta-toradex-distro:
     url: "https://git.toradex.com/meta-toradex-distro.git"
-    refspec: 1e0d10b2851ac455618ab7e4c7db86c9ad1227a0
+    refspec: 48913ab629a231913e3e147e93e57f7cf6019ac6
 
   # mender, from: https://raw.githubusercontent.com/mendersoftware/meta-mender-community/dunfell/scripts/mender-no-setup-layers.xml
   src/meta-mender:

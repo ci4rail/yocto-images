@@ -4,5 +4,7 @@ Remove
     wm8904
     mcp25xxfd
 Add
-    ethtool
-    lan74xx
+    gpsd autostart
+    cpuburn-a53
+
+Change mender artifact name (include Bringup etc.)

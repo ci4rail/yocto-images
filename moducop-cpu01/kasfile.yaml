@@ -98,7 +98,7 @@ repos:
   # docker
   src/meta-virtualization:
     url: git://git.yoctoproject.org/meta-virtualization
-    refspec: 92cd3467502bd27b98a76862ca6525ce425a8479
+    refspec: ff997b6b3ba800978546098ab3cdaa113b6695e1
 
   # iotedge and dependencies (rust)
   # fixed revision 6840cf2a from branch `dunfell`
@@ -114,7 +114,7 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: feature/add-moducop
+    refspec: feature/moducop
 
 bblayers_conf_header:
   src/meta-custom: |

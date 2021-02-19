@@ -10,6 +10,7 @@ meta:
     - tools/curl/dobi.yaml
     - moducop-cpu01/dobi.yaml
     - verdindevboard/dobi.yaml
+    - mender-on-verdin/dobi.yaml
 
 # ===================================================
 # alias

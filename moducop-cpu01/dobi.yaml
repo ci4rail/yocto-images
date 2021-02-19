@@ -93,7 +93,7 @@ job=moducop-cpu01-build-bringup-image:
     - SHELL=/bin/bash
     - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
     - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
-    - MENDER_ARTIFACT_NAME={env.GitVersion_BranchVersion}{env.MENDER_ARTIFACT_DEV_SUFFIX}
+    - MENDER_ARTIFACT_NAME=cpu01-bringup-{env.GitVersion_BranchVersion}{env.MENDER_ARTIFACT_DEV_SUFFIX}
     - IMAGE_GIT_VERSION={env.GitVersion_BranchVersion}
     - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
   annotations:

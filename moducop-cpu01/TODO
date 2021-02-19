@@ -8,4 +8,4 @@ Add
     cpuburn-a53
 
 Change mender artifact name (include Bringup etc.)
-ppp?
+*Merge meta-ci.os with dunfell branch

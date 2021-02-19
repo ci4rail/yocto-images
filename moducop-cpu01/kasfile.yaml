@@ -81,10 +81,10 @@ repos:
     url: "https://git.toradex.com/meta-toradex-distro.git"
     refspec: 48913ab629a231913e3e147e93e57f7cf6019ac6
 
-  # mender, from: https://raw.githubusercontent.com/mendersoftware/meta-mender-community/dunfell/scripts/mender-no-setup-layers.xml
+  # mender
   src/meta-mender:
     url: "https://github.com/mendersoftware/meta-mender"
-    refspec: 850a275ad65fc730b8b74c9ee9397091395ddbd6
+    refspec: f5864bfb32906b87cc24d5b84e74805994f0ef3e
     layers:
       meta-mender-core:
       meta-mender-demo:
@@ -95,6 +95,22 @@ repos:
     layers:
       meta-mender-toradex-nxp:
 
+  # docker
+  src/meta-virtualization:
+    url: git://git.yoctoproject.org/meta-virtualization
+    refspec: 92cd3467502bd27b98a76862ca6525ce425a8479
+
+  # iotedge and dependencies (rust)
+  # fixed revision 6840cf2a from branch `dunfell`
+  src/meta-iotedge:
+    url: https://github.com/Azure/meta-iotedge.git
+    refspec: 6840cf2afb51b4f2c535a05d5635736652f664f7
+    
+  src/meta-rust:
+  # fixed revision e4d25b98 from branch `master`
+    url: git://github.com/meta-rust/meta-rust.git
+    refspec: e4d25b98083bcecb94df6ee189a165d63ede7f3d
+    
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
@@ -138,7 +154,7 @@ local_conf_header:
     DISTRO = "tdx-xwayland"
     include conf/machine/include/${MACHINE}.inc
     INHERIT += "mender-full"
-    DISTRO_FEATURES_append = " systemd"
+    DISTRO_FEATURES_append = " systemd virtualization"
     VIRTUAL-RUNTIME_init_manager = "systemd"
     DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
     VIRTUAL-RUNTIME_initscripts = ""
@@ -153,7 +169,8 @@ local_conf_header:
     OFFSET_SPL_PAYLOAD_verdin-imx8mm = ""
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
-    IMAGE_INSTALL_append = " nano pciutils minicom fio"
+    IMAGE_INSTALL_append = " nano pciutils minicom fio nano docker-ce ca-certificates \
+        iotedge-daemon iotedge-cli overlay-directories persistent-journald kyt-dlm-devinfo-static device-state-service"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     MENDER_STORAGE_TOTAL_SIZE_MB = "4096"

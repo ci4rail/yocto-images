@@ -132,6 +132,10 @@ bblayers_conf_header:
     BBPATH = "${TOPDIR}"
     BBFILES ?= ""
 
+env:
+  MENDER_SERVER_URL: "https://hosted.mender.io"
+  MENDER_TENANT_TOKEN: "DEFAULT_EMPTY_TENANT_TOKEN"
+  IMAGE_NAME_SUFFIX: ""
 
 local_conf_header:
   src/meta-custom: |

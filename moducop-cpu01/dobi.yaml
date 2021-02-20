@@ -41,16 +41,31 @@ env=moducop-cpu01-envs:
 
 # Get layer revisions
 job=moducop-cpu01-layer-revparse:
-  use: image-buildingblock-gitversion
-  command: "/git/layer-revparse.sh /git/moducop-cpu01/src /git/moducop-cpu01/layer-revs"
+  use: image-kas
+  entrypoint: /git/layer-revparse.sh /git/moducop-cpu01/src /git/moducop-cpu01/layer-revs
   mounts:
     - mount-buildingblock-gitversion-source-dir
-  sources: /git/moducop-cpu01/src
+  sources: moducop-cpu01/src
   artifact: /git/moducop-cpu01/layer-revs
-  env:
-    - "USERID={user.uid}"
+  user: "{user.uid}:{user.gid}"
   annotations:
     description: "get layer revisions"
+    tags:
+      - cpu01
+
+# Generate dynamic kasfile-image-naming.yaml
+job=moducop-cpu01-gen-image-version:
+  use: image-kas
+  entrypoint: /git/gen-image-version.sh /git /git/moducop-cpu01/layer-revs /git/moducop-cpu01/generated-kasfile-image-naming.yaml
+  mounts:
+    - mount-buildingblock-gitversion-source-dir
+  sources: moducop-cpu01/layer-revs
+  artifact: /git/moducop-cpu01/generated-kasfile-image-naming.yaml
+  user: "{user.uid}:{user.gid}"
+  env:
+    - "USER={user.name}"
+  annotations:
+    description: "Generate image version"
     tags:
       - cpu01
 

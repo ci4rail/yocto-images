@@ -8,3 +8,4 @@ gen/
 */sstate-cache/
 .env
 downloads
+generated*

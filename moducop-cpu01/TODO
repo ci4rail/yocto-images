@@ -7,5 +7,5 @@ Add
     gpsd autostart
     cpuburn-a53
 
-Change mender artifact name (include Bringup etc.)
+*Change mender artifact name (include Bringup etc.)
 *Merge meta-ci.os with dunfell branch

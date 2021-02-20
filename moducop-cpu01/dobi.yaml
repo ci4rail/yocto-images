@@ -39,6 +39,22 @@ env=moducop-cpu01-envs:
 # jobs
 # ===================================================
 
+# Get layer revisions
+job=moducop-cpu01-layer-revparse:
+  use: image-buildingblock-gitversion
+  command: "/git/layer-revparse.sh /git/moducop-cpu01/src /git/moducop-cpu01/layer-revs"
+  mounts:
+    - mount-buildingblock-gitversion-source-dir
+  sources: /git/moducop-cpu01/src
+  artifact: /git/moducop-cpu01/layer-revs
+  env:
+    - "USERID={user.uid}"
+  annotations:
+    description: "get layer revisions"
+    tags:
+      - cpu01
+
+
 # Interactive yocto shell
 job=moducop-cpu01-yocto-shell:
   use: image-kas
@@ -66,7 +82,7 @@ job=moducop-cpu01-yocto-shell:
   annotations:
     description: "interactive yocto shell"
     tags:
-      - verdin
+      - cpu01
 
 # Build bringup-image
 job=moducop-cpu01-build-bringup-image:
@@ -99,7 +115,7 @@ job=moducop-cpu01-build-bringup-image:
   annotations:
     description: "Build ci4rail-bringup-image"
     tags:
-      - verdin
+      - cpu01
 
 # Clean 
 job=moducop-cpu01-clean:
@@ -121,4 +137,4 @@ job=moducop-cpu01-clean:
   annotations:
     description: "Cleanup"
     tags:
-      - verdin
+      - cpu01

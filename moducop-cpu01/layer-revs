@@ -1,0 +1,19 @@
+bitbake: 89fc9450abefd682266efcbfa031d1ef115ff1a7
+meta-ci.os: 39e48535e154f336b46e58813b914d92e84021d7 (dirty)
+meta-freescale: 46f54fdc5ad854a22bf759aac7fd65db1d1bb574
+meta-freescale-3rdparty.git: 05b1746a4adc240b690fe965ac5b8a043d9b9d03
+meta-freescale-distro: 5d882cdf079b3bde0bd9869ce3ca3db411acbf3b
+meta-iotedge: 6840cf2afb51b4f2c535a05d5635736652f664f7
+meta-mender: f5864bfb32906b87cc24d5b84e74805994f0ef3e
+meta-mender-community: 2120d69c3d63405da5dcba2cefc678944b85a582
+meta-openembedded: f2d02cb71eaff8eb285a1997b30be52486c160ae
+meta-qt5: 0d8eb956015acdea7e77cd6672d08dce18061510
+meta-rust: e4d25b98083bcecb94df6ee189a165d63ede7f3d
+meta-toradex-bsp-common: cdbfe017be9096adbbfb4d3bbea0421e44f54cf3
+meta-toradex-demos: 38705bdc1ff671597680c5a9c9d1a76822bb5620
+meta-toradex-distro: 48913ab629a231913e3e147e93e57f7cf6019ac6
+meta-toradex-nxp: 8e762e3c8ec5c84f76254f442f37c70dfb7e1b68
+meta-toradex-tegra: b214067b27204f471cf405a1e3997d3da233a8f9
+meta-virtualization: ff997b6b3ba800978546098ab3cdaa113b6695e1
+meta-yocto: c1c79c1a122b053fb3ce0187b3cc89df1bb3bdd6
+openembedded-core: b885888df67eb5cdb3b82f4f0a07369a449e223b

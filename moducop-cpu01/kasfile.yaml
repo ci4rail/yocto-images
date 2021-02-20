@@ -1,5 +1,16 @@
+#
+# This kasfile requires a second kasfile to be included from 
+# the kas command line 
+# e.g. "build kasfile.yaml:kasfile-image-naming.yaml"
+#
+# The intention is that the ci pipeline uses a static file
+# kasfile-image-naming.yaml, while local dobi builds
+# use a dynamically generated .yaml file
 header:
   version: 9
+  includes:
+    - kasfile-image-naming.yaml
+
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01
 # The distro name as it is written into the `local.conf` of bitbake.
@@ -121,12 +132,6 @@ bblayers_conf_header:
     BBPATH = "${TOPDIR}"
     BBFILES ?= ""
 
-env:
-  MENDER_ARTIFACT_NAME: "DEFAULT_EMPTY_ARTIFACT_NAME"
-  MENDER_SERVER_URL: "https://hosted.mender.io"
-  MENDER_TENANT_TOKEN: "DEFAULT_EMPTY_TENANT_TOKEN"
-  IMAGE_GIT_VERSION: ""
-  IMAGE_NAME_SUFFIX: ""
 
 local_conf_header:
   src/meta-custom: |

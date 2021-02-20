@@ -60,7 +60,7 @@ job=moducop-cpu01-yocto-shell:
   use: image-kas
   depends:
     - moducop-cpu01-envs
-  command: "shell /repo/kasfile.yaml"
+  command: "shell /repo/kasfile.yaml:kasfile-image-naming.yaml"
   mounts:
     - build-dir-cpu01
     - repo-dir-cpu01
@@ -93,7 +93,7 @@ job=moducop-cpu01-build-bringup-image:
     - moducop-cpu01/kasfile.yaml
   artifact:
     - moducop-cpu01/install/images/
-  command: "build /repo/kasfile.yaml"
+  command: "build /repo/kasfile.yaml:kasfile-image-naming.yaml"
   mounts:
     - build-dir-cpu01
     - repo-dir-cpu01

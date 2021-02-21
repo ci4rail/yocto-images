@@ -53,12 +53,16 @@ job=moducop-cpu01-layer-revparse:
     tags:
       - cpu01
 
-# Generate dynamic kasfile-image-naming.yaml
-job=moducop-cpu01-gen-image-version:
+# Generate dynamic kasfile-image-naming.yaml for bringup image
+job=moducop-cpu01-bringup-gen-image-version:
   use: image-kas
   depends:
     - moducop-cpu01-layer-revparse
-  entrypoint: /git/gen-image-version.sh /git /git/moducop-cpu01/layer-revs /git/moducop-cpu01/generated-kasfile-image-naming.yaml
+  entrypoint: /git/gen-image-version.sh
+    /git
+    /git/moducop-cpu01/layer-revs
+    cpu01-bringup
+    /git/moducop-cpu01/generated-bringup-kasfile-image-naming.yaml
   mounts:
     - mount-buildingblock-gitversion-source-dir
   sources: moducop-cpu01/layer-revs
@@ -67,18 +71,18 @@ job=moducop-cpu01-gen-image-version:
   env:
     - "USER={user.name}"
   annotations:
-    description: "Generate image version"
+    description: "Generate cpu01-bringup image version"
     tags:
       - cpu01
 
 
 # Interactive yocto shell
+# Warning: Image/Mender artifact names will be defaults!
 job=moducop-cpu01-yocto-shell:
   use: image-kas
   depends:
     - moducop-cpu01-envs
-    - moducop-cpu01-gen-image-version
-  command: "shell /repo/kasfile.yaml:generated-kasfile-image-naming.yaml"
+  command: "shell /repo/kasfile.yaml:kasfile-image-naming.yaml"
   mounts:
     - build-dir-cpu01
     - repo-dir-cpu01
@@ -105,12 +109,12 @@ job=moducop-cpu01-build-bringup-image:
   use: image-kas
   depends:
     - moducop-cpu01-envs
-    - moducop-cpu01-gen-image-version
+    - moducop-cpu01-bringup-gen-image-version
   sources:
     - moducop-cpu01/kasfile.yaml
   artifact:
     - moducop-cpu01/install/images/
-  command: "build /repo/kasfile.yaml:generated-kasfile-image-naming.yaml"
+  command: "build /repo/kasfile.yaml:generated-bringup-kasfile-image-naming.yaml"
   mounts:
     - build-dir-cpu01
     - repo-dir-cpu01

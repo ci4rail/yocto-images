@@ -16,14 +16,15 @@
 
 set -e
 
-if [ "$#" -ne 3 ] ; then
-    echo "Usage: ${0} <git-root> <layer-refs file> <outfile>"
+if [ "$#" -ne 4 ] ; then
+    echo "Usage: ${0} <git-root> <layer-refs file> <mender-artifact-prefix> <outfile>"
     exit 1
 fi
 
 git_root=${1}
 layer_refs=${2}
-out_file=${3}
+mender_prefix=${3}
+out_file=${4}
 
 is_dirty=0
 
@@ -63,6 +64,7 @@ fi
 echo "header:
   version: 9
 env:
-  MENDER_ARTIFACT_NAME: ${version}
+  MENDER_ARTIFACT_NAME: ${mender_prefix}-${version}
   IMAGE_GIT_VERSION: ${version}" > ${out_file}
 
+cat ${out_file}

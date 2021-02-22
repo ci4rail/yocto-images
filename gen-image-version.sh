@@ -15,6 +15,7 @@
 # This script is expected to be called by dobi
 
 set -e
+set -x
 
 if [ "$#" -ne 4 ] ; then
     echo "Usage: ${0} <git-root> <layer-refs file> <mender-artifact-prefix> <outfile>"

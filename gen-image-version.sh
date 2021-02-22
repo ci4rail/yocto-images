@@ -15,7 +15,6 @@
 # This script is expected to be called by dobi
 
 set -e
-set -x
 
 if [ "$#" -ne 4 ] ; then
     echo "Usage: ${0} <git-root> <layer-refs file> <mender-artifact-prefix> <outfile>"
@@ -44,11 +43,10 @@ echo "top level repo is dirty: ${is_dirty} ${stat}"
 
 if [ ${is_dirty} -eq 0 ]; then
     # check if one of the layer repos is dirty
-    stat=`grep \(dirty\) ${layer_refs}`
-    if [ ! -z "${stat}" ]; then
+    if [ $(grep \(dirty\) ${layer_refs}) -eq 0 ]; then
         is_dirty=1
     fi
-    echo "Layer refs are dirty: ${is_dirty} ${stat}"
+    echo "Layer refs are dirty: ${is_dirty}"
 fi
 
 # replace slashes in branch name with -

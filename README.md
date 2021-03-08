@@ -108,7 +108,12 @@ Copy and adapt `ci/credentials.template.yaml` it to your needs.
 cp ci/credentials.template.yaml ci/credentials-prod.yaml
 ```
 
-*Note: `ci/config-prod.yaml` is the production configuration. It monitors the directory `mender-on-verdin` on `master` branch for changes and triggeres a build. Under normal circumstances no modifications are needed in this file. If you want to test something out you can modify and use `ci/config-dev.yaml`*
+*Note: `ci/config-prod.yaml` is the production configuration. It monitors the directory `yocto` on `master` branch for changes and triggeres a build. Under normal circumstances no modifications are needed in this file. If you want to test something out you can modify and use `ci/config-dev.yaml`*
 
 *Note: `ci/credentials-prod.yaml` and `ci/credentials.yaml` are ignored by git. In this file you can store access credentials and keys that won't be checked in. If you are using some third party vault for credentials that integrates well into concourse, you won't need this file.*
 
+
+Example for setting the pipeline:
+```bash
+fly -t prod set-pipeline -c pipeline.yaml -p cpu01-bringup-image -l ci/config-dev.yaml -l ci/credentials.yaml -v name=cpu01-bringup
+```

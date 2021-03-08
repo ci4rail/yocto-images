@@ -24,6 +24,12 @@ resources:
       repository: ghcr.io/siemens/kas/kas
       tag: 2.3.3
 
+  - name: image-mender-cli
+    type: docker-image
+    source:
+      repository: ci4rail/mender-cli
+      tag: master-2021-03-08
+
   # S3 buckets
   - name: s3-gitversion
     type: s3
@@ -131,6 +137,7 @@ jobs:
               unpack: true
           - get: image-bash-utils
           - get: image-kas
+          - get: image-mender-cli
       - task: prepare-build-environment-variables
         image: image-bash-utils
         config:
@@ -178,6 +185,21 @@ jobs:
                 /kas/container-entrypoint build kasfile-((name)).yaml
                 cp -r /install/images/*/*CI.OS.LMP*.mender_tezi.tar ${ROOT}/install
                 cp -r /install/images/*/*CI.OS.LMP*.mender ${ROOT}/install
+
+      - task: mender-upload
+        image: image-mender-cli
+        config:
+          platform: linux
+          inputs:
+            - name: install
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                /mender-cli login --username ((HOSTED_MENDER_USER_EMAIL)) --password ((HOSTED_MENDER_PASSWORD));
+                ls -l install;
+                /mender-cli artifacts upload install/*.mender;
 
       - put: s3-tezi-file
         params:

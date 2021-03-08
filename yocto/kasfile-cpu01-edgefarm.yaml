@@ -12,13 +12,14 @@ header:
     - kasfile-image-naming.yaml
     - kasfile-tdxbsp.yaml
     - kasfile-mender.yaml
+    - kasfile-iotedge.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01
 # The distro name as it is written into the `local.conf` of bitbake.
 distro: tdx-xwayland
 # The target that is built by bitbake
-target: ci4rail-bringup-image
+target: ci4rail-edgefarm-image
 
 repos:
     
@@ -74,8 +75,8 @@ local_conf_header:
     OFFSET_SPL_PAYLOAD_verdin-imx8mm = ""
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
-    IMAGE_INSTALL_append = " nano docker-ce ca-certificates \
-        overlay-directories persistent-journald"
+    IMAGE_INSTALL_append = " docker-ce ca-certificates \
+        iotedge-daemon iotedge-cli overlay-directories persistent-journald kyt-dlm-devinfo-static device-state-service"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     MENDER_STORAGE_TOTAL_SIZE_MB = "4096"

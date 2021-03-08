@@ -21,6 +21,8 @@ alias=version:
 alias=build-all:
   tasks:
     - cpu01-bringup-build-image
+    - cpu01-edgefarm-build-image
+    - verdindev-edgefarm-build-image
   annotations:
     description: "[alias] build all images"
 

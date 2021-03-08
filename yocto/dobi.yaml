@@ -3,92 +3,89 @@
 # ===================================================
 
 # Where the yocto-build happens
-mount=build-dir-cpu01:
-  bind: moducop-cpu01
+mount=build-dir-yocto:
+  bind: yocto
   path: /work
 
 # The location of kasfile.yaml (kas expects it in /repo)
-mount=repo-dir-cpu01:
-  bind: moducop-cpu01
+mount=repo-dir-yocto:
+  bind: yocto
   path: /repo
   read-only: true
 
 # Yocto downloads DL_DIR
-mount=download-dir-cpu01:
+mount=download-dir-yocto:
   bind: "{env.YOCTO_DOWNLOAD_DIR:downloads}"
   path: /downloads
 
 # Yocto shared state cache SSTATE_DIR
-mount=sstate-dir-cpu01:
-  bind: "{env.YOCTO_SSTATE_CACHE_DIR:}moducop-cpu01/sstate-cache"
+mount=sstate-dir-yocto:
+  bind: "{env.YOCTO_SSTATE_CACHE_DIR:}yocto/sstate-cache"
   path: /sstate-cache
 
 # Yocto images (DEPLOY_DIR)
-mount=install-dir-cpu01:
-  bind: moducop-cpu01/install
+mount=install-dir-yocto:
+  bind: yocto/install
   path: /install
 
 # ===================================================
 # envs
 # ===================================================
 
-env=moducop-cpu01-envs:
-    files: [moducop-cpu01/config/mender.env]
+env=yocto-envs:
+    files: [yocto/config/mender.env]
 
 # ===================================================
 # jobs
 # ===================================================
 
 # Get layer revisions
-job=moducop-cpu01-layer-revparse:
+job=yocto-layer-revparse:
   use: image-kas
-  entrypoint: /git/layer-revparse.sh /git/moducop-cpu01/src /git/moducop-cpu01/layer-revs
+  entrypoint: /git/layer-revparse.sh /git/yocto/src /git/yocto/layer-revs
   mounts:
     - mount-buildingblock-gitversion-source-dir
-  sources: moducop-cpu01/src
-  artifact: /git/moducop-cpu01/layer-revs
+  sources: yocto/src
+  artifact: /git/yocto/layer-revs
   user: "{user.uid}:{user.gid}"
-  annotations:
-    description: "get layer revisions"
-    tags:
-      - cpu01
+  #annotations:
+  #  description: "get layer revisions"
 
-# Generate dynamic kasfile-image-naming.yaml for bringup image
-job=moducop-cpu01-bringup-gen-image-version:
+# CPU01-bringup: Generate dynamic kasfile for image naming
+job=cpu01-bringup-gen-image-version:
   use: image-kas
   depends:
-    - moducop-cpu01-layer-revparse
+    - yocto-envs
+    - yocto-layer-revparse
   entrypoint: /git/gen-image-version.sh
     /git
-    /git/moducop-cpu01/layer-revs
+    /git/yocto/layer-revs
     cpu01-bringup
-    /git/moducop-cpu01/generated-bringup-kasfile-image-naming.yaml
+    /git/yocto/.generated-cpu01-bringup-image-naming.yaml
   mounts:
     - mount-buildingblock-gitversion-source-dir
-  sources: moducop-cpu01/layer-revs
-  artifact: /git/moducop-cpu01/generated-kasfile-image-naming.yaml
+  sources: yocto/layer-revs
+  artifact: /git/yocto/.generated-cpu01-bringup-image-naming.yaml
   user: "{user.uid}:{user.gid}"
   env:
     - "USER={user.name}"
-  annotations:
-    description: "Generate cpu01-bringup image version"
-    tags:
-      - cpu01
+  #annotations:
+  #  description: "Generate cpu01-bringup image version"
 
 
-# Interactive yocto shell
+# CPU01-bringup: Interactive yocto shell
 # Warning: Image/Mender artifact names will be defaults!
-job=moducop-cpu01-yocto-shell:
+job=cpu01-bringup-yocto-shell:
   use: image-kas
   depends:
-    - moducop-cpu01-envs
-  command: "shell /repo/kasfile.yaml:kasfile-image-naming.yaml"
+    - yocto-envs
+  command: "shell /repo/kasfile-cpu01-bringup.yaml:kasfile-image-naming.yaml"
   mounts:
-    - build-dir-cpu01
-    - repo-dir-cpu01
-    - download-dir-cpu01
-    - sstate-dir-cpu01
-    - install-dir-cpu01
+    - build-dir-yocto
+    - repo-dir-yocto
+    - download-dir-yocto
+    - sstate-dir-yocto
+    - install-dir-yocto
   working-dir: /work
   interactive: true
   env:
@@ -101,26 +98,23 @@ job=moducop-cpu01-yocto-shell:
     - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
   annotations:
     description: "interactive yocto shell"
-    tags:
-      - cpu01
 
 # Build bringup-image
-job=moducop-cpu01-build-bringup-image:
+job=cpu01-bringup-build-image:
   use: image-kas
   depends:
-    - moducop-cpu01-envs
-    - moducop-cpu01-bringup-gen-image-version
+    - cpu01-bringup-gen-image-version
   sources:
-    - moducop-cpu01/kasfile.yaml
+    - yocto/kasfile-cpu01-bringup.yaml
   artifact:
-    - moducop-cpu01/install/images/
-  command: "build /repo/kasfile.yaml:generated-bringup-kasfile-image-naming.yaml"
+    - yocto/install/images/moducop-cpu01
+  command: "build /repo/kasfile-cpu01-bringup.yaml:.generated-cpu01-bringup-image-naming.yaml"
   mounts:
-    - build-dir-cpu01
-    - repo-dir-cpu01
-    - download-dir-cpu01
-    - sstate-dir-cpu01
-    - install-dir-cpu01
+    - build-dir-yocto
+    - repo-dir-yocto
+    - download-dir-yocto
+    - sstate-dir-yocto
+    - install-dir-yocto
   working-dir: /work
   interactive: true
   env:
@@ -132,20 +126,18 @@ job=moducop-cpu01-build-bringup-image:
     - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
     - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
   annotations:
-    description: "Build ci4rail-bringup-image"
-    tags:
-      - cpu01
+    description: "Build cpu01-bringup-image"
 
 # Clean 
-job=moducop-cpu01-clean:
+job=yocto-clean:
   use: image-kas
   entrypoint: rm -rf /downloads/ /sstate-cache/ /install/ /build/
   mounts:
-    - build-dir-cpu01
-    - repo-dir-cpu01
-    - download-dir-cpu01
-    - sstate-dir-cpu01
-    - install-dir-cpu01
+    - build-dir-yocto
+    - repo-dir-yocto
+    - download-dir-yocto
+    - sstate-dir-yocto
+    - install-dir-yocto
   working-dir: /work
   interactive: true
   env:
@@ -155,5 +147,3 @@ job=moducop-cpu01-clean:
     - SHELL=/bin/bash
   annotations:
     description: "Cleanup"
-    tags:
-      - cpu01

@@ -2,3 +2,4 @@ sstate-cache
 build
 install
 src
+.generated*

@@ -115,5 +115,6 @@ cp ci/credentials.template.yaml ci/credentials-prod.yaml
 
 Example for setting the pipeline:
 ```bash
+cd yocto
 fly -t prod set-pipeline -c pipeline.yaml -p cpu01-bringup-image -l ci/config-dev.yaml -l ci/credentials.yaml -v name=cpu01-bringup
 ```

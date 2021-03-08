@@ -2,7 +2,7 @@
 # Project configuration
 # -----------------------------
 ## Defines the name for the project
-name: moducop-cpu01
+name: cpu01-bringup
 
 # Git configuration
 # -----------------
@@ -12,7 +12,7 @@ git_source: git@github.com:ci4rail/ci.os.lmp.git
 git_branch: main
 ## Specify the git paths to monitor
 git_paths:
-  - moducop-cpu01
+  - yocto
 ## This enables/disables ssl verification of the git resource
 git_skip_ssl_verification: false
 

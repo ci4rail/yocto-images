@@ -2,41 +2,54 @@
 
 Build definitions and scripts for ci.os.lmp platform.
 
-This repo can host several projects (with different Yocto versions, machines etc.). Each project
-has a subdirectory in that repo, e.g. `mender-on-verdin`.
+This repo can host several projects (with different Yocto versions, machines etc.). 
 
 Yocto builds are performed using kas: https://github.com/siemens/kas
 
-# Projects
-## mender-on-verdin
-![CI](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/mender-on-verdin/jobs/build-mender-on-verdin/badge)
+# Images 
+
+The following images are currently built by this repo
+## verdindev-edgefarm
+![CI](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/verdindev-edgefarm/jobs/build-verdindev-edgefarm/badge)
+An image for the Ci4Rail edgefarm use case (Yocto with mender, docker and iotedge support)
+Target Platform: Toradex Verdin Development Board.
+
+## cpu01-edgefarm
+![CI](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-edgefarm/jobs/build-cpu01-edgefarm/badge)
+An image for the Ci4Rail edgefarm use case (Yocto with mender, docker and iotedge support)
+Target Platform: Ci4Rail Moducop CPU01.
+
+## cpu01-bringup
+![CI](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-bringup/jobs/build-cpu01-bringup/badge)
+An image for HW platform tests and bringup. Includes mender support, but no docker and iotedge.
+Contains many tools for HW testing
+Target Platform: Ci4Rail Moducop CPU01.
+
+
+
+
+
 
 Project to integrate mender.io layer on top of toradex layers for toradex verdin module. It can be either build locally using dobi or via Concourse CI.
-
-See [CI/CD Readme](mender-on-verdin/README.md) for information about the CI/CD build.
-Before building this locally using dobi you need to enter your your mender specific data into `mender-on-verdin/config/mender.env`.
-
-## moducop-cpu01
-
-Project to build images for Moducop CPU01
-
-You need to enter your your mender specific data into `moducop-cpu01/config/mender.env`.
 
 
 ## Running developer builds locally
 
-Developer builds are executed via dobi, e.g. for `mender-on-verdin`. 
+Developer builds are executed via dobi. 
 
-To build the minimal image for `mender-on-verdin`
+First, enter your your mender specific data into `yocto/config/mender.env` (using template `yocto/config/mender.env.template`)
+
+
+For example, to build the image for `cpu01-edgefarm`:
 
 ```bash
-./dobi.sh mender-on-verdin-build-minimal-image
+./dobi.sh cpu01-edgefarm-build-image
 ```
 
-To run an interactive yocto shell for `mender-on-verdin`
+To run an interactive yocto shell for `cpu01-edgefarm`
 
 ```bash
-./dobi.sh mender-on-verdin-yocto-shell
+./dobi.sh cpu01-edgefarm-yocto-shell
 ```
 
 To build all images:
@@ -52,7 +65,7 @@ Call `./dobi.sh list` to see a list of all jobs.
 By default, Yocto downloads will be placed into the *./downloads* folder, in order
 to share the downloads between all projects.
 
-By default, Yocto shared state cache will be placed into *\<project\>/sstate-cache* folder.
+By default, Yocto shared state cache will be placed into *\yocto/sstate-cache* folder.
 
 You can set default environment variables in the *default.env* file (template is provided: *default.env.template*), for example:
 
@@ -101,7 +114,8 @@ Then login to your concourse instance.
 fly --target prod login --concourse-url https://concourse.ci4rail.com
 ```
 
-The following steps are performed for each project in this repo e.g. `mender-on-verdin`.
+The following steps are performed inside `yocto` subdirectory:
+
 Copy and adapt `ci/credentials.template.yaml` it to your needs. 
 
 ```bash
@@ -113,8 +127,16 @@ cp ci/credentials.template.yaml ci/credentials-prod.yaml
 *Note: `ci/credentials-prod.yaml` and `ci/credentials.yaml` are ignored by git. In this file you can store access credentials and keys that won't be checked in. If you are using some third party vault for credentials that integrates well into concourse, you won't need this file.*
 
 
-Example for setting the pipeline:
+Example for setting the pipeline (here: to create a pipeline for cpu01-bringup image):
 ```bash
 cd yocto
-fly -t prod set-pipeline -c pipeline.yaml -p cpu01-bringup-image -l ci/config-dev.yaml -l ci/credentials.yaml -v name=cpu01-bringup
+fly -t prod set-pipeline -c pipeline.yaml -p cpu01-bringup -l ci/config-dev.yaml -l ci/credentials.yaml -v name=cpu01-bringup
 ```
+
+The pipeline produces:
+* A TEZI tar file that can be installed with the tdx-installer. This file is stored on https://minio.ci4rail.com/, for example: https://minio.ci4rail.com/minio/cpu01-bringup/.
+* A mender file, that is pushed to mender server
+
+
+For further help on fly usage please refer to the [fly documentation](https://concourse-ci.org/fly.html).
+

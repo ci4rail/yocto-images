@@ -16,6 +16,7 @@
 
 set -e
 
+
 if [ "$#" -ne 4 ] ; then
     echo "Usage: ${0} <git-root> <layer-refs file> <mender-artifact-prefix> <outfile>"
     exit 1

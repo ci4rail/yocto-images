@@ -2,7 +2,7 @@
 # Project configuration
 # -----------------------------
 ## Defines the name for the project
-# Set this via fly .... -v name=cpu01-bringup
+# Set this via fly .... -v name=cpu01-bringup (or to your desired target)
 #name: cpu01-bringup
 
 # Git configuration

@@ -1,5 +1,5 @@
 bitbake: 89fc9450abefd682266efcbfa031d1ef115ff1a7
-meta-ci.os: 6b90943226b78fe668af506a3a308f746a6b5413
+meta-ci.os: 4351ddad3d44721e974129b4e6c068a682899be4
 meta-freescale: 46f54fdc5ad854a22bf759aac7fd65db1d1bb574
 meta-freescale-3rdparty.git: 05b1746a4adc240b690fe965ac5b8a043d9b9d03
 meta-freescale-distro: 5d882cdf079b3bde0bd9869ce3ca3db411acbf3b

@@ -27,6 +27,10 @@ repos:
     url: https://github.com/ci4rail/meta-ci.os.git
     refspec: feature/moducop
 
+  src/meta-ci.bringup:
+    url: https://github.com/ci4rail/meta-ci.bringup.git
+    refspec: dunfell
+
 bblayers_conf_header:
   src/meta-custom: |
     BBPATH = "${TOPDIR}"

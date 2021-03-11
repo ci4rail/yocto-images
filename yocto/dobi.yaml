@@ -54,7 +54,7 @@ job=gen-image-version-template: &Gen-image-version-template
   sources: yocto/layer-revs
   user: "{user.uid}:{user.gid}"
   env: 
-    - &Gen-image-env-user "USER={user.name}"
+    - "USER={user.name}"
   entrypoint: /git/gen-image-version.sh
     /git
     /git/yocto/layer-revs
@@ -128,9 +128,11 @@ job=yocto-layer-revparse:
 job=cpu01-bringup-gen-image-version:
   <<: *Gen-image-version-template
   artifact: /git/yocto/.generated-cpu01-bringup-image-naming.yaml
-  env: 
-    - *Gen-image-env-user
-    - "IMAGE_NAME=cpu01-bringup"
+  entrypoint: /git/gen-image-version.sh
+    /git
+    /git/yocto/layer-revs
+    cpu01-bringup
+    /git/yocto/.generated-cpu01-bringup-image-naming.yaml
 
 job=cpu01-bringup-yocto-shell:
   <<: *Yocto-shell-template
@@ -158,9 +160,11 @@ job=cpu01-bringup-build-image:
 job=cpu01-edgefarm-gen-image-version:
   <<: *Gen-image-version-template
   artifact: /git/yocto/.generated-cpu01-edgefarm-image-naming.yaml
-  env: 
-    - *Gen-image-env-user
-    - "IMAGE_NAME=cpu01-edgefarm"
+  entrypoint: /git/gen-image-version.sh
+    /git
+    /git/yocto/layer-revs
+    cpu01-edgefarm
+    /git/yocto/.generated-cpu01-edgefarm-image-naming.yaml
 
 job=cpu01-edgefarm-yocto-shell:
   <<: *Yocto-shell-template
@@ -188,9 +192,11 @@ job=cpu01-edgefarm-build-image:
 job=verdindev-edgefarm-gen-image-version:
   <<: *Gen-image-version-template
   artifact: /git/yocto/.generated-verdindev-edgefarm-image-naming.yaml
-  env: 
-    - *Gen-image-env-user
-    - "IMAGE_NAME=verdindev-edgefarm"
+  entrypoint: /git/gen-image-version.sh
+    /git
+    /git/yocto/layer-revs
+    verdindev-edgefarm
+    /git/yocto/.generated-verdindev-edgefarm-image-naming.yaml
 
 job=verdindev-edgefarm-yocto-shell:
   <<: *Yocto-shell-template

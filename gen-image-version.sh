@@ -42,12 +42,10 @@ if [ ! -z "${stat}" ]; then
 fi
 echo "top level repo is dirty: ${is_dirty} ${stat}"
 
-if [ ${is_dirty} -eq 0 ]; then
-    # check if one of the layer repos is dirty
-    if [ $(grep \(dirty\) ${layer_refs}) -eq 0 ]; then
-        is_dirty=1
-    fi
-    echo "Layer refs are dirty: ${is_dirty}"
+# check if one of the layer repos is dirty
+if grep -q \(dirty\) ${layer_refs}; then
+    is_dirty=1
+    echo "Layer refs are dirty"
 fi
 
 # replace slashes in branch name with -

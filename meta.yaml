@@ -7,7 +7,6 @@ meta:
   include:
     - version.yaml
     - dobi.yaml
-    - tools/curl/dobi.yaml
     - yocto/dobi.yaml
 
 # ===================================================

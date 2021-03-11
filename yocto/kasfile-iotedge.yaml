@@ -17,11 +17,6 @@ repos:
     url: git://github.com/meta-rust/meta-rust.git
     refspec: e4d25b98083bcecb94df6ee189a165d63ede7f3d
     
-  # ci4rail
-  src/meta-ci.os:
-    url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: feature/moducop
-
 bblayers_conf_header:
   src/meta-custom: |
     BBPATH = "${TOPDIR}"

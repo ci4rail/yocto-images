@@ -9,7 +9,7 @@
 header:
   version: 9
   includes:
-    - kasfile-image-naming.yaml
+    - kasfile-default-image-naming.yaml
     - kasfile-tdxbsp.yaml
     - kasfile-mender.yaml
 

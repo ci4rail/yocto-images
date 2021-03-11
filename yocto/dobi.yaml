@@ -1,3 +1,6 @@
+---
+
+
 # ===================================================
 # mounts
 # ===================================================
@@ -35,6 +38,76 @@ mount=install-dir-yocto:
 env=yocto-envs:
     files: [yocto/config/mender.env]
 
+
+# ===================================================
+# Templates
+# These jobs are not callable. They server as 
+# templates for the actual jobs (DRY).
+# ===================================================
+job=gen-image-version-template: &Gen-image-version-template
+  use: image-kas
+  depends:
+    - yocto-envs
+    - yocto-layer-revparse
+  mounts:
+    - mount-buildingblock-gitversion-source-dir
+  sources: yocto/layer-revs
+  user: "{user.uid}:{user.gid}"
+  env: 
+    - &Gen-image-env-user "USER={user.name}"
+  entrypoint: /git/gen-image-version.sh
+    /git
+    /git/yocto/layer-revs
+    ${IMAGE_NAME}
+    /git/yocto/.generated-${IMAGE_NAME}-bringup-image-naming.yaml
+
+
+# Warning: MENDER_ARTIFACT_NAME and IMAGE_GIT_VERSION are
+# set to the default values in kasfile-default-image-naming.yaml
+# because it is unknown what image type you'll build in the shell
+job=yocto-shell-template: &Yocto-shell-template
+  use: image-kas
+  depends:
+    - yocto-envs
+  mounts:
+    - build-dir-yocto
+    - repo-dir-yocto
+    - download-dir-yocto
+    - sstate-dir-yocto
+    - install-dir-yocto
+  working-dir: /work
+  interactive: true
+  env:
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - TERM=xterm-256color
+    - SHELL=/bin/bash
+    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
+    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
+    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
+
+job=build-image-template: &Build-image-template
+  use: image-kas
+  mounts:
+    - build-dir-yocto
+    - repo-dir-yocto
+    - download-dir-yocto
+    - sstate-dir-yocto
+    - install-dir-yocto
+  working-dir: /work
+  interactive: true
+  env:
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - TERM=xterm-256color
+    - SHELL=/bin/bash
+    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
+    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
+    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
+
+
+
+
 # ===================================================
 # jobs
 # ===================================================
@@ -48,251 +121,102 @@ job=yocto-layer-revparse:
   sources: yocto/src
   artifact: /git/yocto/layer-revs
   user: "{user.uid}:{user.gid}"
-  #annotations:
-  #  description: "get layer revisions"
 
-# CPU01-bringup: Generate dynamic kasfile for image naming
+# 
+# cpu01-bringup jobs
+#
 job=cpu01-bringup-gen-image-version:
-  use: image-kas
-  depends:
-    - yocto-envs
-    - yocto-layer-revparse
-  entrypoint: /git/gen-image-version.sh
-    /git
-    /git/yocto/layer-revs
-    cpu01-bringup
-    /git/yocto/.generated-cpu01-bringup-image-naming.yaml
-  mounts:
-    - mount-buildingblock-gitversion-source-dir
-  sources: yocto/layer-revs
+  <<: *Gen-image-version-template
   artifact: /git/yocto/.generated-cpu01-bringup-image-naming.yaml
-  user: "{user.uid}:{user.gid}"
-  env:
-    - "USER={user.name}"
-  #annotations:
-  #  description: "Generate cpu01-bringup image version"
+  env: 
+    - *Gen-image-env-user
+    - "IMAGE_NAME=cpu01-bringup"
 
-
-# CPU01-bringup: Interactive yocto shell
-# Warning: Image/Mender artifact names will be defaults!
 job=cpu01-bringup-yocto-shell:
-  use: image-kas
-  depends:
-    - yocto-envs
-  command: "shell /repo/kasfile-cpu01-bringup.yaml:kasfile-image-naming.yaml"
-  mounts:
-    - build-dir-yocto
-    - repo-dir-yocto
-    - download-dir-yocto
-    - sstate-dir-yocto
-    - install-dir-yocto
-  working-dir: /work
-  interactive: true
-  env:
-    - USER_ID={user.uid}
-    - GROUP_ID={user.gid}
-    - TERM=xterm-256color
-    - SHELL=/bin/bash
-    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
-    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
-    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
+  <<: *Yocto-shell-template
+  command: "shell /repo/kasfile-cpu01-bringup.yaml"
   annotations:
-    description: "interactive yocto shell cpu01-bringup config"
+    description: "\t\t--> interactive yocto shell cpu01-bringup config"
 
-# CPU01-bringup: Build image
 job=cpu01-bringup-build-image:
-  use: image-kas
+  <<: *Build-image-template
   depends:
     - cpu01-bringup-gen-image-version
   sources:
     - yocto/kasfile-cpu01-bringup.yaml
     - yocto/kasfile-tdxbsp.yaml
     - yocto/kasfile-mender.yaml
+  command: "build /repo/kasfile-cpu01-bringup.yaml:.generated-cpu01-bringup-image-naming.yaml"
   artifact:
     - yocto/install/images/moducop-cpu01
-  command: "build /repo/kasfile-cpu01-bringup.yaml:.generated-cpu01-bringup-image-naming.yaml"
-  mounts:
-    - build-dir-yocto
-    - repo-dir-yocto
-    - download-dir-yocto
-    - sstate-dir-yocto
-    - install-dir-yocto
-  working-dir: /work
-  interactive: true
-  env:
-    - USER_ID={user.uid}
-    - GROUP_ID={user.gid}
-    - TERM=xterm-256color
-    - SHELL=/bin/bash
-    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
-    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
-    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
   annotations:
-    description: "Build cpu01-bringup-image"
+    description: "\t\t--> Build cpu01-bringup-image"
 
-
-# CPU01-edgefarm: Generate dynamic kasfile for image naming
+# 
+# cpu01-edgefarm jobs
+#
 job=cpu01-edgefarm-gen-image-version:
-  use: image-kas
-  depends:
-    - yocto-envs
-    - yocto-layer-revparse
-  entrypoint: /git/gen-image-version.sh
-    /git
-    /git/yocto/layer-revs
-    cpu01-edgefarm
-    /git/yocto/.generated-cpu01-edgefarm-image-naming.yaml
-  mounts:
-    - mount-buildingblock-gitversion-source-dir
-  sources: yocto/layer-revs
+  <<: *Gen-image-version-template
   artifact: /git/yocto/.generated-cpu01-edgefarm-image-naming.yaml
-  user: "{user.uid}:{user.gid}"
-  env:
-    - "USER={user.name}"
+  env: 
+    - *Gen-image-env-user
+    - "IMAGE_NAME=cpu01-edgefarm"
 
-
-# CPU01-edgefarm: Interactive yocto shell
-# Warning: Image/Mender artifact names will be defaults!
 job=cpu01-edgefarm-yocto-shell:
-  use: image-kas
-  depends:
-    - yocto-envs
+  <<: *Yocto-shell-template
   command: "shell /repo/kasfile-cpu01-edgefarm.yaml"
-  mounts:
-    - build-dir-yocto
-    - repo-dir-yocto
-    - download-dir-yocto
-    - sstate-dir-yocto
-    - install-dir-yocto
-  working-dir: /work
-  interactive: true
-  env:
-    - USER_ID={user.uid}
-    - GROUP_ID={user.gid}
-    - TERM=xterm-256color
-    - SHELL=/bin/bash
-    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
-    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
-    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
   annotations:
-    description: "interactive yocto shell cpu01-edgefarm config"
+    description: "\t\t--> interactive yocto shell cpu01-edgefarm config"
 
-# CPU01-edgefarm: Build image
 job=cpu01-edgefarm-build-image:
-  use: image-kas
+  <<: *Build-image-template
   depends:
     - cpu01-edgefarm-gen-image-version
   sources:
     - yocto/kasfile-cpu01-edgefarm.yaml
     - yocto/kasfile-tdxbsp.yaml
     - yocto/kasfile-mender.yaml
-    - yocto/kasfile-iotedge.yaml
+  command: "build /repo/kasfile-cpu01-edgefarm.yaml:.generated-cpu01-edgefarm-image-naming.yaml"
   artifact:
     - yocto/install/images/moducop-cpu01
-  command: "build /repo/kasfile-cpu01-edgefarm.yaml:.generated-cpu01-edgefarm-image-naming.yaml"
-  mounts:
-    - build-dir-yocto
-    - repo-dir-yocto
-    - download-dir-yocto
-    - sstate-dir-yocto
-    - install-dir-yocto
-  working-dir: /work
-  interactive: true
-  env:
-    - USER_ID={user.uid}
-    - GROUP_ID={user.gid}
-    - TERM=xterm-256color
-    - SHELL=/bin/bash
-    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
-    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
-    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
   annotations:
-    description: "Build cpu01-edgefarm-image"
+    description: "\t\t--> Build cpu01-edgefarm-image"
 
-
-# verdindev-edgefarm: Generate dynamic kasfile for image naming
+# 
+# verdindev-edgefarm jobs
+#
 job=verdindev-edgefarm-gen-image-version:
-  use: image-kas
-  depends:
-    - yocto-envs
-    - yocto-layer-revparse
-  entrypoint: /git/gen-image-version.sh
-    /git
-    /git/yocto/layer-revs
-    verdindev-edgefarm
-    /git/yocto/.generated-verdindev-edgefarm-image-naming.yaml
-  mounts:
-    - mount-buildingblock-gitversion-source-dir
-  sources: yocto/layer-revs
+  <<: *Gen-image-version-template
   artifact: /git/yocto/.generated-verdindev-edgefarm-image-naming.yaml
-  user: "{user.uid}:{user.gid}"
-  env:
-    - "USER={user.name}"
+  env: 
+    - *Gen-image-env-user
+    - "IMAGE_NAME=verdindev-edgefarm"
 
-
-# verdindev-edgefarm: Interactive yocto shell
-# Warning: Image/Mender artifact names will be defaults!
 job=verdindev-edgefarm-yocto-shell:
-  use: image-kas
-  depends:
-    - yocto-envs
+  <<: *Yocto-shell-template
   command: "shell /repo/kasfile-verdindev-edgefarm.yaml"
-  mounts:
-    - build-dir-yocto
-    - repo-dir-yocto
-    - download-dir-yocto
-    - sstate-dir-yocto
-    - install-dir-yocto
-  working-dir: /work
-  interactive: true
-  env:
-    - USER_ID={user.uid}
-    - GROUP_ID={user.gid}
-    - TERM=xterm-256color
-    - SHELL=/bin/bash
-    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
-    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
-    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
   annotations:
-    description: "interactive yocto shell verdindev-edgefarm config"
+    description: "\t--> interactive yocto shell verdindev-edgefarm config"
 
-# verdindev-edgefarm: Build image
 job=verdindev-edgefarm-build-image:
-  use: image-kas
+  <<: *Build-image-template
   depends:
     - verdindev-edgefarm-gen-image-version
   sources:
     - yocto/kasfile-verdindev-edgefarm.yaml
     - yocto/kasfile-tdxbsp.yaml
     - yocto/kasfile-mender.yaml
-    - yocto/kasfile-iotedge.yaml
-  artifact:
-    - yocto/install/images/moducop-verdindev
   command: "build /repo/kasfile-verdindev-edgefarm.yaml:.generated-verdindev-edgefarm-image-naming.yaml"
-  mounts:
-    - build-dir-yocto
-    - repo-dir-yocto
-    - download-dir-yocto
-    - sstate-dir-yocto
-    - install-dir-yocto
-  working-dir: /work
-  interactive: true
-  env:
-    - USER_ID={user.uid}
-    - GROUP_ID={user.gid}
-    - TERM=xterm-256color
-    - SHELL=/bin/bash
-    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
-    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
-    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
+  artifact:
+    - yocto/install/images/moducop-cpu01
   annotations:
-    description: "Build verdindev-edgefarm-image"
+    description: "\t--> Build verdindev-edgefarm-image"
 
 
 # Clean 
 job=yocto-clean:
   use: image-kas
-  entrypoint: rm -rf /downloads/ /sstate-cache/ /install/ /build/
+  entrypoint: rm -rf /downloads/* /sstate-cache/* /install/* /work/build/*
   mounts:
     - build-dir-yocto
     - repo-dir-yocto
@@ -307,4 +231,4 @@ job=yocto-clean:
     - TERM=xterm-256color
     - SHELL=/bin/bash
   annotations:
-    description: "Cleanup"
+    description: "\t\t\t--> Cleanup"

@@ -222,7 +222,8 @@ job=verdindev-edgefarm-build-image:
 # Clean 
 job=yocto-clean:
   use: image-kas
-  entrypoint: rm -rf /downloads/* /sstate-cache/* /install/* /work/build/*
+  entrypoint: /bin/bash -c "rm -rf /downloads/* /sstate-cache/* /install/* /work/build/*"
+  #entrypoint: /bin/bash
   mounts:
     - build-dir-yocto
     - repo-dir-yocto

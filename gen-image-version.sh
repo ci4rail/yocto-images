@@ -16,7 +16,6 @@
 
 set -e
 
-
 if [ "$#" -ne 4 ] ; then
     echo "Usage: ${0} <git-root> <layer-refs file> <mender-artifact-prefix> <outfile>"
     exit 1
@@ -28,7 +27,6 @@ mender_prefix=${3}
 out_file=${4}
 
 is_dirty=0
-
 
 # check if the top repo is dirty
 cd ${git_root}
@@ -50,7 +48,6 @@ fi
 
 # replace slashes in branch name with -
 branch=`echo ${GitVersion_BranchName} | sed -e "s/\//-/g"`
-
 
 if [ ${is_dirty} -eq 0 ]; then
     version=${GitVersion_FullSemVer}.${branch}.${GitVersion_ShortSha}

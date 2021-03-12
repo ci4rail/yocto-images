@@ -140,6 +140,7 @@ fly -t dev set-pipeline -c pipeline.yaml -p cpu01-bringup -l ci/config-dev.yaml 
 
 To set all pipelines, use
 ```bash
+cd yocto
 ./set-dev-pipelines.sh
 ```
 

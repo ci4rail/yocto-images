@@ -25,7 +25,7 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: feature/moducop
+    refspec: dunfell
 
   src/meta-ci.bringup:
     url: https://github.com/ci4rail/meta-ci.bringup.git

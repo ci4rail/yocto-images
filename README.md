@@ -144,13 +144,8 @@ cd yocto
 ./set-dev-pipelines.sh
 ```
 
-
 *Note: Currently, only `ci/config-dev.yaml` exists. It monitors the directory `yocto` on `main` branch for changes and triggeres a build. Under normal circumstances no modifications are needed in this file. 
 `ci/config-prod.yaml` will be added later when release images are required.
-
-
-
-
 
 The pipeline produces:
 * A TEZI tar file that can be installed with the tdx-installer. This file is stored on https://minio.ci4rail.com/, for example: https://minio.ci4rail.com/minio/cpu01-bringup/.

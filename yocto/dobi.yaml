@@ -1,6 +1,4 @@
 ---
-
-
 # ===================================================
 # mounts
 # ===================================================
@@ -38,7 +36,6 @@ mount=install-dir-yocto:
 env=yocto-envs:
     files: [yocto/config/mender.env]
 
-
 # ===================================================
 # Templates
 # These jobs are not callable. They server as 
@@ -60,7 +57,6 @@ job=gen-image-version-template: &Gen-image-version-template
     /git/yocto/layer-revs
     ${IMAGE_NAME}
     /git/yocto/.generated-${IMAGE_NAME}-bringup-image-naming.yaml
-
 
 # Warning: MENDER_ARTIFACT_NAME and IMAGE_GIT_VERSION are
 # set to the default values in kasfile-default-image-naming.yaml
@@ -104,9 +100,6 @@ job=build-image-template: &Build-image-template
     - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
     - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
     - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
-
-
-
 
 # ===================================================
 # jobs
@@ -217,7 +210,6 @@ job=verdindev-edgefarm-build-image:
     - yocto/install/images/moducop-cpu01
   annotations:
     description: "\t--> Build verdindev-edgefarm-image"
-
 
 # Clean 
 job=yocto-clean:

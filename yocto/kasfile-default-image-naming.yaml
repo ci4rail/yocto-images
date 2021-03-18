@@ -1,0 +1,5 @@
+header:
+  version: 9
+env:
+  MENDER_ARTIFACT_NAME: "DEFAULT_EMPTY_ARTIFACT_NAME"
+  IMAGE_GIT_VERSION: ""

@@ -2,7 +2,8 @@
 # Project configuration
 # -----------------------------
 ## Defines the name for the project
-name: mender-on-verdin
+# Set this via fly .... -v name=cpu01-bringup (or to your desired target)
+#name: cpu01-bringup
 
 # Git configuration
 # -----------------
@@ -12,14 +13,14 @@ git_source: git@github.com:ci4rail/ci.os.lmp.git
 git_branch: main
 ## Specify the git paths to monitor
 git_paths:
-  - mender-on-verdin
+  - yocto
 ## This enables/disables ssl verification of the git resource
 git_skip_ssl_verification: false
 
 # S3 configuration
 # ----------------
 ## Specify the S3 endpoint URI
-s3_endpoint: http://172.17.0.1:9000
+s3_endpoint: https://minio.ci4rail.com
 ## This enables/disables the ssl verification for the S3 endpoint
 s3_skip_ssl_verification: false
 

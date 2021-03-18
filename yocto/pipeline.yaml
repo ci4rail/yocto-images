@@ -24,13 +24,19 @@ resources:
       repository: ghcr.io/siemens/kas/kas
       tag: 2.3.3
 
+  - name: image-mender-cli
+    type: docker-image
+    source:
+      repository: ci4rail/mender-cli
+      tag: master-2021-03-08
+
   # S3 buckets
   - name: s3-gitversion
     type: s3
     source:
       bucket: ((name))
       endpoint: ((s3_endpoint))
-      regexp: ((name))/gitversion/gitversion-(.*).tar.gz
+      regexp: gitversion/gitversion-(.*).tar.gz
       access_key_id: ((s3_access_key))
       secret_access_key: ((s3_secret_key))
       disable_ssl: ((s3_skip_ssl_verification))
@@ -39,7 +45,7 @@ resources:
     type: s3
     source:
       bucket: ((name))
-      regexp: ((name))/Verdin-iMX8MM_Reference-Minimal-Image_CI.OS.LMP-(.*).mender_tezi.tar
+      regexp: (.*).mender_tezi.tar
       access_key_id: ((s3_access_key))
       secret_access_key: ((s3_secret_key))
       endpoint: ((s3_endpoint))
@@ -49,7 +55,7 @@ resources:
     type: s3
     source:
       bucket: ((name))
-      regexp: ((name))/Verdin-iMX8MM_Reference-Minimal-Image_CI.OS.LMP-(.*).mender
+      regexp: (.*).mender
       access_key_id: ((s3_access_key))
       secret_access_key: ((s3_secret_key))
       endpoint: ((s3_endpoint))
@@ -131,6 +137,7 @@ jobs:
               unpack: true
           - get: image-bash-utils
           - get: image-kas
+          - get: image-mender-cli
       - task: prepare-build-environment-variables
         image: image-bash-utils
         config:
@@ -147,7 +154,7 @@ jobs:
                 echo Generating build environment variables:
                 echo MENDER_ARTIFACT_DEV_SUFFIX=((MENDER_ARTIFACT_DEV_SUFFIX)) > build-envs/env
                 echo IMAGE_NAME_SUFFIX=((IMAGE_NAME_SUFFIX)) >> build-envs/env
-                echo MENDER_ARTIFACT_NAME=$(cat s3-gitversion/gitversion/plain/BranchVersion)${MENDER_ARTIFACT_DEV_SUFFIX} >> build-envs/env
+                echo MENDER_ARTIFACT_NAME=((name))-$(cat s3-gitversion/gitversion/plain/BranchVersion)${MENDER_ARTIFACT_DEV_SUFFIX} >> build-envs/env
                 echo MENDER_SERVER_URL=((MENDER_SERVER_URL)) >> build-envs/env
                 echo MENDER_TENANT_TOKEN=((MENDER_TENANT_TOKEN)) >> build-envs/env
                 echo HOSTED_MENDER_USER_EMAIL=((HOSTED_MENDER_USER_EMAIL)) >> build-envs/env
@@ -174,17 +181,32 @@ jobs:
                 GROUP_ID=30000
                 chown -R ${USER_ID}:${GROUP_ID} /install /sstate-cache /downloads source
                 set -o allexport; source ${ROOT}/build-envs/env; set +o allexport
-                cd ${ROOT}/source/mender-on-verdin
-                /kas/container-entrypoint build kasfile.yaml
-                cp -r /install/images/verdin-imx8mm/Verdin-iMX8MM_Reference-Minimal-Image_CI.OS.LMP*.mender_tezi.tar ${ROOT}/install
-                cp -r /install/images/verdin-imx8mm/Verdin-iMX8MM_Reference-Minimal-Image_CI.OS.LMP*.mender ${ROOT}/install
+                cd ${ROOT}/source/yocto
+                /kas/container-entrypoint build kasfile-((name)).yaml
+                cp -r /install/images/*/*CI.OS.LMP*.mender_tezi.tar ${ROOT}/install
+                cp -r /install/images/*/*CI.OS.LMP*.mender ${ROOT}/install
+
+      - task: mender-upload
+        image: image-mender-cli
+        config:
+          platform: linux
+          inputs:
+            - name: install
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                /mender-cli login --username ((HOSTED_MENDER_USER_EMAIL)) --password ((HOSTED_MENDER_PASSWORD));
+                ls -l install;
+                /mender-cli artifacts upload install/*.mender;
 
       - put: s3-tezi-file
         params:
-          file: install/Verdin-iMX8MM_Reference-Minimal-Image_CI.OS.LMP-*.mender_tezi.tar
+          file: install/*.mender_tezi.tar
           acl: public-read
           
       - put: s3-mender-artifact
         params:
-          file: install/Verdin-iMX8MM_Reference-Minimal-Image_CI.OS.LMP-*.mender
+          file: install/*.mender
           acl: public-read

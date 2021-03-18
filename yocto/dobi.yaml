@@ -1,0 +1,232 @@
+---
+# ===================================================
+# mounts
+# ===================================================
+
+# Where the yocto-build happens
+mount=build-dir-yocto:
+  bind: yocto
+  path: /work
+
+# The location of kasfile.yaml (kas expects it in /repo)
+mount=repo-dir-yocto:
+  bind: yocto
+  path: /repo
+  read-only: true
+
+# Yocto downloads DL_DIR
+mount=download-dir-yocto:
+  bind: "{env.YOCTO_DOWNLOAD_DIR:downloads}"
+  path: /downloads
+
+# Yocto shared state cache SSTATE_DIR
+mount=sstate-dir-yocto:
+  bind: "{env.YOCTO_SSTATE_CACHE_DIR:}yocto/sstate-cache"
+  path: /sstate-cache
+
+# Yocto images (DEPLOY_DIR)
+mount=install-dir-yocto:
+  bind: yocto/install
+  path: /install
+
+# ===================================================
+# envs
+# ===================================================
+
+env=yocto-envs:
+    files: [yocto/config/mender.env]
+
+# ===================================================
+# Templates
+# These jobs are not callable. They server as 
+# templates for the actual jobs (DRY).
+# ===================================================
+job=gen-image-version-template: &Gen-image-version-template
+  use: image-kas
+  depends:
+    - yocto-envs
+    - yocto-layer-revparse
+  mounts:
+    - mount-buildingblock-gitversion-source-dir
+  sources: yocto/layer-revs
+  user: "{user.uid}:{user.gid}"
+  env: 
+    - "USER={user.name}"
+  entrypoint: /git/gen-image-version.sh
+    /git
+    /git/yocto/layer-revs
+    ${IMAGE_NAME}
+    /git/yocto/.generated-${IMAGE_NAME}-bringup-image-naming.yaml
+
+# Warning: MENDER_ARTIFACT_NAME and IMAGE_GIT_VERSION are
+# set to the default values in kasfile-default-image-naming.yaml
+# because it is unknown what image type you'll build in the shell
+job=yocto-shell-template: &Yocto-shell-template
+  use: image-kas
+  depends:
+    - yocto-envs
+  mounts:
+    - build-dir-yocto
+    - repo-dir-yocto
+    - download-dir-yocto
+    - sstate-dir-yocto
+    - install-dir-yocto
+  working-dir: /work
+  interactive: true
+  env:
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - TERM=xterm-256color
+    - SHELL=/bin/bash
+    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
+    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
+    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
+
+job=build-image-template: &Build-image-template
+  use: image-kas
+  mounts:
+    - build-dir-yocto
+    - repo-dir-yocto
+    - download-dir-yocto
+    - sstate-dir-yocto
+    - install-dir-yocto
+  working-dir: /work
+  interactive: true
+  env:
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - TERM=xterm-256color
+    - SHELL=/bin/bash
+    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
+    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
+    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
+
+# ===================================================
+# jobs
+# ===================================================
+
+# Get layer revisions
+job=yocto-layer-revparse:
+  use: image-kas
+  entrypoint: /git/layer-revparse.sh /git/yocto/src /git/yocto/layer-revs
+  mounts:
+    - mount-buildingblock-gitversion-source-dir
+  sources: yocto/src
+  artifact: /git/yocto/layer-revs
+  user: "{user.uid}:{user.gid}"
+
+# 
+# cpu01-bringup jobs
+#
+job=cpu01-bringup-gen-image-version:
+  <<: *Gen-image-version-template
+  artifact: /git/yocto/.generated-cpu01-bringup-image-naming.yaml
+  entrypoint: /git/gen-image-version.sh
+    /git
+    /git/yocto/layer-revs
+    cpu01-bringup
+    /git/yocto/.generated-cpu01-bringup-image-naming.yaml
+
+job=cpu01-bringup-yocto-shell:
+  <<: *Yocto-shell-template
+  command: "shell /repo/kasfile-cpu01-bringup.yaml"
+  annotations:
+    description: "\t\t--> interactive yocto shell cpu01-bringup config"
+
+job=cpu01-bringup-build-image:
+  <<: *Build-image-template
+  depends:
+    - cpu01-bringup-gen-image-version
+  sources:
+    - yocto/kasfile-cpu01-bringup.yaml
+    - yocto/kasfile-tdxbsp.yaml
+    - yocto/kasfile-mender.yaml
+  command: "build /repo/kasfile-cpu01-bringup.yaml:.generated-cpu01-bringup-image-naming.yaml"
+  artifact:
+    - yocto/install/images/moducop-cpu01
+  annotations:
+    description: "\t\t--> Build cpu01-bringup-image"
+
+# 
+# cpu01-edgefarm jobs
+#
+job=cpu01-edgefarm-gen-image-version:
+  <<: *Gen-image-version-template
+  artifact: /git/yocto/.generated-cpu01-edgefarm-image-naming.yaml
+  entrypoint: /git/gen-image-version.sh
+    /git
+    /git/yocto/layer-revs
+    cpu01-edgefarm
+    /git/yocto/.generated-cpu01-edgefarm-image-naming.yaml
+
+job=cpu01-edgefarm-yocto-shell:
+  <<: *Yocto-shell-template
+  command: "shell /repo/kasfile-cpu01-edgefarm.yaml"
+  annotations:
+    description: "\t\t--> interactive yocto shell cpu01-edgefarm config"
+
+job=cpu01-edgefarm-build-image:
+  <<: *Build-image-template
+  depends:
+    - cpu01-edgefarm-gen-image-version
+  sources:
+    - yocto/kasfile-cpu01-edgefarm.yaml
+    - yocto/kasfile-tdxbsp.yaml
+    - yocto/kasfile-mender.yaml
+  command: "build /repo/kasfile-cpu01-edgefarm.yaml:.generated-cpu01-edgefarm-image-naming.yaml"
+  artifact:
+    - yocto/install/images/moducop-cpu01
+  annotations:
+    description: "\t\t--> Build cpu01-edgefarm-image"
+
+# 
+# verdindev-edgefarm jobs
+#
+job=verdindev-edgefarm-gen-image-version:
+  <<: *Gen-image-version-template
+  artifact: /git/yocto/.generated-verdindev-edgefarm-image-naming.yaml
+  entrypoint: /git/gen-image-version.sh
+    /git
+    /git/yocto/layer-revs
+    verdindev-edgefarm
+    /git/yocto/.generated-verdindev-edgefarm-image-naming.yaml
+
+job=verdindev-edgefarm-yocto-shell:
+  <<: *Yocto-shell-template
+  command: "shell /repo/kasfile-verdindev-edgefarm.yaml"
+  annotations:
+    description: "\t--> interactive yocto shell verdindev-edgefarm config"
+
+job=verdindev-edgefarm-build-image:
+  <<: *Build-image-template
+  depends:
+    - verdindev-edgefarm-gen-image-version
+  sources:
+    - yocto/kasfile-verdindev-edgefarm.yaml
+    - yocto/kasfile-tdxbsp.yaml
+    - yocto/kasfile-mender.yaml
+  command: "build /repo/kasfile-verdindev-edgefarm.yaml:.generated-verdindev-edgefarm-image-naming.yaml"
+  artifact:
+    - yocto/install/images/moducop-cpu01
+  annotations:
+    description: "\t--> Build verdindev-edgefarm-image"
+
+# Clean 
+job=yocto-clean:
+  use: image-kas
+  entrypoint: /bin/bash -c "rm -rf /downloads/* /sstate-cache/* /install/* /work/build/*"
+  mounts:
+    - build-dir-yocto
+    - repo-dir-yocto
+    - download-dir-yocto
+    - sstate-dir-yocto
+    - install-dir-yocto
+  working-dir: /work
+  interactive: true
+  env:
+    - USER_ID={user.uid}
+    - GROUP_ID={user.gid}
+    - TERM=xterm-256color
+    - SHELL=/bin/bash
+  annotations:
+    description: "\t\t\t--> Cleanup"

@@ -16,3 +16,63 @@ image=image-mender-cli:
   image: ci4rail/mender-cli
   tags: [master]
   pull: once
+
+# ===================================================
+# mounts
+# ===================================================
+
+# Where the yocto-build happens
+mount=build-dir-yocto:
+  bind: yocto
+  path: /work
+
+# The location of kasfile.yaml (kas expects it in /repo)
+mount=repo-dir-yocto:
+  bind: yocto
+  path: /repo
+  read-only: true
+
+# Yocto downloads DL_DIR
+mount=download-dir-yocto:
+  bind: "{env.YOCTO_DOWNLOAD_DIR:downloads}"
+  path: /downloads
+
+# Yocto shared state cache SSTATE_DIR
+mount=sstate-dir-yocto:
+  bind: "{env.YOCTO_SSTATE_CACHE_DIR:}yocto/sstate-cache"
+  path: /sstate-cache
+
+# Yocto images (DEPLOY_DIR)
+mount=install-dir-yocto:
+  bind: yocto/install
+  path: /install
+
+# Scripts
+mount=scripts-dir:
+  bind: scripts
+  path: /scripts
+
+mount=mender-auth-dir:
+  bind: ~/.cache/mender
+  path: /mender-auth
+
+
+# ===================================================
+# envs
+# ===================================================
+
+env=yocto-envs:
+    files: [yocto/config/mender.env]
+
+# ===================================================
+# jobs
+# ===================================================
+# Get layer revisions
+job=yocto-layer-revparse:
+  use: image-kas
+  entrypoint: /git/layer-revparse.sh /git/yocto/src /git/yocto/layer-revs
+  mounts:
+    - mount-buildingblock-gitversion-source-dir
+  sources: yocto/src
+  artifact: /git/yocto/layer-revs
+  user: "{user.uid}:{user.gid}"

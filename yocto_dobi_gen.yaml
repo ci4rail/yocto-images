@@ -1,0 +1,69 @@
+#
+# This generates the yocto 
+#
+
+meta:
+  project: ci.os.lmp
+
+# ===================================================
+# mount points
+# ===================================================
+mount=source-dir:
+  bind: yocto
+  path: /data
+  read-only: false
+
+# ===================================================
+# images
+# ===================================================
+
+image=image-jinja:
+  image: pinterb/jinja2
+  tags: ["0.0.16"]
+  pull: once
+
+# ===================================================
+# jobs
+# ===================================================
+
+job=template: &Template
+  use: image-jinja
+  mounts:
+    - source-dir
+  sources: yocto/dobi_j2.yaml
+
+job=cpu01-bringup:
+  <<: *Template
+  artifact: yocto/.generated_cpu01-bringup.yaml
+  command: image_name='cpu01-bringup' image_pattern='moducop-cpu01/*Bringup*CI.OS.*.mender'
+  env: 
+    - "PUID={user.uid}"
+    - "PGID={user.gid}"
+    - "TEMPLATE=dobi_j2.yaml"
+    - "OUT_FILE=.generated_cpu01-bringup.yaml"
+
+job=cpu01-edgefarm:
+  <<: *Template
+  artifact: yocto/.generated_cpu01-edgefarm.yaml
+  command: image_name='cpu01-edgefarm' image_pattern='moducop-cpu01/*Edgefarm*CI.OS.*.mender'
+  env: 
+    - "PUID={user.uid}"
+    - "PGID={user.gid}"
+    - "TEMPLATE=dobi_j2.yaml"
+    - "OUT_FILE=.generated_cpu01-edgefarm.yaml"
+
+job=verdindev-edgefarm:
+  <<: *Template
+  artifact: yocto/.generated_verdindev-edgefarm.yaml
+  command: image_name='verdindev-edgefarm' image_pattern='verdin-imx8mm/*Edgefarm*CI.OS.*.mender'
+  env: 
+    - "PUID={user.uid}"
+    - "PGID={user.gid}"
+    - "TEMPLATE=dobi_j2.yaml"
+    - "OUT_FILE=.generated_verdindev-edgefarm.yaml"
+
+alias=all:
+  tasks:
+    - cpu01-bringup
+    - cpu01-edgefarm
+    - verdindev-edgefarm

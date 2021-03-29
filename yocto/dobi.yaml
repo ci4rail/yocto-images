@@ -29,6 +29,16 @@ mount=install-dir-yocto:
   bind: yocto/install
   path: /install
 
+# Scripts
+mount=scripts-dir:
+  bind: scripts
+  path: /scripts
+
+mount=mender-auth-dir:
+  bind: ~/.cache/mender
+  path: /mender-auth
+
+
 # ===================================================
 # envs
 # ===================================================
@@ -101,6 +111,25 @@ job=build-image-template: &Build-image-template
     - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
     - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
 
+job=mender-upload-template: &Mender-upload-template
+  use: image-mender-cli
+  interactive: true
+  mounts:
+    - install-dir-yocto
+    - mender-auth-dir
+  user: "{user.uid}:{user.gid}"
+  
+job=mender-deploy-template: &Mender-deploy-template
+  use: image-curl-jq
+  mounts:
+    - install-dir-yocto
+    - scripts-dir
+    - mender-auth-dir
+  user: "{user.uid}:{user.gid}"
+  env:
+    - MENDER_DEVICE_ID={env.MENDER_DEVICE_ID}
+    - MENDER_AUTH_TOKEN=/mender-auth/authtoken
+
 # ===================================================
 # jobs
 # ===================================================
@@ -147,6 +176,19 @@ job=cpu01-bringup-build-image:
   annotations:
     description: "\t\t--> Build cpu01-bringup-image"
 
+
+job=cpu01-bringup-mender-upload:
+  <<: *Mender-upload-template
+  entrypoint: /bin/sh -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/moducop-cpu01/*Bringup*CI.OS.*.mender"
+  annotations:
+    description: "\t\t--> Upload cpu01-bringup-image to mender"
+
+job=cpu01-bringup-mender-deploy:
+  <<: *Mender-deploy-template
+  command: /scripts/mender_deploy_artifact_to_device.sh /install/images/moducop-cpu01/*Bringup*CI.OS.*.mender
+  annotations:
+    description: "\t\t--> Deploy cpu01-bringup-image to MENDER_DEVICE_ID"
+
 # 
 # cpu01-edgefarm jobs
 #
@@ -178,6 +220,18 @@ job=cpu01-edgefarm-build-image:
     - yocto/install/images/moducop-cpu01
   annotations:
     description: "\t\t--> Build cpu01-edgefarm-image"
+
+job=cpu01-edgefarm-mender-upload:
+  <<: *Mender-upload-template
+  entrypoint: /bin/sh -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/moducop-cpu01/*Edgefarm*CI.OS.*.mender"
+  annotations:
+    description: "\t\t--> Upload cpu01-edgefarm-image to mender"
+
+job=cpu01-edgefarm-mender-deploy:
+  <<: *Mender-deploy-template
+  command: /scripts/mender_deploy_artifact_to_device.sh /install/images/moducop-cpu01/*Edgefarm*CI.OS.*.mender
+  annotations:
+    description: "\t\t--> Deploy cpu01-edgefarm-image to MENDER_DEVICE_ID"
 
 # 
 # verdindev-edgefarm jobs
@@ -230,3 +284,15 @@ job=yocto-clean:
     - SHELL=/bin/bash
   annotations:
     description: "\t\t\t--> Cleanup"
+
+job=verdindev-edgefarm-mender-upload:
+  <<: *Mender-upload-template
+  entrypoint: /bin/sh -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/verdin-imx8mm/*Edgefarm*CI.OS.*.mender"
+  annotations:
+    description: "\t--> Upload verdindev-edgefarm-image to mender"
+
+job=verdindev-edgefarm-mender-deploy:
+  <<: *Mender-deploy-template
+  command: /scripts/mender_deploy_artifact_to_device.sh /install/images/verdin-imx8mm/*Edgefarm*CI.OS.*.mender
+  annotations:
+    description: "\t--> Deploy verdindev-edgefarm-image to MENDER_DEVICE_ID"

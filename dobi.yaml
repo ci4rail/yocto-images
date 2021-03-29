@@ -6,3 +6,13 @@ image=image-kas:
   image: ghcr.io/siemens/kas/kas
   tags: ['2.3.3']
   pull: once
+
+image=image-curl-jq:
+  image: dwdraju/alpine-curl-jq
+  tags: [latest]
+  pull: once
+
+image=image-mender-cli:
+  image: ci4rail/mender-cli
+  tags: [master]
+  pull: once

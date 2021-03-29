@@ -64,6 +64,21 @@ To build all images:
 ./dobi.sh build-all
 ```
 
+### Deploy images via mender
+
+Download [Mender CLI](https://github.com/mendersoftware/mender-cli/releases)
+
+Login with `mender-cli`
+```bash
+./dobi.sh cpu01-edgefarm-mender-upload
+```
+
+To deploy an image a specific device
+```bash
+export MENDER_DEVICE_ID=<device id from mender portal>
+./dobi.sh cpu01-edgefarm-mender-deploy
+```
+
 Call `./dobi.sh list` to see a list of all jobs. 
 
 #### Yocto download and shared state cache

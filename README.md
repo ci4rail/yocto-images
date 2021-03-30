@@ -45,6 +45,10 @@ Developer builds are executed via dobi.
 
 First, enter your your mender specific data into `yocto/config/mender.env` (using template `yocto/config/mender.env.template`)
 
+Second, enter your specific data in `default.env` (using template `default.env.template`). You can use the default setting, but MENDER_DEVICE_ID must be adapted to the device you want to use to [deploy locally built images](#Deploy images via mender).
+```
+export MENDER_DEVICE_ID=<device id from mender portal>
+```
 
 For example, to build the image for `cpu01-edgefarm`:
 
@@ -68,14 +72,21 @@ To build all images:
 
 Download [Mender CLI](https://github.com/mendersoftware/mender-cli/releases)
 
-Login with `mender-cli`
+Login with `mender-cli`.
+
+Upload image to mender:
 ```bash
 ./dobi.sh cpu01-edgefarm-mender-upload
 ```
 
-To deploy an image a specific device
+To deploy an image to a specific device:
+
+Set the device ID you want to use for deployment, if you haven't specified it in `default.env`:
 ```bash
 export MENDER_DEVICE_ID=<device id from mender portal>
+```
+Start deployment
+```bash
 ./dobi.sh cpu01-edgefarm-mender-deploy
 ```
 

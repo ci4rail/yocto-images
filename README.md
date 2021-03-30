@@ -11,7 +11,7 @@ Yocto builds are performed using kas: https://github.com/siemens/kas
 The following images are currently built by this repo
 ## verdindev-edgefarm
 
-![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/verdindev-edgefarm/jobs/build-verdindev-edgefarm/badge)
+![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/verdindev-edgefarm-dev/jobs/build-verdindev-edgefarm/badge)
 
 An image for the Ci4Rail edgefarm use case (Yocto with mender, docker and iotedge support)
 
@@ -19,7 +19,7 @@ Target Platform: Toradex Verdin Development Board.
 
 ## cpu01-edgefarm
 
-![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-edgefarm/jobs/build-cpu01-edgefarm/badge)
+![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-edgefarm-dev/jobs/build-cpu01-edgefarm/badge)
 
 An image for the Ci4Rail edgefarm use case (Yocto with mender, docker and iotedge support)
 
@@ -27,7 +27,7 @@ Target Platform: Ci4Rail Moducop CPU01.
 
 ## cpu01-bringup
 
-![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-bringup/jobs/build-cpu01-bringup/badge)
+![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-bringup-dev/jobs/build-cpu01-bringup/badge)
 
 An image for HW platform tests and bringup. Includes mender support, but no docker and iotedge.
 Contains many tools for HW testing

@@ -19,7 +19,7 @@ if [ -z "${MENDER_AUTH_TOKEN}" ]; then
 fi
 
 if [ ! -f ${MENDER_AUTH_TOKEN} ]; then
-  echo "File ${MENDER_AUTH_TOKEN} does not exit" >&2
+  echo "File ${MENDER_AUTH_TOKEN} does not exist" >&2
   exit 1
 fi
 JWT=$(cat ${MENDER_AUTH_TOKEN})
@@ -48,6 +48,5 @@ json="{
   ] 
  }"
 
-curl -H "Authorization: Bearer $JWT" -H 'Content-Type: application/json' -H 'Accept: application/json' \
+curl -H "Authorization: Bearer ${JWT}" -H 'Content-Type: application/json' -H 'Accept: application/json' \
  -X POST  ${MENDER_SERVER_URL}/api/management/v1/deployments/deployments  -d "${json}"
- 

@@ -1,0 +1,51 @@
+resources:
+  # Upstream docker images
+  - name: image-robot
+    type: docker-image
+    source:
+      repository: ci4rail/robot
+      tag: latest
+  
+  # Git sources
+  - name: testscript-source
+    type: git
+    source:
+      uri: git@github.com:ci4rail/cpu01-test.git
+      private_key: ((privatekey))
+      branch: main
+      paths: 
+        - .
+      skip_ssl_verification: false
+
+jobs:
+  - name: test-((name))
+    public: true
+    plan:
+      - in_parallel:
+          - get: testscript-source
+            trigger: true
+          - get: image-robot
+      - task: check-testcomputer-availability
+        image: image-robot
+        platform: linux
+        inputs:
+          - name: testscript-source
+          - name: ci
+        params:
+          ROBOT_TC_IP: ((robot_tc_ip))
+          ROBOT_DUT_IP: ((robot_dut_ip))
+          ROBOT_TC_USER: ((robot_tc_user))
+          ROBOT_WIFI_AP: ((robot_wifi_ap))
+          ROBOT_WIFI_PASS: ((robot_wifi_pass))
+          ROBOT_TF_RELAY1_UID: ((robot_tf_relay1_uid))
+          PRIVATE_KEY: ((privatekey))
+        run:
+          path: /bin/sh
+          args:
+            - -c
+            - |
+              echo ${PRIVATE_KEY} > id_rsa
+              export ROBOT_SSH_KEY_FILE=$(pwd)/id_rsa
+              robot -t "Get DUT Power State" testscript-source/type-test/helpers
+
+

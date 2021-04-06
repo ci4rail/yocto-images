@@ -7,9 +7,7 @@ meta:
   include:
     - version.yaml
     - dobi.yaml
-    - yocto/.generated_cpu01-bringup.yaml
-    - yocto/.generated_cpu01-edgefarm.yaml
-    - yocto/.generated_verdindev-edgefarm.yaml
+    - yocto/.generated_dobi.yaml
 
 # ===================================================
 # alias

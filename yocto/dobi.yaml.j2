@@ -1,9 +1,12 @@
 ---
+{% for image in image_list %}
+  {% for key, value in image.items() %}
+    {% set image_name = key %}
+    {% set image_pattern = value["image_pattern"] %}
 
 # ===================================================
-# jobs
+# jobs for {{ image_name }}
 # ===================================================
-
 job={{image_name}}-gen-image-version:
   use: image-kas
   depends:
@@ -101,4 +104,15 @@ job={{image_name}}-mender-deploy:
   command: /scripts/mender_deploy_artifact_to_device.sh /install/images/{{image_pattern}}
   annotations:
     description: "\t\t--> Deploy {{image_name}} image to MENDER_DEVICE_ID"
+  {% endfor %}
+{% endfor %}
 
+alias=build-yocto-all:
+  tasks:
+  {% for image in image_list %}
+    {% for key, value in image.items() %}
+    - {{key}}-build-image
+    {% endfor %}
+  {% endfor %}
+  annotations:
+    description: "\t\t\t--> [alias]build all images in yocto folder"

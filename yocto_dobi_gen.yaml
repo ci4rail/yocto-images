@@ -1,6 +1,7 @@
 #
-# This generates the yocto 
-#
+# This generates the yocto/.generated_dobi.yaml 
+# from the template yocto/dobi.yaml.j2 using
+# the variables set in yocto/image_list.json
 
 meta:
   project: ci.os.lmp
@@ -8,9 +9,19 @@ meta:
 # ===================================================
 # mount points
 # ===================================================
-mount=source-dir:
+mount=templates-dir:
   bind: yocto
-  path: /data
+  path: /templates
+  read-only: true
+
+mount=variables-dir:
+  bind: yocto
+  path: /variables
+  read-only: true
+
+mount=output-dir:
+  bind: yocto
+  path: /output
   read-only: false
 
 # ===================================================
@@ -18,52 +29,27 @@ mount=source-dir:
 # ===================================================
 
 image=image-jinja:
-  image: pinterb/jinja2
-  tags: ["0.0.16"]
+  image: dinutac/jinja2docker
+  tags: ["2.1.6"]
   pull: once
 
 # ===================================================
 # jobs
 # ===================================================
 
-job=template: &Template
+job=generate-yocto-dobi.yaml:
   use: image-jinja
   mounts:
-    - source-dir
-  sources: yocto/dobi_j2.yaml
-
-job=cpu01-bringup:
-  <<: *Template
-  artifact: yocto/.generated_cpu01-bringup.yaml
-  command: image_name='cpu01-bringup' image_pattern='moducop-cpu01/*Bringup*CI.OS.*.mender'
-  env: 
-    - "PUID={user.uid}"
-    - "PGID={user.gid}"
-    - "TEMPLATE=dobi_j2.yaml"
-    - "OUT_FILE=.generated_cpu01-bringup.yaml"
-
-job=cpu01-edgefarm:
-  <<: *Template
-  artifact: yocto/.generated_cpu01-edgefarm.yaml
-  command: image_name='cpu01-edgefarm' image_pattern='moducop-cpu01/*Edgefarm*CI.OS.*.mender'
-  env: 
-    - "PUID={user.uid}"
-    - "PGID={user.gid}"
-    - "TEMPLATE=dobi_j2.yaml"
-    - "OUT_FILE=.generated_cpu01-edgefarm.yaml"
-
-job=verdindev-edgefarm:
-  <<: *Template
-  artifact: yocto/.generated_verdindev-edgefarm.yaml
-  command: image_name='verdindev-edgefarm' image_pattern='verdin-imx8mm/*Edgefarm*CI.OS.*.mender'
-  env: 
-    - "PUID={user.uid}"
-    - "PGID={user.gid}"
-    - "TEMPLATE=dobi_j2.yaml"
-    - "OUT_FILE=.generated_verdindev-edgefarm.yaml"
+    - templates-dir
+    - variables-dir
+    - output-dir
+  sources: 
+    - yocto/dobi.yaml.j2
+    - yocto/image_list.json
+  artifact: yocto/.generated_dobi.yaml
+  command: /templates/dobi.yaml.j2 /variables/image_list.json --outfile=/output/.generated_dobi.yaml --format=yaml
+  user: "{user.uid}:{user.gid}"
 
 alias=all:
   tasks:
-    - cpu01-bringup
-    - cpu01-edgefarm
-    - verdindev-edgefarm
+    - generate-yocto-dobi.yaml

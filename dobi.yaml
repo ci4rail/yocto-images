@@ -74,5 +74,5 @@ job=yocto-layer-revparse:
   mounts:
     - mount-buildingblock-gitversion-source-dir
   sources: yocto/src
-  artifact: /git/yocto/layer-revs
+  artifact: yocto/layer-revs
   user: "{user.uid}:{user.gid}"

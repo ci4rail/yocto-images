@@ -10,17 +10,17 @@ meta:
 # mount points
 # ===================================================
 mount=templates-dir:
-  bind: yocto
+  bind: .
   path: /templates
   read-only: true
 
 mount=variables-dir:
-  bind: yocto
+  bind: .
   path: /variables
   read-only: true
 
 mount=output-dir:
-  bind: yocto
+  bind: .
   path: /output
   read-only: false
 

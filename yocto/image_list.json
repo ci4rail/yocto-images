@@ -1,19 +1,16 @@
 {
     "image_list": [
         {
-            "cpu01-bringup": {
-                "image_pattern": "moducop-cpu01/*Bringup*CI.OS.*.mender"
-            }
+            "name": "cpu01-bringup",
+            "image_pattern": "moducop-cpu01/*Bringup*CI.OS.*.mender"
         },
         {
-            "cpu01-edgefarm": {
-                "image_pattern": "moducop-cpu01/*Edgefarm*CI.OS.*.mender"
-            }
+            "name": "cpu01-edgefarm",
+            "image_pattern": "moducop-cpu01/*Edgefarm*CI.OS.*.mender"
         },
         {
-            "verdindev-edgefarm": {
-                "image_pattern": "verdin-imx8mm/*Edgefarm*CI.OS.*.mender"
-            }
+            "name": "verdindev-edgefarm",
+            "image_pattern": "verdin-imx8mm/*Edgefarm*CI.OS.*.mender"
         }
     ]
 }

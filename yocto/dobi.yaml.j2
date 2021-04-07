@@ -109,7 +109,7 @@ alias=build-yocto-all:
   tasks:
   {% for image in image_list %}
     {% set image_name = image["name"] %}
-    - {{key}}-build-image
+    - {{image_name}}-build-image
   {% endfor %}
   annotations:
     description: "\t\t\t--> [alias]build all images in yocto folder"

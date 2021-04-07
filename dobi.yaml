@@ -70,7 +70,8 @@ env=yocto-envs:
 # Get layer revisions
 job=yocto-layer-revparse:
   use: image-kas
-  entrypoint: /git/layer-revparse.sh /git/yocto/src /git/yocto/layer-revs
+  entrypoint: /bin/bash
+  command: /git/layer-revparse.sh /git/yocto/src /git/yocto/layer-revs
   mounts:
     - mount-buildingblock-gitversion-source-dir
   sources: yocto/src

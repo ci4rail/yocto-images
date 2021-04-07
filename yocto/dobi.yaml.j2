@@ -18,7 +18,8 @@ job={{image_name}}-gen-image-version:
   user: "{user.uid}:{user.gid}"
   env: 
     - "USER={user.name}"
-  entrypoint: /git/gen-image-version.sh
+  entrypoint: /bin/bash
+  command: /git/gen-image-version.sh
     /git
     /git/yocto/layer-revs
     {{image_name}}
@@ -86,7 +87,8 @@ job={{image_name}}-mender-upload:
     - install-dir-yocto
     - mender-auth-dir
   user: "{user.uid}:{user.gid}"
-  entrypoint: /bin/sh -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/{{image_pattern}}"
+  entrypoint: /bin/sh 
+  command: -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/{{image_pattern}}"
   annotations:
     description: "\t\t--> Upload {{image_name}} image to mender"
   

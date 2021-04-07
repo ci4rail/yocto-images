@@ -13,7 +13,10 @@ if [ "$#" -ne 2 ] ; then
 fi
 
 set -e
-
+if [ ! -d ${1} ]; then
+    echo "${1} does not exist. Exit."
+    exit 0
+fi
 allout=$(
     cd ${1}
 

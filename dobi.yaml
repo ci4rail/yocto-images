@@ -34,12 +34,12 @@ mount=repo-dir-yocto:
 
 # Yocto downloads DL_DIR
 mount=download-dir-yocto:
-  bind: "{env.YOCTO_DOWNLOAD_DIR:downloads}"
+  bind: "{env.YOCTO_DOWNLOAD_DIR:cache/downloads}"
   path: /downloads
 
 # Yocto shared state cache SSTATE_DIR
 mount=sstate-dir-yocto:
-  bind: "{env.YOCTO_SSTATE_CACHE_DIR:}yocto/sstate-cache"
+  bind: "{env.YOCTO_SSTATE_CACHE_DIR:cache/sstate-cache}"
   path: /sstate-cache
 
 # Yocto images (DEPLOY_DIR)

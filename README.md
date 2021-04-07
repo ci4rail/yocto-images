@@ -11,7 +11,7 @@ Yocto builds are performed using kas: https://github.com/siemens/kas
 The following images are currently built by this repo
 ## verdindev-edgefarm
 
-![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/verdindev-edgefarm/jobs/build-verdindev-edgefarm/badge)
+![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/verdindev-edgefarm-dev/jobs/build-verdindev-edgefarm/badge)
 
 An image for the Ci4Rail edgefarm use case (Yocto with mender, docker and iotedge support)
 
@@ -19,7 +19,7 @@ Target Platform: Toradex Verdin Development Board.
 
 ## cpu01-edgefarm
 
-![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-edgefarm/jobs/build-cpu01-edgefarm/badge)
+![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-edgefarm-dev/jobs/build-cpu01-edgefarm/badge)
 
 An image for the Ci4Rail edgefarm use case (Yocto with mender, docker and iotedge support)
 
@@ -27,7 +27,7 @@ Target Platform: Ci4Rail Moducop CPU01.
 
 ## cpu01-bringup
 
-![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-bringup/jobs/build-cpu01-bringup/badge)
+![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-bringup-dev/jobs/build-cpu01-bringup/badge)
 
 An image for HW platform tests and bringup. Includes mender support, but no docker and iotedge.
 Contains many tools for HW testing
@@ -45,6 +45,10 @@ Developer builds are executed via dobi.
 
 First, enter your your mender specific data into `yocto/config/mender.env` (using template `yocto/config/mender.env.template`)
 
+Second, enter your specific data in `default.env` (using template `default.env.template`). You can use the default setting, but MENDER_DEVICE_ID must be adapted to the device you want to use to [deploy locally built images](#Deploy images via mender).
+```
+export MENDER_DEVICE_ID=<device id from mender portal>
+```
 
 For example, to build the image for `cpu01-edgefarm`:
 
@@ -62,6 +66,28 @@ To build all images:
 
 ```bash
 ./dobi.sh build-all
+```
+
+### Deploy images via mender
+
+Download [Mender CLI](https://github.com/mendersoftware/mender-cli/releases)
+
+Login with `mender-cli`.
+
+Upload image to mender:
+```bash
+./dobi.sh cpu01-edgefarm-mender-upload
+```
+
+To deploy an image to a specific device:
+
+Set the device ID you want to use for deployment, if you haven't specified it in `default.env`:
+```bash
+export MENDER_DEVICE_ID=<device id from mender portal>
+```
+Start deployment
+```bash
+./dobi.sh cpu01-edgefarm-mender-deploy
 ```
 
 Call `./dobi.sh list` to see a list of all jobs. 

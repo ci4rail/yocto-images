@@ -5,6 +5,6 @@ gen/
 */downloads/
 */install/
 */src/
-*/sstate-cache/
 .env
-downloads
+cache
+default.env

@@ -7,7 +7,7 @@ meta:
   include:
     - version.yaml
     - dobi.yaml
-    - yocto/dobi.yaml
+    - yocto/.generated_dobi.yaml
 
 # ===================================================
 # alias
@@ -17,11 +17,4 @@ alias=version:
   tasks:
     - buildingblock-version
 
-alias=build-all:
-  tasks:
-    - cpu01-bringup-build-image
-    - cpu01-edgefarm-build-image
-    - verdindev-edgefarm-build-image
-  annotations:
-    description: "\t\t\t--> [alias]build all images"
 

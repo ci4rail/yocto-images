@@ -1,0 +1,55 @@
+#
+# This generates the yocto/.generated_dobi.yaml 
+# from the template yocto/dobi.yaml.j2 using
+# the variables set in yocto/image_list.json
+
+meta:
+  project: ci.os.lmp
+
+# ===================================================
+# mount points
+# ===================================================
+mount=templates-dir:
+  bind: .
+  path: /templates
+  read-only: true
+
+mount=variables-dir:
+  bind: .
+  path: /variables
+  read-only: true
+
+mount=output-dir:
+  bind: .
+  path: /output
+  read-only: false
+
+# ===================================================
+# images
+# ===================================================
+
+image=image-jinja:
+  image: dinutac/jinja2docker
+  tags: ["2.1.6"]
+  pull: once
+
+# ===================================================
+# jobs
+# ===================================================
+
+job=generate-yocto-dobi.yaml:
+  use: image-jinja
+  mounts:
+    - templates-dir
+    - variables-dir
+    - output-dir
+  sources: 
+    - yocto/dobi.yaml.j2
+    - yocto/image_list.json
+  artifact: yocto/.generated_dobi.yaml
+  command: /templates/dobi.yaml.j2 /variables/image_list.json --outfile=/output/.generated_dobi.yaml --format=yaml
+  user: "{user.uid}:{user.gid}"
+
+alias=all:
+  tasks:
+    - generate-yocto-dobi.yaml

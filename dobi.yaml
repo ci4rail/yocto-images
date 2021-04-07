@@ -53,7 +53,7 @@ mount=scripts-dir:
   path: /scripts
 
 mount=mender-auth-dir:
-  bind: ~/.cache/mender
+  bind:  "{env.MENDER_AUTH_DIR:~/.cache/mender}"
   path: /mender-auth
 
 

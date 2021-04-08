@@ -23,7 +23,7 @@ resources:
     source:
       uri: git@github.com:ci4rail/cpu01-test.git
       private_key: ((privatekey))
-      branch: feature/yocto-test
+      branch: main
       paths: 
         - .
       skip_ssl_verification: false

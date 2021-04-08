@@ -17,6 +17,16 @@ resources:
       endpoint: ((s3_endpoint))
       disable_ssl: ((s3_skip_ssl_verification))
       
+  - name: s3-test-results
+    type: s3
+    source:
+      bucket: ((name))
+      regexp: log-(.*).html
+      access_key_id: ((s3_access_key))
+      secret_access_key: ((s3_secret_key))
+      endpoint: ((s3_endpoint))
+      disable_ssl: ((s3_skip_ssl_verification))
+
   # Git sources
   - name: testscript-source
     type: git
@@ -66,5 +76,10 @@ jobs:
 
                 tezi_tar_s3=$(cd s3-tezi-file && ls *.mender_tezi.tar)
                 echo "Testing image ${tezi_tar_s3}"
-                robot --outputdir results -vTEZI_TAR:${tezi_tar_s3} testscript-source/yocto-edgefarm-test
-
+                robot --outputdir results -l log-${tezi_tar_s3}-$(date "+%s").html -v TEZI_TAR:${tezi_tar_s3} testscript-source/yocto-edgefarm-test
+                #robot --outputdir results -l log-${tezi_tar_s3}-$(date "+%s").html testscript-source/yocto-edgefarm-test
+        ensure:
+          put: s3-test-results
+          params:
+            file: results/log-*.html
+            acl: public-read

@@ -148,7 +148,9 @@ fly --target dev login --concourse-url https://concourse.ci4rail.com
 
 The following steps are performed inside `yocto` subdirectory:
 
-Copy and adapt `ci/credentials.template.yaml` it to your needs. 
+Copy `ci/credentials.template.yaml` to `ci/credentials.yaml` and adapt it to your needs. 
+
+Copy `ci/config-testing.template.yaml` to `ci/config-testing.yaml` and adapt it to your needs. This sets the parameters to test the cpu01-edgefarm image. 
 
 ```bash
 cp ci/credentials.template.yaml ci/credentials-prod.yaml
@@ -164,18 +166,30 @@ cd yocto
 fly -t dev set-pipeline -c pipeline.yaml -p cpu01-bringup -l ci/config-dev.yaml -l ci/credentials.yaml -v name=cpu01-bringup
 ```
 
-To set all pipelines, use
-```bash
-cd yocto
-./set-dev-pipelines.sh
-```
-
 *Note: Currently, only `ci/config-dev.yaml` exists. It monitors the directory `yocto` on `main` branch for changes and triggeres a build. Under normal circumstances no modifications are needed in this file. 
 `ci/config-prod.yaml` will be added later when release images are required.
 
 The pipeline produces:
 * A TEZI tar file that can be installed with the tdx-installer. This file is stored on https://minio.ci4rail.com/, for example: https://minio.ci4rail.com/minio/cpu01-bringup/.
 * A mender file, that is pushed to mender server
+
+### Activate test pipeline
+
+A test pipeline `pipeline_testing.yaml` exists only for cpu01-edgefarm image. It monitors the S3 bucket for new images, downloads the image to the test setup, programs it into DUT and executes test cases.
+
+```bash
+cd yocto
+fly -t dev set-pipeline -c pipeline_testing.yaml -p cpu01-edgefarm-acceptance-test -l ci/config-testing.yaml ci/config-dev.yaml -l ci/credentials.yaml -v name=cpu01-edgefarm
+```
+
+### Set all pipelines
+
+To set all pipelines, use
+```bash
+cd yocto
+./set-dev-pipelines.sh
+```
+
 
 
 For further help on fly usage please refer to the [fly documentation](https://concourse-ci.org/fly.html).

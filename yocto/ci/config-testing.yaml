@@ -1,6 +1,5 @@
 ---
-robot_tc_ip: 192.168.24.12
-robot_dut_ip: 192.168.24.13
+robot_tc_ip: 192.168.24.14
 robot_tc_user: klaus
 robot_wifi_ap: hydra-rpi-wifi
 robot_wifi_pass: testfarm

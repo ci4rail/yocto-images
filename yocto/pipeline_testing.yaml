@@ -4,8 +4,19 @@ resources:
     type: docker-image
     source:
       repository: ci4rail/robot
-      tag: latest
+      tag: latest-2021-03-25
   
+  # S3 Buckets
+  - name: s3-tezi-file
+    type: s3
+    source:
+      bucket: ((name))
+      regexp: (.*).mender_tezi.tar
+      access_key_id: ((s3_access_key))
+      secret_access_key: ((s3_secret_key))
+      endpoint: ((s3_endpoint))
+      disable_ssl: ((s3_skip_ssl_verification))
+      
   # Git sources
   - name: testscript-source
     type: git
@@ -25,12 +36,15 @@ jobs:
           - get: testscript-source
             trigger: true
           - get: image-robot
+          - get: s3-tezi-file
+            trigger: true
       - task: run-edgefarm-image-test
         image: image-robot
         config:
           platform: linux
           inputs:
             - name: testscript-source
+            - name: s3-tezi-file
           outputs:
             - name: results
           params:
@@ -39,7 +53,6 @@ jobs:
             ROBOT_WIFI_AP: ((robot_wifi_ap))
             ROBOT_WIFI_PASS: ((robot_wifi_pass))
             ROBOT_TF_RELAY1_UID: ((robot_tf_relay1_uid))
-            PRIVATE_KEY: ((privatekey))
           run:
             path: /bin/sh
             args:
@@ -48,7 +61,10 @@ jobs:
                 cat > id_rsa <<-ENDOFMESSAGE
                 ((privatekey))
                 ENDOFMESSAGE
-                export ROBOT_SSH_KEY_FILE=$(pwd)/id_rsa
-                robot --outputdir results -vTEZI_TAR:/tmp/mender_tezi.tar testscript-source/yocto-edgefarm-test
 
+                export ROBOT_SSH_KEY_FILE=$(pwd)/id_rsa
+
+                tezi_tar_s3=$(cd s3-tezi-file && ls *.mender_tezi.tar)
+                echo "Testing image ${tezi_tar_s3}"
+                robot --outputdir results -vTEZI_TAR:${tezi_tar_s3} testscript-source/yocto-edgefarm-test
 

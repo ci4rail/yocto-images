@@ -70,6 +70,7 @@ To build all images:
 
 ### Deploy images via mender
 
+
 Download [Mender CLI](https://docs.mender.io/downloads#mender-cli)
 
 Login with `mender-cli`.

@@ -50,3 +50,4 @@ json="{
 
 curl -H "Authorization: Bearer ${JWT}" -H 'Content-Type: application/json' -H 'Accept: application/json' \
  -X POST  ${MENDER_SERVER_URL}/api/management/v1/deployments/deployments  -d "${json}"
+

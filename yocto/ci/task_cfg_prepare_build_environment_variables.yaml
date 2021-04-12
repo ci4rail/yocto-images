@@ -6,8 +6,6 @@ image_resource:
     repository: cfmanteiga/alpine-bash-curl-jq
     tag: latest
 
-inputs:
-  - name: s3-gitversion
 outputs:
   - name: build-envs
 run:

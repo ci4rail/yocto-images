@@ -13,6 +13,16 @@ resources:
       repository: ci4rail/ci.os.lmp
       access_token: ((access_token))
 
+  # Git sources
+  - name: source
+    type: git
+    source:
+      uri: ((git_source))
+      private_key: ((privatekey))
+      branch: ((git_branch))
+      paths: ((git_paths))
+      skip_ssl_verification: ((git_skip_ssl_verification))
+
 jobs:
   - name: build
     public: true
@@ -25,7 +35,12 @@ jobs:
           params:
             path: pull-request
             status: failure
-
+      - get: source
+      - task: prepare-build-environment-variables
+        image: image-bash-utils
+        file: source/yocto/ci/task_cfg_prepare_build_environment_variables.yaml
+        vars:
+          name: ((name))
 
       - put: pull-request
         params:

@@ -1,0 +1,34 @@
+platform: linux
+
+image_resource:
+  type: registry-image
+  source:
+    repository: ghcr.io/siemens/kas/kas
+    tag: 2.3.3
+
+inputs:
+  - name: source
+  - name: gitversion
+outputs:
+  - name: install
+run:
+  path: /bin/bash
+  args:
+    - -ec
+    - |
+      ROOT=$(pwd)
+      mkdir -p /install /sstate-cache /downloads
+      USER_ID=30000
+      GROUP_ID=30000
+      chown -R ${USER_ID}:${GROUP_ID} /install /sstate-cache /downloads source
+      export IMAGE_GIT_VERSION=$(cat s3-gitversion/gitversion/plain/BranchVersion)
+      cd ${ROOT}/source/yocto
+      /kas/container-entrypoint build kasfile-((name)).yaml
+      cp -r /install/images/*/*CI.OS.LMP*.mender_tezi.tar ${ROOT}/install
+      cp -r /install/images/*/*CI.OS.LMP*.mender ${ROOT}/install
+  params: 
+    MENDER_ARTIFACT_DEV_SUFFIX: ((MENDER_ARTIFACT_DEV_SUFFIX))
+    IMAGE_NAME_SUFFIX: ((IMAGE_NAME_SUFFIX))
+    MENDER_ARTIFACT_NAME: ((MENDER_ARTIFACT_NAME))
+    MENDER_SERVER_URL: ((MENDER_SERVER_URL))
+    MENDER_TENANT_TOKEN: ((MENDER_TENANT_TOKEN))

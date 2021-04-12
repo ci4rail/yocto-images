@@ -36,16 +36,21 @@ jobs:
             path: pull-request
             status: failure
       - get: source
-      - task: prepare-build-environment-variables
-        file: source/yocto/ci/task_cfg_prepare_build_environment_variables.yaml
-        vars:
-          name: ((name))
-          HOSTED_MENDER_USER_EMAIL: ((HOSTED_MENDER_USER_EMAIL))
-          HOSTED_MENDER_PASSWORD: ((HOSTED_MENDER_PASSWORD))
-          MENDER_ARTIFACT_DEV_SUFFIX: ((MENDER_ARTIFACT_DEV_SUFFIX))
-          MENDER_SERVER_URL: ((MENDER_SERVER_URL))
-          MENDER_TENANT_TOKEN: ((MENDER_TENANT_TOKEN))
-          IMAGE_NAME_SUFFIX: ((IMAGE_NAME_SUFFIX))
+
+      - task: generate-version
+        file: source/yocto/ci/task_cfg_generate_version.yaml
+
+      # - task: prepare-build-environment-variables
+      #   file: source/yocto/ci/task_cfg_prepare_build_environment_variables.yaml
+      #   vars:
+      #     name: ((name))
+      #     HOSTED_MENDER_USER_EMAIL: ((HOSTED_MENDER_USER_EMAIL))
+      #     HOSTED_MENDER_PASSWORD: ((HOSTED_MENDER_PASSWORD))
+      #     MENDER_ARTIFACT_DEV_SUFFIX: ((MENDER_ARTIFACT_DEV_SUFFIX))
+      #     MENDER_SERVER_URL: ((MENDER_SERVER_URL))
+      #     MENDER_TENANT_TOKEN: ((MENDER_TENANT_TOKEN))
+      #     IMAGE_NAME_SUFFIX: ((IMAGE_NAME_SUFFIX))
+
       - put: pull-request
         params:
           path: pull-request

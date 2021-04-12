@@ -1,0 +1,33 @@
+platform: linux
+
+image_resource:
+  type: registry-image
+  source:
+    repository: ci4rail/robot
+    tag: latest-2021-03-25
+
+inputs:
+  - name: testscript-source
+  - name: s3-tezi-file
+outputs:
+  - name: results
+params:
+  ROBOT_TC_IP: ((robot_tc_ip))
+  ROBOT_TC_USER: ((robot_tc_user))
+  ROBOT_WIFI_AP: ((robot_wifi_ap))
+  ROBOT_WIFI_PASS: ((robot_wifi_pass))
+  ROBOT_TF_RELAY1_UID: ((robot_tf_relay1_uid))
+run:
+  path: /bin/sh
+  args:
+    - -c
+    - |
+      cat > id_rsa <<-ENDOFMESSAGE
+      ((privatekey))
+      ENDOFMESSAGE
+
+      export ROBOT_SSH_KEY_FILE=$(pwd)/id_rsa
+
+      tezi_tar_s3=$(cd s3-tezi-file && ls *.mender_tezi.tar)
+      echo "Testing image ${tezi_tar_s3}"
+      robot --outputdir results -l log-${tezi_tar_s3}-$(date "+%s").html -v TEZI_TAR:${tezi_tar_s3} testscript-source/yocto-edgefarm-test

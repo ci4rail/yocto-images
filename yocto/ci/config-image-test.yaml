@@ -1,0 +1,10 @@
+---
+testscript_source_repo: git@github.com:ci4rail/cpu01-test.git
+testscript_source_branch: main
+
+robot_tc_ip: 192.168.24.14
+robot_tc_user: klaus
+robot_wifi_ap: hydra-rpi-wifi
+robot_wifi_pass: testfarm
+robot_tf_relay1_uid: Nsf
+

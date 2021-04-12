@@ -1,3 +1,4 @@
+---
 resources:
   # S3 buckets
   - name: s3-tezi-file
@@ -20,7 +21,7 @@ resources:
       endpoint: ((s3_endpoint))
       disable_ssl: ((s3_skip_ssl_verification))
  
-- name: s3-test-results
+  - name: s3-test-results
     type: s3
     source:
       bucket: ((name))
@@ -87,6 +88,8 @@ jobs:
         file: source/yocto/ci/task_cfg_mender_upload.yaml
 
   - name: test
+    public: true
+    plan:
       - in_parallel:
           - get: testscript-source
             trigger: true

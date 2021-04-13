@@ -73,6 +73,9 @@ jobs:
 
       - task: mender-upload
         file: source/yocto/ci/task_cfg_mender_upload.yaml
+        vars:
+          HOSTED_MENDER_USER_EMAIL: ((HOSTED_MENDER_USER_EMAIL))
+          HOSTED_MENDER_PASSWORD: ((HOSTED_MENDER_PASSWORD))
 
       - put: s3-tezi-file
         params:

@@ -63,11 +63,6 @@ jobs:
       - get: pull-request
         trigger: true
         version: every
-        on_failure:
-          put: pull-request
-          params:
-            path: pull-request
-            status: failure
 
       - put: pull-request
         params:
@@ -93,15 +88,22 @@ jobs:
           file: install/*.mender_tezi.tar
           acl: public-read
 
+    on_failure:
+      put: pull-request
+      params:
+        path: pull-request
+        status: failure
+
   - name: test
     public: true
     plan:
       - in_parallel:
-          - get: source
-          - get: testscript-source
-            trigger: true
-          - get: s3-tezi-file
-            trigger: true
+        - get: pull-request
+        - get: source
+        - get: testscript-source
+          trigger: true
+        - get: s3-tezi-file
+          trigger: true
       - task: run-edgefarm-image-test
         file: source/yocto/ci/task_cfg_image_test.yaml
         vars:
@@ -116,12 +118,13 @@ jobs:
           params:
             file: results/log-*.html
             acl: public-read
-      - put: pull-request
-        params:
-          path: pull-request
-          status: pending
 
       - put: pull-request
         params:
           path: pull-request
           status: success
+    on_failure:
+      put: pull-request
+      params:
+        path: pull-request
+        status: failure

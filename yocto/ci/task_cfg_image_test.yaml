@@ -29,6 +29,5 @@ run:
 
       tezi_tar_s3=$(cd s3-tezi-file && ls *.mender_tezi.tar)
       echo "Testing image ${tezi_tar_s3}"
-      #robot --outputdir results -l log-${tezi_tar_s3}-$(date "+%s").html -v TEZI_TAR:${tezi_tar_s3} testscript-source/yocto-edgefarm-test
-      robot --outputdir results -l log-${tezi_tar_s3}-$(date "+%s").html testscript-source/yocto-edgefarm-test
+      robot --outputdir results -l log-${tezi_tar_s3}-$(date "+%s").html -v TEZI_TAR:${tezi_tar_s3} testscript-source/yocto-edgefarm-test
   user: root

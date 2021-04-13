@@ -129,7 +129,25 @@ MENDER_ARTIFACT_DEV_SUFFIX=-dev
 IMAGE_NAME_SUFFIX=-dev
 ```
 
-## CI/CD configuration
+## CI/CD 
+
+The following provides an overview of the different dobi and ci pipelines together with their configuration files:
+
+Different CI pipelines exist:
+
+* triger when a new commit is made on the main branch of this repo:
+    * Testing stage. Triggers on any commit in main banch
+        * cpu01-edgefarm: Builds the image and runs acceptance test in testfarm
+        * cpu01-bringup: Builds the image 
+        * cpu01-bringup: Builds the image 
+    * Staging stage. Triggers on commits with "staging" tag (not yet implemented)
+    * Production stage. Triggers on commits with "staging" tag (not yet implemented)
+
+* trigger on github pull requests:
+    * cpu01-edgefarm: Builds the image and runs acceptance test in testfarm
+    * Other images are not built and tested during pull requests
+
+![Yocto pipelines](/doc/yocto_pipelines.svg)
 
 ### General perparations
 
@@ -152,45 +170,21 @@ Copy `ci/credentials.template.yaml` to `ci/credentials.yaml` and adapt it to you
 
 Copy `ci/config-testing.template.yaml` to `ci/config-testing.yaml` and adapt it to your needs. This sets the parameters to test the cpu01-edgefarm image. 
 
-```bash
-cp ci/credentials.template.yaml ci/credentials-prod.yaml
-```
-*Note: `ci/credentials-prod.yaml` and `ci/credentials.yaml` are ignored by git. In this file you can store access credentials and keys that won't be checked in. If you are using some third party vault for credentials that integrates well into concourse, you won't need this file.*
+*Note: `ci/credentials-prod.yaml` and `ci/config-testing.yaml` are ignored by git. In this file you can store access credentials and keys that won't be checked in. If you are using some third party vault for credentials that integrates well into concourse, you won't need this file.*
 
 
 ### Activate build pipeline
 
-Example for setting the pipeline (here: to create a pipeline for cpu01-bringup image):
+Use the following script to activate the pipelines:
 ```bash
 cd yocto
-fly -t dev set-pipeline -c pipeline.yaml -p cpu01-bringup -l ci/config-dev.yaml -l ci/credentials.yaml -v name=cpu01-bringup
+./set-pipelines.sh
 ```
 
-*Note: Currently, only `ci/config-dev.yaml` exists. It monitors the directory `yocto` on `main` branch for changes and triggeres a build. Under normal circumstances no modifications are needed in this file. 
-`ci/config-prod.yaml` will be added later when release images are required.
-
-The pipeline produces:
+All pipeline produces:
 * A TEZI tar file that can be installed with the tdx-installer. This file is stored on https://minio.ci4rail.com/, for example: https://minio.ci4rail.com/minio/cpu01-bringup/.
 * A mender file, that is pushed to mender server
-
-### Activate test pipeline
-
-A test pipeline `pipeline_testing.yaml` exists only for cpu01-edgefarm image. It monitors the S3 bucket for new images, downloads the image to the test setup, programs it into DUT and executes test cases.
-
-```bash
-cd yocto
-fly -t dev set-pipeline -c pipeline_testing.yaml -p cpu01-edgefarm-acceptance-test -l ci/config-testing.yaml ci/config-dev.yaml -l ci/credentials.yaml -v name=cpu01-edgefarm
-```
-
-### Set all pipelines
-
-To set all pipelines, use
-```bash
-cd yocto
-./set-dev-pipelines.sh
-```
-
-
+* The pipelines that include acceptance tests also put the robot HTML log files to the minio server.
 
 For further help on fly usage please refer to the [fly documentation](https://concourse-ci.org/fly.html).
 

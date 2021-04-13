@@ -68,6 +68,12 @@ jobs:
           params:
             path: pull-request
             status: failure
+
+      - put: pull-request
+        params:
+          path: pull-request
+          status: pending
+
       - get: source
 
       - task: generate-version

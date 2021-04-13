@@ -5,7 +5,7 @@ resources:
     type: s3
     source:
       bucket: ((name))
-      regexp: (.*).mender_tezi.tar
+      regexp: (.*)((IMAGE_NAME_SUFFIX)).mender_tezi.tar
       access_key_id: ((s3_access_key))
       secret_access_key: ((s3_secret_key))
       endpoint: ((s3_endpoint))
@@ -15,7 +15,7 @@ resources:
     type: s3
     source:
       bucket: ((name))
-      regexp: (.*).mender
+      regexp: (.*)((IMAGE_NAME_SUFFIX)).mender
       access_key_id: ((s3_access_key))
       secret_access_key: ((s3_secret_key))
       endpoint: ((s3_endpoint))

@@ -22,6 +22,8 @@ run:
   args:
     - -c
     - |
+      ls -la .
+      id -u
       cat > id_rsa <<-ENDOFMESSAGE
       ((privatekey))
       ENDOFMESSAGE

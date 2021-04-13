@@ -87,13 +87,11 @@ jobs:
           file: install/*.mender
           acl: public-read
 
-      - task: mender-upload
-        file: source/yocto/ci/task_cfg_mender_upload.yaml
-
   - name: test
     public: true
     plan:
       - in_parallel:
+          - get: source
           - get: testscript-source
             trigger: true
           - get: s3-tezi-file
@@ -101,6 +99,7 @@ jobs:
       - task: run-edgefarm-image-test
         file: source/yocto/ci/task_cfg_image_test.yaml
         vars:
+          privatekey: ((privatekey))
           name: ((name))
           robot_tc_ip: ((robot_tc_ip))  
           robot_tc_user: ((robot_tc_user))

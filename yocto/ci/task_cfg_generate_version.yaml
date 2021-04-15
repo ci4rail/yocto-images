@@ -7,7 +7,7 @@ image_resource:
     tag: 0.7.0
 
 inputs:
-  - name: source
+  - name: ((source))
 outputs:
   - name: gitversion
 run:
@@ -16,5 +16,5 @@ run:
     - -exc
     - entrypoint.sh && ls -l ${GEN_PATH}
 params:
-  GIT_PATH: source
+  GIT_PATH: ((source))
   GEN_PATH: gitversion

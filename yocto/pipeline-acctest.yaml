@@ -61,11 +61,14 @@ jobs:
 
       - task: generate-version
         file: source/yocto/ci/task_cfg_generate_version.yaml
+        vars:
+          source: source
 
       - task: build-tezi-file
         file: source/yocto/ci/task_cfg_build_tezi_file.yaml
         vars:
           name: ((name))
+          source: source
           MENDER_SERVER_URL: ((MENDER_SERVER_URL))
           MENDER_TENANT_TOKEN: ((MENDER_TENANT_TOKEN))
           MENDER_ARTIFACT_DEV_SUFFIX: ((MENDER_ARTIFACT_DEV_SUFFIX))

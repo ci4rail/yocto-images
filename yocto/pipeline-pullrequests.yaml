@@ -36,15 +36,15 @@ resources:
       disable_ssl: ((s3_skip_ssl_verification))
 
   # Git sources
-  - name: source
-    type: git
-    source:
-      uri: ((git_source))
-      private_key: ((privatekey))
-      branch: ((git_branch))
-      paths: ((git_paths))
-      # TODO: git_tag_rexex
-      skip_ssl_verification: ((git_skip_ssl_verification))
+  # - name: source
+  #   type: git
+  #   source:
+  #     uri: ((git_source))
+  #     private_key: ((privatekey))
+  #     branch: ((git_branch))
+  #     paths: ((git_paths))
+  #     # TODO: git_tag_rexex
+  #     skip_ssl_verification: ((git_skip_ssl_verification))
 
   - name: testscript-source
     type: git
@@ -69,15 +69,16 @@ jobs:
           path: pull-request
           status: pending
 
-      - get: source
-
       - task: generate-version
-        file: source/yocto/ci/task_cfg_generate_version.yaml
+        file: pull-request/yocto/ci/task_cfg_generate_version.yaml
+        vars:
+          source: pull-request
 
       - task: build-tezi-file
-        file: source/yocto/ci/task_cfg_build_tezi_file.yaml
+        file: pull-request/yocto/ci/task_cfg_build_tezi_file.yaml
         vars:
           name: ((name))
+          source: pull-request
           MENDER_SERVER_URL: ((MENDER_SERVER_URL))
           MENDER_TENANT_TOKEN: ((MENDER_TENANT_TOKEN))
           MENDER_ARTIFACT_DEV_SUFFIX: -pr
@@ -99,13 +100,12 @@ jobs:
     plan:
       - in_parallel:
         - get: pull-request
-        - get: source
         - get: testscript-source
           trigger: true
         - get: s3-tezi-file
           trigger: true
       - task: run-edgefarm-image-test
-        file: source/yocto/ci/task_cfg_image_test.yaml
+        file: pull-request/yocto/ci/task_cfg_image_test.yaml
         vars:
           privatekey: ((privatekey))
           name: ((name))

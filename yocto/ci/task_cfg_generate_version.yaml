@@ -1,0 +1,20 @@
+platform: linux
+
+image_resource:
+  type: registry-image
+  source:
+    repository: elbb/bb-gitversion
+    tag: 0.7.0
+
+inputs:
+  - name: ((source))
+outputs:
+  - name: gitversion
+run:
+  path: /bin/bash
+  args:
+    - -exc
+    - entrypoint.sh && ls -l ${GEN_PATH}
+params:
+  GIT_PATH: ((source))
+  GEN_PATH: gitversion

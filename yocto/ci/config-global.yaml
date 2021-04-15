@@ -1,0 +1,24 @@
+---
+# Project configuration
+# -----------------
+## Specify the git repository to work with
+git_source: git@github.com:ci4rail/ci.os.lmp.git
+## Specify the git branch to work with
+git_branch: feature/pr-pipeline
+## Specify the git paths to monitor
+git_paths:
+  - yocto
+## This enables/disables ssl verification of the git resource
+git_skip_ssl_verification: false
+
+# S3 configuration
+# ----------------
+## Specify the S3 endpoint URI
+s3_endpoint: https://minio.ci4rail.com
+## This enables/disables the ssl verification for the S3 endpoint
+s3_skip_ssl_verification: false
+
+# Mender configuration
+# --------------------
+# This is the address the mender service is reachable
+MENDER_SERVER_URL: https://hosted.mender.io

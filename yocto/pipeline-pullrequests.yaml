@@ -35,17 +35,6 @@ resources:
       endpoint: ((s3_endpoint))
       disable_ssl: ((s3_skip_ssl_verification))
 
-  # Git sources
-  # - name: source
-  #   type: git
-  #   source:
-  #     uri: ((git_source))
-  #     private_key: ((privatekey))
-  #     branch: ((git_branch))
-  #     paths: ((git_paths))
-  #     # TODO: git_tag_rexex
-  #     skip_ssl_verification: ((git_skip_ssl_verification))
-
   - name: testscript-source
     type: git
     source:

@@ -26,7 +26,7 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: 3e66fad8aca429606aa831248862bf6fc2324f8f
+    refspec: b7ba07fd832bf8920af601a185eff1652492f602
 
 bblayers_conf_header:
   src/meta-custom: |
@@ -40,7 +40,7 @@ local_conf_header:
     SSTATE_DIR ?= "/sstate-cache"
     DEPLOY_DIR = "/install"
     PACKAGE_CLASSES ?= "package_ipk"
-    EXTRA_IMAGE_FEATURES ?= "debug-tweaks package-management"
+    EXTRA_IMAGE_FEATURES ?= "package-management"
     USER_CLASSES ?= "buildstats image-mklibs image-prelink"
     PATCHRESOLVE = "noop"
     BB_DISKMON_DIRS ??= "\
@@ -81,3 +81,5 @@ local_conf_header:
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     MENDER_STORAGE_TOTAL_SIZE_MB = "4096"
     ROOTFS_RO_UNNEEDED = "update-rc.d base-passwd"
+    INHERIT += "extrausers"
+    EXTRA_USERS_PARAMS = "usermod -P cheesebread root; "

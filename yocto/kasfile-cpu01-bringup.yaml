@@ -25,11 +25,11 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: dunfell
+    refspec: 0c2a55e1e5fdc665b6cee8cc38651590be4b5c40
 
   src/meta-ci.bringup:
     url: https://github.com/ci4rail/meta-ci.bringup.git
-    refspec: dunfell
+    refspec: bb9e906b0c4a3959a43f3059aa146549306ab595
 
 bblayers_conf_header:
   src/meta-custom: |

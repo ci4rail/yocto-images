@@ -91,7 +91,6 @@ jobs:
           acl: public-read
 
       - get: testscript-source
-        trigger: true
 
       - task: run-edgefarm-image-test
         file: source/yocto/ci/task_cfg_image_test.yaml

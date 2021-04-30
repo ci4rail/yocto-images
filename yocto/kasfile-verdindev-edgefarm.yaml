@@ -76,7 +76,7 @@ local_conf_header:
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
     IMAGE_INSTALL_append = " docker-ce ca-certificates \
-        iotedge-daemon iotedge-cli overlay-directories persistent-journald kyt-dlm-devinfo-static device-state-service"
+        iotedge-daemon iotedge-cli overlay-directories persistent-journald dlm-devinfo-static device-state-service"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     MENDER_STORAGE_TOTAL_SIZE_MB = "4096"

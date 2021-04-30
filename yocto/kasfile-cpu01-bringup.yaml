@@ -29,7 +29,7 @@ repos:
 
   src/meta-ci.bringup:
     url: https://github.com/ci4rail/meta-ci.bringup.git
-    refspec: bb9e906b0c4a3959a43f3059aa146549306ab595
+    refspec: 024fb15f8d5fa4b159e6d9fc46b6ffa02dac1bed
 
 bblayers_conf_header:
   src/meta-custom: |

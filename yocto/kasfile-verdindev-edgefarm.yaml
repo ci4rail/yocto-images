@@ -26,7 +26,7 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: 84cb3be20d9eb355da9f8b018c823fba52d2a18b
+    refspec: 0c2a55e1e5fdc665b6cee8cc38651590be4b5c40
 
 bblayers_conf_header:
   src/meta-custom: |
@@ -76,7 +76,7 @@ local_conf_header:
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
     IMAGE_INSTALL_append = " docker-ce ca-certificates \
-        iotedge-daemon iotedge-cli overlay-directories persistent-journald kyt-dlm-devinfo-static device-state-service"
+        iotedge-daemon iotedge-cli overlay-directories persistent-journald dlm-devinfo-static device-state-service"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     MENDER_STORAGE_TOTAL_SIZE_MB = "4096"

@@ -26,7 +26,7 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: 0c2a55e1e5fdc665b6cee8cc38651590be4b5c40
+    refspec: 5c7a60411dd3dd5086d8be0205993e49b36fcd06
 
 bblayers_conf_header:
   src/meta-custom: |

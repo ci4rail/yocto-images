@@ -1,0 +1,12 @@
+---
+#
+# Configuration for TESTING STAGE
+#
+# Git tag regexp which triggers the pipeline
+#
+git_tag_regex: ".*"  # TODO: Ignore staging/release tags
+# Specify a name suffixes if needed, e.g. `-dev` for development builds
+# The mender artifact name suffix 
+MENDER_ARTIFACT_DEV_SUFFIX: -testing
+# The tezi file name suffix
+IMAGE_NAME_SUFFIX: -testing

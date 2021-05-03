@@ -13,6 +13,8 @@ resources:
     source:
       repository: ci4rail/ci.os.lmp
       access_token: ((access_token))
+      paths: [yocto]
+      ignore_paths: ["yocto/ci"]
 
   # S3 buckets
   - name: s3-tezi-file
@@ -35,17 +37,6 @@ resources:
       endpoint: ((s3_endpoint))
       disable_ssl: ((s3_skip_ssl_verification))
 
-  # Git sources
-  # - name: source
-  #   type: git
-  #   source:
-  #     uri: ((git_source))
-  #     private_key: ((privatekey))
-  #     branch: ((git_branch))
-  #     paths: ((git_paths))
-  #     # TODO: git_tag_rexex
-  #     skip_ssl_verification: ((git_skip_ssl_verification))
-
   - name: testscript-source
     type: git
     source:
@@ -57,7 +48,7 @@ resources:
       skip_ssl_verification: false
 
 jobs:
-  - name: build
+  - name: build-and-test
     public: true
     plan:
       - get: pull-request
@@ -89,24 +80,12 @@ jobs:
           file: install/*.mender_tezi.tar
           acl: public-read
 
-    on_failure:
-      put: pull-request
-      params:
-        path: pull-request
-        status: failure
+      - get: testscript-source
 
-  - name: test
-    public: true
-    plan:
-      - in_parallel:
-        - get: pull-request
-        - get: testscript-source
-          trigger: true
-        - get: s3-tezi-file
-          trigger: true
       - task: run-edgefarm-image-test
         file: pull-request/yocto/ci/task_cfg_image_test.yaml
         vars:
+          image_dir: install
           privatekey: ((privatekey))
           name: ((name))
           robot_tc_ip: ((robot_tc_ip))  

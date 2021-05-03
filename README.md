@@ -168,7 +168,7 @@ The following steps are performed inside `yocto` subdirectory:
 
 Copy `ci/credentials.template.yaml` to `ci/credentials.yaml` and adapt it to your needs. 
 
-Copy `ci/config-testing.template.yaml` to `ci/config-testing.yaml` and adapt it to your needs. This sets the parameters to test the cpu01-edgefarm image. 
+Copy `ci/config-image-test.template.yaml` to `ci/config-image-test.yaml` and adapt it to your needs. This sets the parameters to test the cpu01-edgefarm image. 
 
 *Note: `ci/credentials-prod.yaml` and `ci/config-testing.yaml` are ignored by git. In this file you can store access credentials and keys that won't be checked in. If you are using some third party vault for credentials that integrates well into concourse, you won't need this file.*
 

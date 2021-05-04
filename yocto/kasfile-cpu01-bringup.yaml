@@ -81,4 +81,6 @@ local_conf_header:
     IMAGE_INSTALL_append = " nano overlay-directories persistent-journald"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
-    MENDER_STORAGE_TOTAL_SIZE_MB = "4096"
+    # boot + 2xroot partition must fit in MENDER_STORAGE_TOTAL_SIZE_MB
+    # Keep it as small as possible, to reduce target programming time
+    MENDER_STORAGE_TOTAL_SIZE_MB = "1600"

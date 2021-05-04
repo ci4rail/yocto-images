@@ -79,7 +79,9 @@ local_conf_header:
         iotedge-daemon iotedge-cli overlay-directories persistent-journald dlm-devinfo-static device-state-service"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
-    MENDER_STORAGE_TOTAL_SIZE_MB = "4096"
+    # boot + 2xroot partition must fit in MENDER_STORAGE_TOTAL_SIZE_MB
+    # Keep it as small as possible, to reduce target programming time
+    MENDER_STORAGE_TOTAL_SIZE_MB = "2000"
     ROOTFS_RO_UNNEEDED = "update-rc.d base-passwd"
     INHERIT += "extrausers"
     EXTRA_USERS_PARAMS = "usermod -P cheesebread root; "

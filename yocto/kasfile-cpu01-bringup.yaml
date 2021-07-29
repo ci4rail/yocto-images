@@ -25,7 +25,7 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: 5c7a60411dd3dd5086d8be0205993e49b36fcd06
+    refspec: 2f64797475e1c5b4ac712b28e9efd27ea4971a7a
 
   src/meta-ci.bringup:
     url: https://github.com/ci4rail/meta-ci.bringup.git

@@ -81,7 +81,7 @@ ${dobi} --filename yocto/dobi_gen.yaml all
 # check argument count
 if [ -z ${1} ]; then
     echo "no arguments!"
-    dobi --filename meta.yaml list
+    ${dobi} --filename meta.yaml list
     exit 1
 fi
 
@@ -99,4 +99,4 @@ if [ -f default.env ]; then
 fi
 
 # execute dobi with meta as default
-exec dobi --filename meta.yaml ${@}
+exec ${dobi} --filename meta.yaml ${@}

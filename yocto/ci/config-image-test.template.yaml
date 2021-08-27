@@ -7,3 +7,4 @@ robot_tc_user: yoda
 robot_wifi_ap: hydra-rpi-wifi
 robot_wifi_pass: testfarm
 robot_tf_relay1_uid: Nsf
+robot_lte_apn: web.vodafone.de

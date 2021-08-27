@@ -16,6 +16,7 @@ params:
   ROBOT_TC_USER: ((robot_tc_user))
   ROBOT_WIFI_AP: ((robot_wifi_ap))
   ROBOT_WIFI_PASS: ((robot_wifi_pass))
+  ROBOT_LTE_APN: ((robot_lte_apn))
 run:
   path: /bin/sh
   args:

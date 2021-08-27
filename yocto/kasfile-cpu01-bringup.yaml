@@ -25,11 +25,11 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: feature/iou
+    refspec: 0efe27546d01156c39179a0cd7fed318575d78bf
 
   src/meta-ci.bringup:
     url: https://github.com/ci4rail/meta-ci.bringup.git
-    refspec: feature/add_iou_test_apps
+    refspec: 63aee98a14d3a34d3ec6963be7f60e63b42de8d3
 
 bblayers_conf_header:
   src/meta-custom: |

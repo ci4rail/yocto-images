@@ -92,6 +92,7 @@ jobs:
           robot_tc_user: ((robot_tc_user))
           robot_wifi_ap: ((robot_wifi_ap))
           robot_wifi_pass: ((robot_wifi_pass))
+          robot_lte_apn: ((robot_lte_apn))
         ensure:
           put: s3-test-results
           params:

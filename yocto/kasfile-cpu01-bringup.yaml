@@ -25,7 +25,7 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: 0efe27546d01156c39179a0cd7fed318575d78bf
+    refspec: 9b95795f9781f445a7861d8a86071e87266cd3f5
 
   src/meta-ci.bringup:
     url: https://github.com/ci4rail/meta-ci.bringup.git
@@ -57,8 +57,8 @@ local_conf_header:
         ABORT,/tmp,10M,1K"
     PACKAGECONFIG_append_pn-qemu-system-native = " sdl"
     PACKAGECONFIG_append_pn-nativesdk-qemu = " sdl"
-    CONF_VERSION = "1"
     INHERIT += "rm_work"
+    CONF_VERSION = "1"
     INHERIT += "toradex-mirrors"
     DISTRO = "tdx-xwayland"
     include conf/machine/include/${MACHINE}.inc

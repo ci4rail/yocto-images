@@ -25,11 +25,11 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: 0efe27546d01156c39179a0cd7fed318575d78bf
+    refspec: 767c50fb498154f4ad61a6dac27726c6346494ac
 
   src/meta-ci.bringup:
     url: https://github.com/ci4rail/meta-ci.bringup.git
-    refspec: 63aee98a14d3a34d3ec6963be7f60e63b42de8d3
+    refspec: 6b8f2d5886c3bf523c7cd448ec3063cf0101b00b
 
 bblayers_conf_header:
   src/meta-custom: |
@@ -57,8 +57,8 @@ local_conf_header:
         ABORT,/tmp,10M,1K"
     PACKAGECONFIG_append_pn-qemu-system-native = " sdl"
     PACKAGECONFIG_append_pn-nativesdk-qemu = " sdl"
-    CONF_VERSION = "1"
     INHERIT += "rm_work"
+    CONF_VERSION = "1"
     INHERIT += "toradex-mirrors"
     DISTRO = "tdx-xwayland"
     include conf/machine/include/${MACHINE}.inc

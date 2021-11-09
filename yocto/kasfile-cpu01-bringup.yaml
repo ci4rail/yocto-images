@@ -25,11 +25,11 @@ repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: ttynvt
+    refspec: 767c50fb498154f4ad61a6dac27726c6346494ac
 
   src/meta-ci.bringup:
     url: https://github.com/ci4rail/meta-ci.bringup.git
-    refspec: dunfell
+    refspec: 6b8f2d5886c3bf523c7cd448ec3063cf0101b00b
 
 bblayers_conf_header:
   src/meta-custom: |

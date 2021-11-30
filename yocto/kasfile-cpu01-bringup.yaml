@@ -1,6 +1,6 @@
 #
-# This kasfile requires a second kasfile to be included from 
-# the kas command line 
+# This kasfile requires a second kasfile to be included from
+# the kas command line
 # e.g. "build kasfile.yaml:kasfile-image-naming.yaml"
 #
 # The intention is that the ci pipeline uses a static file
@@ -21,7 +21,7 @@ distro: tdx-xwayland
 target: ci4rail-bringup-image
 
 repos:
-    
+
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git

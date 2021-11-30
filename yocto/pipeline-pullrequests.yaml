@@ -26,7 +26,7 @@ resources:
       secret_access_key: ((s3_secret_key))
       endpoint: ((s3_endpoint))
       disable_ssl: ((s3_skip_ssl_verification))
-  
+
   - name: s3-test-results
     type: s3
     source:
@@ -43,7 +43,7 @@ resources:
       uri: ((testscript_source_repo))
       private_key: ((privatekey))
       branch: ((testscript_source_branch))
-      paths: 
+      paths:
         - .
       skip_ssl_verification: false
 
@@ -88,7 +88,7 @@ jobs:
           image_dir: install
           privatekey: ((privatekey))
           name: ((name))
-          robot_tc_ip: ((robot_tc_ip))  
+          robot_tc_ip: ((robot_tc_ip))
           robot_tc_user: ((robot_tc_user))
           robot_wifi_ap: ((robot_wifi_ap))
           robot_wifi_pass: ((robot_wifi_pass))

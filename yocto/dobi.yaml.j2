@@ -16,7 +16,7 @@ job={{image_name}}-gen-image-version:
   sources: yocto/layer-revs
   artifact: /git/yocto/.generated-{{image_name}}-image-naming.yaml
   user: "{user.uid}:{user.gid}"
-  env: 
+  env:
     - "USER={user.name}"
   entrypoint: /bin/bash
   command: /git/gen-image-version.sh
@@ -28,7 +28,7 @@ job={{image_name}}-gen-image-version:
 # Warning: MENDER_ARTIFACT_NAME and IMAGE_GIT_VERSION are
 # set to the default values in kasfile-default-image-naming.yaml
 # because it is unknown what image type you'll build in the shell
-job={{image_name}}-yocto-shell: 
+job={{image_name}}-yocto-shell:
   use: image-kas
   depends:
     - yocto-envs
@@ -87,11 +87,11 @@ job={{image_name}}-mender-upload:
     - install-dir-yocto
     - mender-auth-dir
   user: "{user.uid}:{user.gid}"
-  entrypoint: /bin/sh 
+  entrypoint: /bin/sh
   command: -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/{{image_pattern}}"
   annotations:
     description: "\t\t--> Upload {{image_name}} image to mender"
-  
+
 job={{image_name}}-mender-deploy:
   use: image-curl-jq
   mounts:

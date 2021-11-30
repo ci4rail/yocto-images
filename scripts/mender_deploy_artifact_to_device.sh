@@ -8,12 +8,12 @@ if [ "$#" -ne 1 ]; then
   exit 1
 fi
 
-if [ -z "${MENDER_DEVICE_ID}" ]; then 
+if [ -z "${MENDER_DEVICE_ID}" ]; then
   echo "Please set MENDER_DEVICE_ID" >&2
   exit 1
 fi
 
-if [ -z "${MENDER_AUTH_TOKEN}" ]; then 
+if [ -z "${MENDER_AUTH_TOKEN}" ]; then
   echo "Please set MENDER_AUTH_TOKEN" >&2
   exit 1
 fi
@@ -40,14 +40,13 @@ echo "Artifact name is "${artifact_name}
 deployment_name="depl-${device_id}-$(date +%Y-%m-%d-%H:%M:%S)"
 echo "Deployment name is "${deployment_name}
 
-json="{ 
-  \"name\": \"${deployment_name}\", 
-  \"artifact_name\": \"${artifact_name}\", 
-  \"devices\": [ 
-    \"${device_id}\" 
-  ] 
+json="{
+  \"name\": \"${deployment_name}\",
+  \"artifact_name\": \"${artifact_name}\",
+  \"devices\": [
+    \"${device_id}\"
+  ]
  }"
 
 curl -H "Authorization: Bearer ${JWT}" -H 'Content-Type: application/json' -H 'Accept: application/json' \
  -X POST  ${MENDER_SERVER_URL}/api/management/v1/deployments/deployments  -d "${json}"
-

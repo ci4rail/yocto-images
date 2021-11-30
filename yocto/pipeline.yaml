@@ -10,7 +10,7 @@ resources:
       secret_access_key: ((s3_secret_key))
       endpoint: ((s3_endpoint))
       disable_ssl: ((s3_skip_ssl_verification))
-  
+
   - name: s3-mender-artifact
     type: s3
     source:
@@ -20,7 +20,7 @@ resources:
       secret_access_key: ((s3_secret_key))
       endpoint: ((s3_endpoint))
       disable_ssl: ((s3_skip_ssl_verification))
- 
+
   # Git sources
   - name: source
     type: git
@@ -64,7 +64,7 @@ jobs:
         params:
           file: install/*.mender_tezi.tar
           acl: public-read
-          
+
       - put: s3-mender-artifact
         params:
           file: install/*.mender

@@ -21,9 +21,9 @@ allout=$(
     cd ${1}
 
     for d in *
-    do 
+    do
         shellout=$(
-            cd $d; 
+            cd $d;
             out="${d}:"
             rev=`git show -s --format=%H`
             out="${out} ${rev}"

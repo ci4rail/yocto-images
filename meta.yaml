@@ -16,5 +16,3 @@ meta:
 alias=version:
   tasks:
     - buildingblock-version
-
-

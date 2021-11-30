@@ -27,7 +27,7 @@ run:
       /kas/container-entrypoint build kasfile-((name)).yaml
       cp -r /install/images/*/*CI.OS.LMP*.mender_tezi.tar ${ROOT}/install
       cp -r /install/images/*/*CI.OS.LMP*.mender ${ROOT}/install
-params: 
+params:
   MENDER_SERVER_URL: ((MENDER_SERVER_URL))
   MENDER_TENANT_TOKEN: ((MENDER_TENANT_TOKEN))
   MENDER_ARTIFACT_DEV_SUFFIX: ((MENDER_ARTIFACT_DEV_SUFFIX))

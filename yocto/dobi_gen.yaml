@@ -1,5 +1,5 @@
 #
-# This generates the yocto/.generated_dobi.yaml 
+# This generates the yocto/.generated_dobi.yaml
 # from the template yocto/dobi.yaml.j2 using
 # the variables set in yocto/image_list.json
 
@@ -43,7 +43,7 @@ job=generate-yocto-dobi.yaml:
     - templates-dir
     - variables-dir
     - output-dir
-  sources: 
+  sources:
     - yocto/dobi.yaml.j2
     - yocto/image_list.json
   artifact: yocto/.generated_dobi.yaml

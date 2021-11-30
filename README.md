@@ -62,12 +62,6 @@ To run an interactive yocto shell for `cpu01-edgefarm`
 ./dobi.sh cpu01-edgefarm-yocto-shell
 ```
 
-To build all images:
-
-```bash
-./dobi.sh build-all
-```
-
 ### Deploy images via mender
 
 Download [Mender CLI](https://docs.mender.io/downloads#mender-cli)

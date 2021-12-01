@@ -12,7 +12,7 @@ header:
     - kasfile-default-image-naming.yaml
     - kasfile-tdxbsp.yaml
     - kasfile-mender.yaml
-    - kasfile-iotedge.yaml
+    - kasfile-virtualization.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01
@@ -22,7 +22,6 @@ distro: tdx-xwayland
 target: ci4rail-edgefarm-image
 
 repos:
-
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
@@ -32,7 +31,6 @@ bblayers_conf_header:
   src/meta-custom: |
     BBPATH = "${TOPDIR}"
     BBFILES ?= ""
-
 
 local_conf_header:
   src/meta-custom: |
@@ -76,7 +74,7 @@ local_conf_header:
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
     IMAGE_INSTALL_append = " docker-ce ca-certificates \
-        iotedge-daemon iotedge-cli overlay-directories persistent-journald dlm-devinfo-static device-state-service"
+        overlay-directories persistent-journald dlm-devinfo-static device-state-service"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     # boot + 2xroot partition must fit in MENDER_STORAGE_TOTAL_SIZE_MB

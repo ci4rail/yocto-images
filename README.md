@@ -14,7 +14,7 @@ The following images are currently built by this repo
 
 ![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-edgefarm-dev/jobs/build-cpu01-edgefarm/badge)
 
-An image for the Ci4Rail edgefarm use case (Yocto with mender, docker and iotedge support)
+An image for the Ci4Rail edgefarm use case (Yocto with mender and docker)
 
 Target Platform: Ci4Rail Moducop CPU01.
 
@@ -22,7 +22,7 @@ Target Platform: Ci4Rail Moducop CPU01.
 
 ![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-bringup-dev/jobs/build-cpu01-bringup/badge)
 
-An image for HW platform tests and bringup. Includes mender support, but no docker and iotedge.
+An image for HW platform tests and bringup. Includes mender support, but no docker.
 Contains many tools for HW testing
 
 Target Platform: Ci4Rail Moducop CPU01.
@@ -53,6 +53,12 @@ To run an interactive yocto shell for `cpu01-edgefarm`
 
 ```bash
 ./dobi.sh cpu01-edgefarm-yocto-shell
+```
+
+To build all images:
+
+```bash
+./dobi.sh build-yocto-all
 ```
 
 #### Deploy images via mender

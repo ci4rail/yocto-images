@@ -10,14 +10,6 @@ Yocto builds are performed using [kas](https://github.com/siemens/kas).
 
 The following images are currently built by this repo
 
-### verdindev-edgefarm
-
-![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/verdindev-edgefarm-dev/jobs/build-verdindev-edgefarm/badge)
-
-An image for the Ci4Rail edgefarm use case (Yocto with mender, docker and iotedge support)
-
-Target Platform: Toradex Verdin Development Board.
-
 ### cpu01-edgefarm
 
 ![Build](https://concourse.ci4rail.com/api/v1/teams/main/pipelines/cpu01-edgefarm-dev/jobs/build-cpu01-edgefarm/badge)

@@ -7,10 +7,6 @@
         {
             "name": "cpu01-edgefarm",
             "image_pattern": "moducop-cpu01/*Edgefarm*CI.OS.*.mender"
-        },
-        {
-            "name": "verdindev-edgefarm",
-            "image_pattern": "verdin-imx8mm/*Edgefarm*CI.OS.*.mender"
         }
     ]
 }

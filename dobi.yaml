@@ -92,3 +92,10 @@ job=yocto-layer-revparse:
   sources: yocto/src
   artifact: yocto/layer-revs
   user: "{user.uid}:{user.gid}"
+
+alias=build-all:
+  tasks:
+    - cpu01-edgefarm-build-image
+    - cpu01-edgefarm-build-image
+  annotations:
+    description: "\t\t\t--> [alias]build all images in yocto folder"

@@ -8,6 +8,7 @@ meta:
     - version.yaml
     - dobi.yaml
     - base/dobi.yaml
+    - edgefarm/dobi.yaml
 
 # ===================================================
 # alias

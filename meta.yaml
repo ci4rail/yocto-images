@@ -7,7 +7,7 @@ meta:
   include:
     - version.yaml
     - dobi.yaml
-    - yocto/.generated_dobi.yaml
+    - base/dobi.yaml
 
 # ===================================================
 # alias

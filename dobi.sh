@@ -75,9 +75,6 @@ fi
 # generate actual version files
 ${dobi} --filename meta.yaml version
 
-# generate the image specific dobi files
-${dobi} --filename yocto/dobi_gen.yaml all
-
 # check argument count
 if [ -z ${1} ]; then
     echo "no arguments!"

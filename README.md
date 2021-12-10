@@ -35,7 +35,7 @@ It can be either build locally using dobi or via Concourse CI.
 
 Developer builds are executed via dobi.
 
-First, enter your your mender specific data into `yocto/config/mender.env` (using template `yocto/config/mender.env.template`)
+First, enter your your mender specific data into `mender.env` (using template `mender.env.template`)
 
 Second, enter your specific data in `default.env` (using template `default.env.template`). You can use the default setting, but MENDER_DEVICE_ID must be adapted to the device you want to use to [deploy locally built images](#Deploy images via mender).
 

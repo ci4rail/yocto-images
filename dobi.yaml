@@ -4,7 +4,7 @@
 
 image=image-kas:
   image: ghcr.io/siemens/kas/kas
-  tags: ['2.3.3']
+  tags: ["2.3.3"]
   pull: once
 
 image=image-curl-jq:
@@ -17,6 +17,16 @@ image=image-mender-cli:
   tags: [master]
   pull: once
 
+image=image-minio-client:
+  image: minio/mc
+  tags: [latest]
+  pull: once
+
+image=image-ssh-client:
+  image: kroniak/ssh-client
+  tags: [latest]
+  pull: once
+
 # ===================================================
 # mounts
 # ===================================================
@@ -25,12 +35,6 @@ image=image-mender-cli:
 mount=build-dir-yocto:
   bind: yocto
   path: /work
-
-# The location of kasfile.yaml (kas expects it in /repo)
-mount=repo-dir-yocto:
-  bind: yocto
-  path: /repo
-  read-only: true
 
 # Yocto downloads DL_DIR
 mount=download-dir-yocto:
@@ -53,16 +57,27 @@ mount=scripts-dir:
   path: /scripts
 
 mount=mender-auth-dir:
-  bind:  "{env.MENDER_AUTH_DIR:~/.cache/mender}"
+  bind: "{env.MENDER_AUTH_DIR:~/.cache/mender}"
   path: /mender-auth
 
+# The location of kas-include files
+mount=kas-includes-dir:
+  bind: kas-includes
+  path: /kas-includes
+  read-only: true
+
+mount=ssh-dir:
+  bind: "{user.home}/.ssh/"
+  path: "/root/.ssh/"
+  # Required due to update of known hosts file
+  read-only: false
 
 # ===================================================
 # envs
 # ===================================================
 
 env=yocto-envs:
-    files: [yocto/config/mender.env]
+  files: [mender.env]
 
 # ===================================================
 # jobs
@@ -71,7 +86,7 @@ env=yocto-envs:
 job=yocto-layer-revparse:
   use: image-kas
   entrypoint: /bin/bash
-  command: /git/layer-revparse.sh /git/yocto/src /git/yocto/layer-revs
+  command: /git/scripts/layer-revparse.sh /git/yocto/src /git/yocto/layer-revs
   mounts:
     - mount-buildingblock-gitversion-source-dir
   sources: yocto/src

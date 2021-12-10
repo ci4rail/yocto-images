@@ -8,3 +8,5 @@ gen/
 .env
 cache
 default.env
+mender.env
+.generated*

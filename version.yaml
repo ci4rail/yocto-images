@@ -3,7 +3,7 @@
 # ===================================================
 
 mount=mount-buildingblock-gitversion-source-dir:
-  bind: .
+  bind: "{fs.projectdir}"
   path: /git
   read-only: false # needs to be read/write to work correctly!
 

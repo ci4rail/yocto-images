@@ -19,7 +19,7 @@ job={{image_name}}-gen-image-version:
   env:
     - "USER={user.name}"
   entrypoint: /bin/bash
-  command: /git/gen-image-version.sh
+  command: /git/scripts/gen-image-version.sh
     /git
     /git/yocto/layer-revs
     {{image_name}}
@@ -31,7 +31,7 @@ job={{image_name}}-gen-image-version:
 job={{image_name}}-yocto-shell:
   use: image-kas
   depends:
-    - yocto-envs
+    - mender-envs
   mounts:
     - build-dir-yocto
     - repo-dir-yocto

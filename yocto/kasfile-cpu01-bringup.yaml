@@ -9,9 +9,9 @@
 header:
   version: 9
   includes:
-    - kasfile-default-image-naming.yaml
-    - kasfile-tdxbsp.yaml
-    - kasfile-mender.yaml
+    - ../kas-includes/kasfile-default-image-naming.yaml
+    - ../kas-includes/kasfile-tdxbsp.yaml
+    - ../kas-includes/kasfile-mender.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01
@@ -21,7 +21,6 @@ distro: tdx-xwayland
 target: ci4rail-bringup-image
 
 repos:
-
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
@@ -35,7 +34,6 @@ bblayers_conf_header:
   src/meta-custom: |
     BBPATH = "${TOPDIR}"
     BBFILES ?= ""
-
 
 local_conf_header:
   src/meta-custom: |

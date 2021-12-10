@@ -9,10 +9,10 @@
 header:
   version: 9
   includes:
-    - kasfile-default-image-naming.yaml
-    - kasfile-tdxbsp.yaml
-    - kasfile-mender.yaml
-    - kasfile-virtualization.yaml
+    - ../kas-includes/kasfile-default-image-naming.yaml
+    - ../kas-includes/kasfile-tdxbsp.yaml
+    - ../kas-includes/kasfile-mender.yaml
+    - ../kas-includes/kasfile-virtualization.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01

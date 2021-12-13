@@ -4,9 +4,9 @@ on:
     branches:
       - main
     paths:
-      - "base"
-      - "kas-includes"
-      - "scripts"
+      - "base/**"
+      - "kas-includes/**"
+      - "scripts/**"
       - ".github/workflows/base-pull-request.yaml"
 
 jobs:

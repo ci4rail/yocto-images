@@ -16,6 +16,8 @@ env:
   IMAGE_NAME_SUFFIX: -testing
   SOURCE: ci.os.lmp
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.3.3
+  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
 jobs:
   calculate-version:
@@ -23,7 +25,8 @@ jobs:
     # Currently not working with Ubuntu 20.04
     runs-on: ubuntu-18.04
     outputs:
-      branchName: ${{ steps.gitversion.outputs.branchName }} # To use an output in another job, you have to map it to a job output.
+      #0.1.0-36.cleanup.e3132eb42a917c62b1f9198def62e78a4346c35d
+      version: ${{ steps.gitversion.outputs.majorMinorPatch }}-${{ steps.gitversion.outputs.commitsSinceVersionSource }}.{{ github.event.pull_request.head.ref }}.$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-8`)
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
@@ -36,27 +39,6 @@ jobs:
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.7
-      - name: Display GitVersion outputs
-        run: |
-          echo "MajorMinorPatch: ${{ steps.gitversion.outputs.majorMinorPatch }}"
-          echo "ShortSha: ${{ steps.gitversion.outputs.shortSha }}"
-          echo "CommitsSinceVersionSourcePadded: ${{ steps.gitversion.outputs.commitsSinceVersionSourcePadded }}"
-
-      - name: semantic-versioning-tag
-        uses: LongOddCode/semantic-versioning-tag@0.6.0
-        id: svt
-
-      - name: validation and set params
-        run: |
-          echo ${{ steps.svt.outputs.major }}
-          echo ${{ steps.svt.outputs.minor }}
-          echo ${{ steps.svt.outputs.patch }}
-          echo ${{ steps.svt.outputs.prerelease }}
-          echo ${{ steps.svt.outputs.buildmetadata }}
-      - name: echo head ref
-        run: |
-          echo ${{ github.event.pull_request.head.ref }}
-          echo ${{ github.event.pull_request.head.sha }}
 
   build-image:
     needs: calculate-version
@@ -100,11 +82,8 @@ jobs:
 
       - name: Display SemVer
         run: |
-          echo "BranchName ${{ needs.calculate-version.outputs.branchName }} branch."
+          echo "BranchName ${{ needs.calculate-version.outputs.version }} branch."
           lsb_release -a
-
-
-          #0.1.0-36.Branch.cleanup.Sha.e3132eb42a917c62b1f9198def62e78a4346c35d
 
   integrationtest:
     # Run when job build-image is finished

@@ -1,4 +1,4 @@
-name: Build and Test Ci4Rail Base Image on pull request
+name: Base Image on pull request
 on:
   pull_request:
     branches:
@@ -25,6 +25,10 @@ jobs:
     outputs:
       branchName: ${{ steps.gitversion.outputs.branchName }} # To use an output in another job, you have to map it to a job output.
     steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v0.9.7
         with:
@@ -72,11 +76,6 @@ jobs:
     runs-on: self-hosted
     if: contains(needs.calculate-version.outputs.branchName, 'main')
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
       - name: Cache for Yocto Builds
         uses: actions/cache@v2
         env:

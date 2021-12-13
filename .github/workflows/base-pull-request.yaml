@@ -28,19 +28,15 @@ jobs:
             ~/sstate
           key: yocto-cache
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: sleep 20 && echo Hello, world!
-
-      # Runs docker hello-world
-      - name: Hello from Docker
-        run: docker run hello-world
-
       - name: Write into cache
-        run: echo "hallo" >> ~/downloads/test.txt
+        run: |
+          mkdir ~/downloads
+          mkdir ~/sstate
+          echo "hallo" >> ~/downloads/test.txt
 
       - name: Read from cache
         run: cat ~/downloads/test.txt
+
   test:
     # Run when job build-image is finished
     needs: build-image
@@ -59,14 +55,6 @@ jobs:
             ~/downloads
             ~/sstate
           key: yocto-cache
-
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: sleep 20 && echo Hello, world!
-
-      # Runs docker hello-world
-      - name: Hello from Docker
-        run: docker run hello-world
 
       - name: Write into cache
         run: echo "hallo" >> ~/downloads/test.txt

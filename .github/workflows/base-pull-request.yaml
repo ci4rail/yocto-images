@@ -1,4 +1,4 @@
-name: Hello World
+name: Build Ci4Rail Base Image
 on:
   pull_request:
     branches:

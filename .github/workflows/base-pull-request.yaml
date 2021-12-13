@@ -4,10 +4,18 @@ on:
     branches:
       - main
     paths:
-      - "base/**"
+      - "base/kasfile-cpu01-base.yaml"
       - "kas-includes/**"
-      - "scripts/**"
       - ".github/workflows/base-pull-request.yaml"
+
+env:
+  NAME: cpu01-base
+  # The mender artifact name suffix
+  MENDER_ARTIFACT_DEV_SUFFIX: -testing
+  # The tezi file name suffix
+  IMAGE_NAME_SUFFIX: -testing
+  SOURCE: ci.os.lmp
+  BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.3.3
 
 jobs:
   build-image:
@@ -17,6 +25,13 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.7
+        with:
+          versionSpec: "5.x"
 
       - name: Cache for Yocto Builds
         uses: actions/cache@v2
@@ -28,16 +43,42 @@ jobs:
             ~/sstate
           key: yocto-cache
 
-      - name: Write into cache
+      - name: Log into Docker
+        run: echo ${DOCKER_PASSWORD} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin
+
+      - name: Add SHORT_SHA env property with commit short sha
+        run: echo "SHORT_SHA=`echo ${{ github.event.pull_request.head.sha }} | cut -c1-8`" >> $GITHUB_ENV
+
+      - name: Delete test file
+        run: rm ~/downloads/test.txt
+      # - name: Build Yocto
+      #   env:
+      #     IMAGE_GIT_VERSION: ${SHORT_SHA}
+      #     BRANCH_VERSION: branchName.${SHORT_SHA}
+      #     MENDER_ARTIFACT_NAME: ${NAME}-$(cat gitversion/plain/BranchVersion)${MENDER_ARTIFACT_DEV_SUFFIX}
+      #   run: |
+      #     docker run ${BUILDER_IMAGE} \
+      #           -v ~/install:/install \
+      #           -v ~/sstate:/sstate \
+      #           -v ~/downloads:/downloads \
+      #           -v ~/${SOURCE}:/builder \
+      #           build kasfile-${NAME}.yaml
+
+      - name: Check Build Artefacts are there
         run: |
-          mkdir ~/downloads
-          mkdir ~/sstate
-          echo "hallo" >> ~/downloads/test.txt
+          ls -al ~/install/images/*/*CI.OS.LMP*.mender_tezi.tar
+          ls -al ~/install/images/*/*CI.OS.LMP*.mender
 
-      - name: Read from cache
-        run: cat ~/downloads/test.txt
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.9.7
+      - name: Display SemVer
+        run: |
+          echo "SemVer: $GITVERSION_SEMVER"
 
-  test:
+          #0.1.0-36.Branch.cleanup.Sha.e3132eb42a917c62b1f9198def62e78a4346c35d
+
+  integrationtest:
     # Run when job build-image is finished
     needs: build-image
     runs-on: self-hosted
@@ -45,19 +86,3 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
-
-      - name: Cache for Yocto Builds
-        uses: actions/cache@v2
-        env:
-          cache-name: yocto-cache
-        with:
-          path: |
-            ~/downloads
-            ~/sstate
-          key: yocto-cache
-
-      - name: Write into cache
-        run: echo "hallo" >> ~/downloads/test.txt
-
-      - name: Read from cache
-        run: cat ~/downloads/test.txt

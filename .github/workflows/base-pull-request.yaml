@@ -10,13 +10,22 @@ on:
       - ".github/workflows/base-pull-request.yaml"
 
 jobs:
-  build:
+  build-image:
     runs-on: self-hosted
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
+
+      - name: Cache for Yocto Builds
+        uses: actions/cache@v2
+        env:
+          cache-name: yocto-cache
+        with:
+          path: |
+            ~/downloads
+            ~/sstate
 
       # Runs a single command using the runners shell
       - name: Run a one-line script
@@ -25,3 +34,13 @@ jobs:
       # Runs docker hello-world
       - name: Hello from Docker
         run: docker run hello-world
+
+      - name: Write into cache
+        run: echo "hallo" >> ~/downloads/test.txt
+
+      - name: Read from cache
+        run: cat ~/downloads/test.txt
+  test:
+    # Run when job build-image is finished
+    needs: build-image
+    runs-on: self-hosted

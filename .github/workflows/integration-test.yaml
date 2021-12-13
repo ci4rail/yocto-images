@@ -1,0 +1,19 @@
+name: Integration Test
+on:
+  workflow_run:
+    workflows: ["Build Ci4Rail Base Image"]
+    types: [completed]
+
+jobs:
+  on-success:
+    runs-on: self-hosted
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Run a one-line script
+        run: sleep 20 && echo Hello, world!
+
+      - name: Hello from Docker
+        run: docker run hello-world

@@ -8,7 +8,6 @@ repos:
     refspec: f5864bfb32906b87cc24d5b84e74805994f0ef3e
     layers:
       meta-mender-core:
-      meta-mender-demo:
 
   src/meta-mender-community:
     url: "https://github.com/mendersoftware/meta-mender-community"

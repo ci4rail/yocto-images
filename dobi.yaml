@@ -69,8 +69,7 @@ mount=kas-includes-dir:
 mount=ssh-dir:
   bind: "{user.home}/.ssh/"
   path: "/root/.ssh/"
-  # Required due to update of known hosts file
-  read-only: false
+  read-only: true
 
 # ===================================================
 # envs
@@ -95,7 +94,8 @@ job=yocto-layer-revparse:
 
 alias=build-all:
   tasks:
+    - cpu01-base-build-image
     - cpu01-edgefarm-build-image
-    - cpu01-edgefarm-build-image
+    - cpu01-bringup-build-image
   annotations:
     description: "\t\t\t--> [alias]build all images in yocto folder"

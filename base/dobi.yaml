@@ -50,10 +50,9 @@ job=cpu01-base-yocto-shell:
     - GROUP_ID={user.gid}
     - TERM=xterm-256color
     - SHELL=/bin/bash
-    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
-    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
     - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
-  command: "shell /work/kasfile-cpu01-base.yaml"
+    - IMAGE_GIT_VERSION=dirty_0.1.0-96.cleanup.heike.20211215.1619
+  command: "shell kasfile-cpu01-base.yaml"
   annotations:
     description: "\t\t--> interactive yocto shell cpu01-base config"
     tags:
@@ -74,48 +73,17 @@ job=cpu01-base-build-image:
     - GROUP_ID={user.gid}
     - TERM=xterm-256color
     - SHELL=/bin/bash
-    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
-    - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
     - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
+    - IMAGE_GIT_VERSION=dirty_0.1.0-96.cleanup.heike
   depends:
     - cpu01-base-gen-image-version
   sources:
     - base/kasfile-cpu01-base.yaml
     - kas-includes/kasfile-tdxbsp.yaml
-    - kas-includes/kasfile-mender.yaml
-  command: "build /work/kasfile-cpu01-base.yaml:.generated-cpu01-image-naming.yaml"
+    - kas-includes/kasfile-virtualization.yaml
+  command: "build kasfile-cpu01-base.yaml"
   annotations:
     description: "\t\t--> Build cpu01-base-image"
-    tags:
-      - base
-
-job=cpu01-base-mender-upload:
-  use: image-mender-cli
-  interactive: true
-  mounts:
-    - install-dir-base
-    - mender-auth-dir
-  user: "{user.uid}:{user.gid}"
-  entrypoint: /bin/sh
-  command: -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/moducop-cpu01/*Edgefarm*CI.OS.*.mender"
-  annotations:
-    description: "\t\t--> Upload cpu01-base image to mender"
-    tags:
-      - base
-
-job=cpu01-base-mender-deploy:
-  use: image-curl-jq
-  mounts:
-    - install-dir-base
-    - scripts-dir
-    - mender-auth-dir
-  user: "{user.uid}:{user.gid}"
-  env:
-    - MENDER_DEVICE_ID={env.MENDER_DEVICE_ID}
-    - MENDER_AUTH_TOKEN=/mender-auth/authtoken
-  command: /scripts/mender_deploy_artifact_to_device.sh /install/images/moducop-cpu01/*Edgefarm*CI.OS.*.mender
-  annotations:
-    description: "\t\t--> Deploy cpu01-base image to MENDER_DEVICE_ID"
     tags:
       - base
 
@@ -126,12 +94,13 @@ job=cpu01-base-minio-push:
   entrypoint: /bin/sh
   command: |
     -c "
-        fileToPush=$(ls -t /work/install/images/moducop-cpu01/*Edgefarm*CI.OS.*.mender_tezi.tar | head -n 1)
+        fileToPush=$(ls -t /work/install/images/moducop-cpu01/*Base-Image*Tezi*.tar | head -n 1)
         echo Push image ${fileToPush} to minio
-        mc cp ${fileToPush} ci4rail_endpoint/cpu01-edgefarm/
+        mc cp ${fileToPush} ci4rail_endpoint/${BUCKET}/
        "
   env:
-    - MC_HOST_ci4rail_endpoint={env.MINIO_ENDPOINT}
+    - MC_HOST_ci4rail_endpoint={env.MC_HOST}
+    - BUCKET=cpu01-base-dev
   annotations:
     description: "\t\t--> Push cpu01-base image to Minio"
     tags:
@@ -147,10 +116,10 @@ job=cpu01-base-minio-deploy:
   entrypoint: /bin/bash
   command: |
     -c '
-      fileToInstall=$(ls -t /work/install/images/moducop-cpu01/*Edgefarm*CI.OS.*.mender_tezi.tar | head -n 1 | rev | cut -d"/" -f 1 | rev)
+      fileToInstall=$(ls -t /work/install/images/moducop-cpu01/*Base-Image*Tezi*.tar | head -n 1 | rev | cut -d"/" -f 1 | rev)
       echo Deploy image ${fileToInstall} using Raspberry Pi with IP ${RASPBERRY_PI_IP} to connected Moducop
       ssh yoda@${RASPBERRY_PI_IP} "
-          s3cmd --config=/etc/s3cfg_ci4rail_minio get s3://${IMAGE}/${fileToInstall} /tmp/tezi-image.tar --force
+          s3cmd --config=/etc/s3cfg_ci4rail_minio get s3://${BUCKET}/${fileToInstall} /tmp/tezi-image.tar --force
           sudo make-gadget-image /tmp/tezi-image.tar /tmp/tezi.img
           docker run \
                   --network=host \
@@ -175,8 +144,9 @@ job=cpu01-base-minio-deploy:
     - USER_ID={user.uid}
     - GROUP_ID={user.gid}
     - RASPBERRY_PI_IP={env.RASPBERRY_PI_IP}
-    - IMAGE=cpu01-edgefarm
+    - BUCKET=cpu01-base-dev
     - CONSOLE_PORT={env.CONSOLE_PORT}
+    - TDX_INSTALLER_IMAGE_TAG={env.TDX_INSTALLER_IMAGE_TAG}
   annotations:
     description: "\t\t--> Deploy cpu01-base image via Raspberry Pi with RASPBERRY_PI_IP to connected Moducop"
     tags:

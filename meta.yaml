@@ -9,6 +9,7 @@ meta:
     - dobi.yaml
     - base/dobi.yaml
     - edgefarm/dobi.yaml
+    - bringup/dobi.yaml
 
 # ===================================================
 # alias

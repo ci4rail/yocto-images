@@ -11,20 +11,24 @@ header:
   includes:
     - ../kas-includes/kasfile-default-image-naming.yaml
     - ../kas-includes/kasfile-tdxbsp.yaml
-    - ../kas-includes/kasfile-virtualization.yaml
+    - ../kas-includes/kasfile-mender.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01
 # The distro name as it is written into the `local.conf` of bitbake.
 distro: tdx-xwayland
 # The target that is built by bitbake
-target: ci4rail-base-image
+target: ci4rail-bringup-image
 
 repos:
   # ci4rail
   src/meta-ci.os:
     url: https://github.com/ci4rail/meta-ci.os.git
-    refspec: 7b1f514bb220a8954d24326e1076368061937ec0
+    refspec: 767c50fb498154f4ad61a6dac27726c6346494ac
+
+  src/meta-ci.bringup:
+    url: https://github.com/ci4rail/meta-ci.bringup.git
+    refspec: 6b8f2d5886c3bf523c7cd448ec3063cf0101b00b
 
 bblayers_conf_header:
   src/meta-custom: |
@@ -36,6 +40,9 @@ local_conf_header:
     DL_DIR ?= "/downloads"
     SSTATE_DIR ?= "/sstate-cache"
     DEPLOY_DIR = "/install"
+    PACKAGE_CLASSES ?= "package_ipk"
+    EXTRA_IMAGE_FEATURES ?= "debug-tweaks package-management"
+    USER_CLASSES ?= "buildstats image-mklibs image-prelink"
     PATCHRESOLVE = "noop"
     BB_DISKMON_DIRS ??= "\
         STOPTASKS,${TMPDIR},1G,100K \
@@ -48,21 +55,30 @@ local_conf_header:
         ABORT,/tmp,10M,1K"
     PACKAGECONFIG_append_pn-qemu-system-native = " sdl"
     PACKAGECONFIG_append_pn-nativesdk-qemu = " sdl"
-    CONF_VERSION = "1"
     INHERIT += "rm_work"
+    CONF_VERSION = "1"
     INHERIT += "toradex-mirrors"
     DISTRO = "tdx-xwayland"
     include conf/machine/include/${MACHINE}.inc
+    INHERIT += "mender-full"
     DISTRO_FEATURES_append = " systemd virtualization"
     VIRTUAL-RUNTIME_init_manager = "systemd"
     DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
     VIRTUAL-RUNTIME_initscripts = ""
+    MENDER_FEATURES_ENABLE_append = " mender-uboot mender-image-sd"
+    MENDER_FEATURES_DISABLE_append = " mender-grub mender-image-uefi"
+    IMAGE_CLASSES += "image_type_mender_tezi"
+    IMAGE_FSTYPES_append = " mender_tezi"
+    IMAGE_FSTYPES_remove = " teziimg"
+    KERNEL_IMAGETYPE_aarch64_mender-grub = "Image"
+    IMAGE_BOOT_FILES = ""
+    IMAGE_BOOT_FILES_remove_mender-grub = "boot.scr-verdin-imx8mm;boot.scr"
     OFFSET_SPL_PAYLOAD_verdin-imx8mm = ""
     ACCEPT_FSL_EULA = "1"
     IMAGE_FEATURES_append = " read-only-rootfs"
-    IMAGE_INSTALL_append = " docker-ce ca-certificates \
-        overlay-directories persistent-journald"
-    ROOTFS_RO_UNNEEDED = "update-rc.d base-passwd"
-    IMAGE_INSTALL_append = " docker-ce ca-certificates"
-    INHERIT += "extrausers"
-    EXTRA_USERS_PARAMS = "usermod -P cheesebread root; "
+    IMAGE_INSTALL_append = " nano overlay-directories persistent-journald"
+    MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
+    MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
+    # boot + 2xroot partition must fit in MENDER_STORAGE_TOTAL_SIZE_MB
+    # Keep it as small as possible, to reduce target programming time
+    MENDER_STORAGE_TOTAL_SIZE_MB = "1600"

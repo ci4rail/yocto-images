@@ -28,7 +28,7 @@ run:
 
       export ROBOT_SSH_KEY_FILE=$(pwd)/id_rsa
 
-      tezi_tar_s3=$(cd ((image_dir)) && ls *.mender_tezi.tar)
+      tezi_tar_s3=$(cd ((image_dir)) && ls *.tar)
       echo "Testing image ${tezi_tar_s3}"
       robot --outputdir results -l log-${tezi_tar_s3}-$(date "+%s").html -v TEZI_TAR:${tezi_tar_s3} testscript-source/yocto-edgefarm-test
   user: root

@@ -58,14 +58,6 @@ jobs:
       - name: Log into Docker
         run: echo ${DOCKER_PASSWORD} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin
 
-      - name: echo user stuff
-        run: |
-          echo USER: ${USER}
-          echo USER_ID: $(id -u ${USER})
-          echo GROUP_ID: $(id -g ${USER})
-          echo user: $(id -nu ${USER})
-          whoami
-
       - name: Build Yocto
         env:
           IMAGE_GIT_VERSION: ${SHORT_SHA}
@@ -76,6 +68,7 @@ jobs:
           MENDER_SERVER_URL: https://hosted.mender.io
           MENDER_TENANT_TOKEN: ${{ secrets.MENDER_TENANT_TOKEN }}
           IMAGE_NAME_SUFFIX: -pr
+          USER: $(id -nu ${USER})
         run: |
           docker run \
                 -v ~/install:/install \
@@ -99,6 +92,7 @@ jobs:
           # This password you will use when authorizing via SSH
           # USER_PASS: ${{ secrets.USER_PASS }}
           USER_PASS: Heike
+          USER: $(id -nu ${USER})
 
       - name: Don't kill instace
         if: ${{ failure() }}

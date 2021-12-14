@@ -9,6 +9,7 @@ on:
       - ".github/workflows/base-pull-request.yaml"
 
 env:
+  DIR: base
   NAME: cpu01-base
   # The mender artifact name suffix
   MENDER_ARTIFACT_DEV_SUFFIX: -testing
@@ -72,7 +73,10 @@ jobs:
                 -v ~/install:/install \
                 -v ~/sstate:/sstate \
                 -v ~/downloads:/downloads \
-                -v ${GITHUB_WORKSPACE}:/builder \
+                -v ${GITHUB_WORKSPACE}/${DIR}:/builder \
+                -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
+                -e USER_ID=$(id -u ${USER}) \
+                -e GROUP_ID=$=$(id -g ${USER}) \
                 build kasfile-${NAME}.yaml
 
       - name: Check Build Artefacts are there

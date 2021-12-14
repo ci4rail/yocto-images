@@ -27,6 +27,7 @@ jobs:
     outputs:
       #0.1.0-36.cleanup.e3132eb42a917c62b1f9198def62e78a4346c35d
       version: ${{ steps.gitversion.outputs.majorMinorPatch }}-${{ steps.gitversion.outputs.commitsSinceVersionSource }}.${{ github.event.pull_request.head.ref }}.${{ steps.gitversion.outputs.shortSha }}
+      short_sha: ${{ steps.gitversion.outputs.shortSha }}
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
@@ -60,15 +61,14 @@ jobs:
 
       - name: Build Yocto
         env:
-          IMAGE_GIT_VERSION: ${SHORT_SHA}
-          BRANCH_VERSION: branchName.${SHORT_SHA}
+          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.short_sha }}
           VERSION: ${{ needs.calculate-version.outputs.version }}
           MENDER_ARTIFACT_DEV_SUFFIX: -pr
           MENDER_ARTIFACT_NAME: ${NAME}-${VERSION}${MENDER_ARTIFACT_DEV_SUFFIX}
           MENDER_SERVER_URL: https://hosted.mender.io
           MENDER_TENANT_TOKEN: ${{ secrets.MENDER_TENANT_TOKEN }}
           IMAGE_NAME_SUFFIX: -pr
-          USER: $(id -nu ${USER})
+          USER: runner
         run: |
           docker run \
                 -v ~/install:/install \
@@ -92,7 +92,7 @@ jobs:
           # This password you will use when authorizing via SSH
           # USER_PASS: ${{ secrets.USER_PASS }}
           USER_PASS: Heike
-          USER: $(id -nu ${USER})
+          USER: runner
 
       - name: Don't kill instace
         if: ${{ failure() }}

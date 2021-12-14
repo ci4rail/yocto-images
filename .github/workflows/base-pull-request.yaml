@@ -80,7 +80,6 @@ jobs:
                 -w /work \
                 ${BUILDER_IMAGE} \
                 kas build kasfile-${NAME}.yaml
-           - name: Start SSH via Ngrok
 
       - name: Check Build Artefacts are there
         run: |

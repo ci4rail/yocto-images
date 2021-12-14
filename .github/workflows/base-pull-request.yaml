@@ -68,7 +68,6 @@ jobs:
           MENDER_SERVER_URL: https://hosted.mender.io
           MENDER_TENANT_TOKEN: ${{ secrets.MENDER_TENANT_TOKEN }}
           IMAGE_NAME_SUFFIX: -pr
-
         run: |
           docker run \
                 -v ~/install:/install \
@@ -78,11 +77,13 @@ jobs:
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -e USER_ID=$(id -u ${USER}) \
                 -e GROUP_ID=$(id -g ${USER}) \
+                -e GROUP=$(id -ng ${USER}) \
                 -e USER=$(id -nu ${USER}) \
                 -w /work \
                 --entrypoint /bin/bash \
                 ${BUILDER_IMAGE} \
-                -c 'useradd -o --uid ${USER_ID} --gid ${GROUP_ID} ${USER} && \
+                -c 'groupadd -o --gid ${GROUP_ID} ${GROUP} && \
+                    useradd -o --uid ${USER_ID} --gid ${GROUP_ID} ${USER} && \
                     exec gosu ${USER} kas build kasfile-${NAME}.yaml'
 
       - name: Check Build Artefacts are there

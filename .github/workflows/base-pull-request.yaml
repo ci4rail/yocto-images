@@ -39,11 +39,6 @@ jobs:
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.7
-      - name: echo user stuff
-        run: |
-          echo USER: $USER
-          echo USER_ID: $(id -u ${USER})
-          echo GROUP_ID: $(id -g ${USER})
 
   build-image:
     needs: calculate-version
@@ -62,6 +57,12 @@ jobs:
 
       - name: Log into Docker
         run: echo ${DOCKER_PASSWORD} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin
+
+      - name: echo user stuff
+        run: |
+          echo USER: $USER
+          echo USER_ID: $(id -u ${USER})
+          echo GROUP_ID: $(id -g ${USER})
 
       - name: Build Yocto
         env:

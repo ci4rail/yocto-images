@@ -14,7 +14,6 @@ env:
   MENDER_ARTIFACT_DEV_SUFFIX: -testing
   # The tezi file name suffix
   IMAGE_NAME_SUFFIX: -testing
-  SOURCE: ci.os.lmp
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.3.3
   DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
   DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
@@ -43,6 +42,7 @@ jobs:
   build-image:
     needs: calculate-version
     runs-on: self-hosted
+
     steps:
       - name: Cache for Yocto Builds
         uses: actions/cache@v2
@@ -57,34 +57,25 @@ jobs:
       - name: Log into Docker
         run: echo ${DOCKER_PASSWORD} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin
 
-      # - name: Build Yocto
-      #   env:
-      #     IMAGE_GIT_VERSION: ${SHORT_SHA}
-      #     BRANCH_VERSION: branchName.${SHORT_SHA}
-      #     MENDER_ARTIFACT_NAME: ${NAME}-$(cat gitversion/plain/BranchVersion)${MENDER_ARTIFACT_DEV_SUFFIX}
-      #   run: |
-      #     docker run ${BUILDER_IMAGE} \
-      #           -v ~/install:/install \
-      #           -v ~/sstate:/sstate \
-      #           -v ~/downloads:/downloads \
-      #           -v ~/${SOURCE}:/builder \
-      #           build kasfile-${NAME}.yaml
-
-      # - name: Check Build Artefacts are there
-      #   run: |
-      #     ls -al ~/install/images/*/*CI.OS.LMP*.mender_tezi.tar
-      #     ls -al ~/install/images/*/*CI.OS.LMP*.mender
-
-      - name: Display Version
+      - name: Build Yocto
+        env:
+          IMAGE_GIT_VERSION: ${SHORT_SHA}
+          BRANCH_VERSION: branchName.${SHORT_SHA}
+          VERSION: ${{ needs.calculate-version.outputs.version }}
+          MENDER_ARTIFACT_DEV_SUFFIX: -pr
+          MENDER_ARTIFACT_NAME: ${NAME}-${VERSION}${MENDER_ARTIFACT_DEV_SUFFIX}
+          MENDER_SERVER_URL: https://hosted.mender.io
+          MENDER_TENANT_TOKEN: ${{ secrets.MENDER_TENANT_TOKEN }}
+          IMAGE_NAME_SUFFIX: -pr
         run: |
-          echo "Version ${{ needs.calculate-version.outputs.version }} branch."
-          lsb_release -a
+          docker run ${BUILDER_IMAGE} \
+                -v ~/install:/install \
+                -v ~/sstate:/sstate \
+                -v ~/downloads:/downloads \
+                -v ${GITHUB_WORKSPACE}:/builder \
+                build kasfile-${NAME}.yaml
 
-  integrationtest:
-    # Run when job build-image is finished
-    needs: build-image
-    runs-on: self-hosted
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - name: Check Build Artefacts are there
+        run: |
+          ls -al ~/install/images/*/*CI.OS.LMP*.mender_tezi.tar
+          ls -al ~/install/images/*/*CI.OS.LMP*.mender

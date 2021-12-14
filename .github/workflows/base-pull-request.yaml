@@ -79,10 +79,10 @@ jobs:
                 -e GROUP_ID=$(id -g ${USER}) \
                 -e USER=$(id -nu ${USER}) \
                 -w /work \
-                --entrypoint /bin/bash
+                --entrypoint /bin/bash \
                 ${BUILDER_IMAGE} \
-                -c "useradd -o --uid ${USER_ID} --gid ${GROUP_ID} ${USER} && \
-                    exec gosu ${USER} kas build kasfile-${NAME}.yaml"
+                useradd -o --uid ${USER_ID} --gid ${GROUP_ID} ${USER} && \
+                exec gosu ${USER} kas build kasfile-${NAME}.yaml
 
       - name: Check Build Artefacts are there
         run: |

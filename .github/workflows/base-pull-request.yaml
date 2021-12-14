@@ -75,11 +75,14 @@ jobs:
                 -v ~/downloads:/downloads \
                 -v ${GITHUB_WORKSPACE}/${DIR}:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
-                -u $(id -u ${USER}):$(id -g ${USER}) \
-                --entrypoint /bin/bash \
+                -e USER_ID=$(id -u ${USER}) \
+                -e GROUP_ID=$(id -g ${USER}) \
+                -e USER=$(id -nu ${USER}) \
                 -w /work \
+                --entrypoint /bin/bash
                 ${BUILDER_IMAGE} \
-                kas build kasfile-${NAME}.yaml
+                useradd -o --uid ${USER_ID} --gid ${GROUP_ID} ${USER} && \
+                exec gosu ${USER} kas build kasfile-${NAME}.yaml
 
       - name: Check Build Artefacts are there
         run: |

@@ -79,8 +79,8 @@ jobs:
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -w /work \
                 ${BUILDER_IMAGE} \
-                -c "chown -R ${USER_ID}:${GROUP_ID} /install /sstate /downloads /work /kas-includes
-                    kas build kasfile-${NAME}.yaml"
+                /bin/bash -c "chown -R ${USER_ID}:${GROUP_ID} /install /sstate /downloads /work /kas-includes
+                              kas build kasfile-${NAME}.yaml"
 
       - name: Check Build Artefacts are there
         run: |

@@ -9,15 +9,11 @@ on:
       - ".github/workflows/base-pull-request.yaml"
 
 env:
+  MENDER_ARTIFACT_DEV_SUFFIX: -pr
   DIR: base
   NAME: cpu01-base
-  # The mender artifact name suffix
-  MENDER_ARTIFACT_DEV_SUFFIX: -testing
-  # The tezi file name suffix
-  IMAGE_NAME_SUFFIX: -testing
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.3.3
-  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+  IMAGE_NAME_SUFFIX: -pr
 
 jobs:
   calculate-version:
@@ -57,17 +53,20 @@ jobs:
           key: yocto-cache
 
       - name: Log into Docker
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: echo ${DOCKER_PASSWORD} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin
 
       - name: Build Yocto
         env:
-          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.short_sha }}
-          VERSION: ${{ needs.calculate-version.outputs.version }}
-          MENDER_ARTIFACT_DEV_SUFFIX: -pr
-          MENDER_ARTIFACT_NAME: ${NAME}-${VERSION}${MENDER_ARTIFACT_DEV_SUFFIX}
+          # Required internally for build
           MENDER_SERVER_URL: https://hosted.mender.io
           MENDER_TENANT_TOKEN: ${{ secrets.MENDER_TENANT_TOKEN }}
-          IMAGE_NAME_SUFFIX: -pr
+          # included in main env
+          # IMAGE_NAME_SUFFIX: $IMAGE_NAME_SUFFIX
+          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.short_sha }}
+          MENDER_ARTIFACT_NAME: ${NAME}-${{ needs.calculate-version.outputs.version }}${MENDER_ARTIFACT_DEV_SUFFIX}
         run: |
           USER_ID=$(id -u ${USER})
           GROUP_ID=$(id -g ${USER})
@@ -77,6 +76,13 @@ jobs:
                 -v ~/downloads:/downloads \
                 -v ${GITHUB_WORKSPACE}/${DIR}:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
+                -e USER_ID=${USER_ID} \
+                -e GROUP_ID=${GROUP_ID} \
+                -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
+                -e MENDER_TENANT_TOKEN=${MENDER_TENANT_TOKEN} \
+                -e IMAGE_NAME_SUFFIX=${IMAGE_NAME_SUFFIX} \
+                -e IMAGE_GIT_VERSION=${IMAGE_GIT_VERSION} \
+                -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
                 -w /work \
                 ${BUILDER_IMAGE} \
                 /bin/bash -c "chown -R ${USER_ID}:${GROUP_ID} /install /sstate /downloads /work /kas-includes

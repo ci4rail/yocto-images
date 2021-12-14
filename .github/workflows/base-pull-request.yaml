@@ -68,16 +68,16 @@ jobs:
           IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.short_sha }}
           MENDER_ARTIFACT_NAME: ${NAME}-${{ needs.calculate-version.outputs.version }}${MENDER_ARTIFACT_DEV_SUFFIX}
         run: |
-          USER_ID=$(id -u ${USER})
-          GROUP_ID=$(id -g ${USER})
           docker run \
                 -v ~/install:/install \
                 -v ~/sstate:/sstate \
                 -v ~/downloads:/downloads \
                 -v ${GITHUB_WORKSPACE}/${DIR}:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
-                -e USER_ID=${USER_ID} \
-                -e GROUP_ID=${GROUP_ID} \
+                -e USER_ID=$(id -u ${USER}) \
+                -e GROUP_ID=$(id -g ${USER}) \
+                -e GROUP=$(id -ng ${USER}) \
+                -e USER=$(id -nu ${USER}) \
                 -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
                 -e MENDER_TENANT_TOKEN=${MENDER_TENANT_TOKEN} \
                 -e IMAGE_NAME_SUFFIX=${IMAGE_NAME_SUFFIX} \
@@ -85,7 +85,9 @@ jobs:
                 -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
                 -w /work \
                 ${BUILDER_IMAGE} \
-                /bin/bash -c "chown -R ${USER_ID}:${GROUP_ID} /install /sstate /downloads /work /kas-includes
+                /bin/bash -c "groupadd -o --gid \${GROUP_ID} \${GROUP}
+                              useradd -o --uid \${USER_ID} --gid \${GROUP_ID} \${USER}
+                              chown -R \${USER_ID}:\${GROUP_ID} /install /sstate /downloads /work /kas-includes
                               kas build kasfile-${NAME}.yaml"
 
       - name: Check Build Artefacts are there

@@ -83,6 +83,7 @@ jobs:
                 -e IMAGE_NAME_SUFFIX=${IMAGE_NAME_SUFFIX} \
                 -e IMAGE_GIT_VERSION=${IMAGE_GIT_VERSION} \
                 -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
+                --entrypoint /bin/bash \
                 -w /work \
                 ${BUILDER_IMAGE} \
                 /bin/bash -c "groupadd -o --gid \${GROUP_ID} \${GROUP}

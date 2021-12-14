@@ -60,9 +60,11 @@ jobs:
 
       - name: echo user stuff
         run: |
-          echo USER: $USER
+          echo USER: ${USER}
           echo USER_ID: $(id -u ${USER})
           echo GROUP_ID: $(id -g ${USER})
+          echo user: $(id -nu ${USER})
+          whoami
 
       - name: Build Yocto
         env:

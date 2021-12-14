@@ -76,7 +76,7 @@ jobs:
                 -v ${GITHUB_WORKSPACE}/${DIR}:/builder \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -e USER_ID=$(id -u ${USER}) \
-                -e GROUP_ID=$=$(id -g ${USER}) \
+                -e GROUP_ID=$(id -g ${USER}) \
                 ${BUILDER_IMAGE} \
                 build kasfile-${NAME}.yaml
 

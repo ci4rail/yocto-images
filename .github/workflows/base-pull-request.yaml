@@ -92,7 +92,7 @@ jobs:
                 -c "groupadd -o --gid \${GROUP_ID} \${GROUP}
                     useradd -o --uid \${USER_ID} --gid \${GROUP_ID} \${USER}
                     chown -R \${USER_ID}:\${GROUP_ID} /install /sstate /downloads /work /kas-includes
-                    kas build kasfile-${NAME}.yaml"
+                    exec gosu \${USER} kas build kasfile-${NAME}.yaml"
 
       - name: Check Build Artefacts are there
         run: |

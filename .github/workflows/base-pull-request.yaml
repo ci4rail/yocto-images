@@ -58,20 +58,6 @@ jobs:
       - name: Log into Docker
         run: echo ${DOCKER_PASSWORD} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin
 
-      - name: Setup tmate session
-        env:
-          IMAGE_GIT_VERSION: ${SHORT_SHA}
-          BRANCH_VERSION: branchName.${SHORT_SHA}
-          VERSION: ${{ needs.calculate-version.outputs.version }}
-          MENDER_ARTIFACT_DEV_SUFFIX: -pr
-          MENDER_ARTIFACT_NAME: ${NAME}-${VERSION}${MENDER_ARTIFACT_DEV_SUFFIX}
-          MENDER_SERVER_URL: https://hosted.mender.io
-          MENDER_TENANT_TOKEN: ${{ secrets.MENDER_TENANT_TOKEN }}
-          IMAGE_NAME_SUFFIX: -pr
-        uses: mxschmitt/action-tmate@v3
-        with:
-          sudo: false
-
       - name: Build Yocto
         env:
           IMAGE_GIT_VERSION: ${SHORT_SHA}
@@ -83,6 +69,7 @@ jobs:
           MENDER_TENANT_TOKEN: ${{ secrets.MENDER_TENANT_TOKEN }}
           IMAGE_NAME_SUFFIX: -pr
         run: |
+          sleep 1000000000
           docker run \
                 -v ~/install:/install \
                 -v ~/sstate:/sstate \

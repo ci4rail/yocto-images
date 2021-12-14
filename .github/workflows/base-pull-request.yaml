@@ -69,23 +69,18 @@ jobs:
           MENDER_TENANT_TOKEN: ${{ secrets.MENDER_TENANT_TOKEN }}
           IMAGE_NAME_SUFFIX: -pr
         run: |
+          USER_ID=$(id -u ${USER})
+          GROUP_ID=$(id -g ${USER})
           docker run \
                 -v ~/install:/install \
                 -v ~/sstate:/sstate \
                 -v ~/downloads:/downloads \
                 -v ${GITHUB_WORKSPACE}/${DIR}:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
-                -e USER_ID=$(id -u ${USER}) \
-                -e GROUP_ID=$(id -g ${USER}) \
-                -e GROUP=$(id -ng ${USER}) \
-                -e USER=$(id -nu ${USER}) \
                 -w /work \
-                --entrypoint /bin/bash \
                 ${BUILDER_IMAGE} \
-                -c 'groupadd -o --gid ${GROUP_ID} ${GROUP}
-                    useradd -o --uid ${USER_ID} --gid ${GROUP_ID} ${USER}
-                    chown -R ${USER_ID}:${GROUP_ID} /install /sstate /downloads /work /kas-includes
-                    exec gosu ${USER} kas build kasfile-${NAME}.yaml'
+                -c "chown -R ${USER_ID}:${GROUP_ID} /install /sstate /downloads /work /kas-includes
+                    kas build kasfile-${NAME}.yaml"
 
       - name: Check Build Artefacts are there
         run: |

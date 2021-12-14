@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-18.04
     outputs:
       #0.1.0-36.cleanup.e3132eb42a917c62b1f9198def62e78a4346c35d
-      version: ${{ steps.gitversion.outputs.majorMinorPatch }}-${{ steps.gitversion.outputs.commitsSinceVersionSource }}.${{ github.event.pull_request.head.ref }}.$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-8`)
+      version: ${{ steps.gitversion.outputs.majorMinorPatch }}-${{ steps.gitversion.outputs.commitsSinceVersionSource }}.${{ github.event.pull_request.head.ref }}.${{ steps.gitversion.outputs.shortSha }}
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2

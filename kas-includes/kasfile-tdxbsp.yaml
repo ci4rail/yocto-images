@@ -66,6 +66,10 @@ repos:
     url: "https://github.com/meta-qt5/meta-qt5.git"
     refspec: 0d8eb956015acdea7e77cd6672d08dce18061510
 
+  src/meta-toradex-demos:
+    url: "https://git.toradex.com/meta-toradex-demos.git"
+    refspec: 82e3d7b2b56fccabcd52708314acc9dfd6bb24d1
+
   src/meta-toradex-distro:
     url: "https://git.toradex.com/meta-toradex-distro.git"
     refspec: 632db61f177acf18df79d40fefdf1c662c6233a8

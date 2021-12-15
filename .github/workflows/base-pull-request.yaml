@@ -9,11 +9,10 @@ on:
       - ".github/workflows/base-pull-request.yaml"
 
 env:
-  MENDER_ARTIFACT_DEV_SUFFIX: -pr
-  DIR: base
-  NAME: cpu01-base
+  IMAGE_TYPE: base
+  MACHINE: cp01
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.3.3
-  IMAGE_NAME_SUFFIX: -pr
+  NAME_SUFFIX: -pr
 
 jobs:
   calculate-version:
@@ -37,7 +36,7 @@ jobs:
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.7
 
-  build-image:
+  build-and-push-image:
     needs: calculate-version
     runs-on: self-hosted
 
@@ -66,16 +65,15 @@ jobs:
           # Required internally for build
           MENDER_SERVER_URL: https://hosted.mender.io
           MENDER_TENANT_TOKEN: ${{ secrets.MENDER_TENANT_TOKEN }}
-          # included in main env
-          # IMAGE_NAME_SUFFIX: $IMAGE_NAME_SUFFIX
+          IMAGE_NAME_SUFFIX: ${{ env.NAME_SUFFIX }}
           IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.short_sha }}
-          MENDER_ARTIFACT_NAME: ${{ env.NAME }}-${{ needs.calculate-version.outputs.version }}${{ env.MENDER_ARTIFACT_DEV_SUFFIX }}
+          MENDER_ARTIFACT_NAME: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}-${{ needs.calculate-version.outputs.version }}${{ env.NAME_SUFFIX }}
         run: |
           docker run \
                 -v ~/install:/install \
                 -v ~/sstate:/sstate-cache \
                 -v ~/downloads:/downloads \
-                -v ${GITHUB_WORKSPACE}/${DIR}:/work \
+                -v ${GITHUB_WORKSPACE}/${IMAGE_TYPE}:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -e USER_ID=$(id -u ${USER}) \
                 -e GROUP_ID=$(id -g ${USER}) \
@@ -92,9 +90,8 @@ jobs:
                 -c "groupadd -o --gid \${GROUP_ID} \${GROUP}
                     useradd -o --uid \${USER_ID} --gid \${GROUP_ID} \${USER}
                     chown -R \${USER_ID}:\${GROUP_ID} /install /sstate-cache /downloads /work /kas-includes
-                    exec gosu \${USER} kas build kasfile-${NAME}.yaml"
+                    exec gosu \${USER} kas build kasfile-${MACHINE}-${IMAGE_TYPE}.yaml"
 
       - name: Check Build Artefacts are there
         run: |
-          ls -al ~/install/images/*/*CI.OS.LMP*.mender_tezi.tar
-          ls -al ~/install/images/*/*CI.OS.LMP*.mender
+          ls -al ~/install/images/*/*

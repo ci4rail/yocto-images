@@ -69,7 +69,7 @@ jobs:
           # included in main env
           # IMAGE_NAME_SUFFIX: $IMAGE_NAME_SUFFIX
           IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.short_sha }}
-          MENDER_ARTIFACT_NAME: ${NAME}-${{ needs.calculate-version.outputs.version }}${MENDER_ARTIFACT_DEV_SUFFIX}
+          MENDER_ARTIFACT_NAME: ${{ env.NAME }}-${{ needs.calculate-version.outputs.version }}${{ env.MENDER_ARTIFACT_DEV_SUFFIX }}
         run: |
           docker run \
                 -v ~/install:/install \

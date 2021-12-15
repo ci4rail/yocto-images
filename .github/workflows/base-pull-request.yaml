@@ -10,7 +10,7 @@ on:
 
 env:
   IMAGE_TYPE: base
-  MACHINE: cp01
+  MACHINE: cpu01
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.3.3
   NAME_SUFFIX: -pr
 

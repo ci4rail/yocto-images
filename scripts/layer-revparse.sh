@@ -5,7 +5,7 @@
 # Write result into <output-file>
 # Result will look like this:
 #  bitbake: 89fc9450abefd682266efcbfa031d1ef115ff1a7
-#  meta-ci.os: 39e48535e154f336b46e58813b914d92e84021d7 (dirty)
+#  meta-ci4rail-bsp: 39e48535e154f336b46e58813b914d92e84021d7 (dirty)
 
 if [ "$#" -ne 2 ] ; then
     echo "no arguments. Use ${0} <directory-with-layers> <output-file>"

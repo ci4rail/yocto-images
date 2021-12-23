@@ -10,21 +10,19 @@
 # Else
 #   VERSION=<fullsemver>.<branch>.<shortsha>
 #
-# To be called with arguments: <git-root> <layer-refs file> <outfile>
+# To be called with arguments: <git-root> <layer-refs file>
 #
 # This script is expected to be called by dobi
 
 set -e
 
-if [ "$#" -ne 4 ] ; then
-    echo "Usage: ${0} <git-root> <layer-refs file> <mender-artifact-prefix> <outfile>"
+if [ "$#" -ne 2 ] ; then
+    echo "Usage: ${0} <git-root> <layer-refs file>"
     exit 1
 fi
 
 git_root=${1}
 layer_refs=${2}
-mender_prefix=${3}
-out_file=${4}
 
 is_dirty=0
 
@@ -38,12 +36,10 @@ stat=`git status -s`
 if [ ! -z "${stat}" ]; then
     is_dirty=1
 fi
-echo "top level repo is dirty: ${is_dirty} ${stat}"
 
 # check if one of the layer repos is dirty
 if grep -q \(dirty\) ${layer_refs}; then
     is_dirty=1
-    echo "Layer refs are dirty"
 fi
 
 # replace slashes in branch name with -
@@ -56,10 +52,4 @@ else
     version=dirty_${GitVersion_FullSemVer}.${branch}.${USER}.${ts}
 fi
 
-echo "header:
-  version: 9
-env:
-  MENDER_ARTIFACT_NAME: ${mender_prefix}-${version}
-  IMAGE_GIT_VERSION: ${version}" > ${out_file}
-
-cat ${out_file}
+echo ${version}

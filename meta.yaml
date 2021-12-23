@@ -3,13 +3,13 @@
 # ===================================================
 
 meta:
-  project: ci.os.lmp
+  project: yocto-images
   include:
     - version.yaml
     - dobi.yaml
-    - base/dobi.yaml
-    - edgefarm/dobi.yaml
-    - bringup/dobi.yaml
+    - base-image/dobi.yaml
+    - edgefarm-image/dobi.yaml
+    - devtools-image/dobi.yaml
 
 # ===================================================
 # alias

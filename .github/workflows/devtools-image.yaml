@@ -1,23 +1,23 @@
-name: Bringup Image on pull request
+name: Bringup Image
 on:
   pull_request:
     branches:
       - main
     paths:
-      - "bringup/kasfile-cpu01-bringup.yaml"
-      - "kas-includes/tdxbsp.yaml"
-      - "kas-includes/virtualization.yaml"
+      - "devtools-image/kasfile-cpu01-devtools.yaml"
+      - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-mender.yaml"
-      - ".github/workflows/bringup-pull-request.yaml"
+      - "kas-includes/kasfile-general.yaml"
+      - ".github/workflows/devtools-pull-request.yaml"
   push:
     branches:
       - main
 
 env:
-  IMAGE_TYPE: bringup
+  IMAGE_TYPE: devtools
   MACHINE: cpu01
-  BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.3.3
-  TAR_IMAGE_SEARCH_STRING: images/moducop-cpu01/*Bringup*CI.OS.*.mender_tezi.tar
+  BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.6.3
+  TAR_IMAGE_SEARCH_STRING: images/moducop-cpu01/Moducop-CPU01_Devtools*.mender_tezi.tar
 
 jobs:
   calculate-version:
@@ -26,8 +26,7 @@ jobs:
     runs-on: ubuntu-18.04
     outputs:
       #0.1.0-36.cleanup.e3132eb42a917c62b1f9198def62e78a4346c35d
-      version: ${{ steps.gitversion.outputs.majorMinorPatch }}-${{ steps.gitversion.outputs.commitsSinceVersionSource }}.${{ github.event.pull_request.head.ref }}.${{ steps.gitversion.outputs.shortSha }}
-      short_sha: ${{ steps.gitversion.outputs.shortSha }}
+      version: ${{ steps.gitversion.outputs.majorMinorPatch }}-${{ steps.gitversion.outputs.commitsSinceVersionSource }}.${{ github.event.pull_request.head.ref }}.${{ steps.shortSha.outputs.shortSha }}
       name_suffix: ${{ steps.eventCheck.outputs.nameSuffix }}
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
@@ -41,6 +40,18 @@ jobs:
       - name: Determine Version
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0.9.7
+      - name: Get git sha as on PR gitversion provides incorrect sha
+        id: shortSha
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+              echo "::set-output name=shortSha::`echo ${{ github.event.pull_request.head.sha }} | cut -c1-8`"
+          elif [ "$EVENT_NAME" = "push" ]; then
+              echo "::set-output name=shortSha::${GITHUB_SHA::8}"
+          else
+              echo "::set-output name=shortSha::invalid"
+          fi
       - name: Generate Image name dependend on github event
         id: eventCheck
         env:
@@ -80,31 +91,25 @@ jobs:
           MENDER_SERVER_URL: https://hosted.mender.io
           MENDER_TENANT_TOKEN: ${{ secrets.MENDER_TENANT_TOKEN }}
           IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
-          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.short_sha }}
+          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.version }}
           MENDER_ARTIFACT_NAME: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
         run: |
           docker run \
                 -v /install:/install \
                 -v /sstate-cache:/sstate-cache \
                 -v /downloads:/downloads \
-                -v ${GITHUB_WORKSPACE}/${IMAGE_TYPE}:/work \
+                -v ${GITHUB_WORKSPACE}/${IMAGE_TYPE}-image:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -e USER_ID=$(id -u ${USER}) \
                 -e GROUP_ID=$(id -g ${USER}) \
-                -e GROUP=$(id -ng ${USER}) \
-                -e USER=$(id -nu ${USER}) \
                 -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
                 -e MENDER_TENANT_TOKEN=${MENDER_TENANT_TOKEN} \
                 -e IMAGE_NAME_SUFFIX=${IMAGE_NAME_SUFFIX} \
                 -e IMAGE_GIT_VERSION=${IMAGE_GIT_VERSION} \
                 -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
-                --entrypoint /bin/bash \
                 -w /work \
                 ${BUILDER_IMAGE} \
-                -c "groupadd -o --gid \${GROUP_ID} \${GROUP}
-                    useradd -o --uid \${USER_ID} --gid \${GROUP_ID} \${USER}
-                    chown -R \${USER_ID}:\${GROUP_ID} /install /sstate-cache /downloads /work /kas-includes
-                    exec gosu \${USER} kas build kasfile-${MACHINE}-${IMAGE_TYPE}.yaml"
+                build kasfile-${MACHINE}-${IMAGE_TYPE}.yaml
 
       - name: Store Cache for Yocto Builds
         if: github.event_name == 'pull_request'

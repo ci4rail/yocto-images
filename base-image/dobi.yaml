@@ -3,40 +3,47 @@
 # ===================================================
 # Yocto images (DEPLOY_DIR)
 mount=install-dir-base:
-  bind: base/install
+  bind: base-image/install
   path: /install
 
 # Where the yocto-build happens
 mount=build-dir-base:
-  bind: base
+  bind: base-image
   path: /work
 
 # ===================================================
 # jobs
 # ===================================================
-job=cpu01-base-gen-image-version:
+# Get layer revisions
+job=base-yocto-layer-revparse:
   use: image-kas
-  depends:
-    - yocto-envs
-    - yocto-layer-revparse
+  entrypoint: /bin/bash
+  command: /git/scripts/layer-revparse.sh /git/base-image/src /git/base-image/layer-revs
   mounts:
     - mount-buildingblock-gitversion-source-dir
-  sources: yocto/layer-revs
-  artifact: /git/base/.generated-cpu01-image-naming.yaml
+  sources: base-image/src
+  artifact: base-image/layer-revs
+  user: "{user.uid}:{user.gid}"
+
+job=base-print-image-version:
+  use: image-kas
+  depends:
+    - base-yocto-layer-revparse
+  mounts:
+    - mount-buildingblock-gitversion-source-dir
   user: "{user.uid}:{user.gid}"
   env:
     - "USER={user.name}"
   entrypoint: /bin/bash
   command: /git/scripts/gen-image-version.sh
     /git
-    /git/yocto/layer-revs
-    cpu01-base
-    /git/base/.generated-cpu01-image-naming.yaml
+    /git/base-image/layer-revs
 
 job=cpu01-base-yocto-shell:
   use: image-kas
   depends:
     - yocto-envs
+    - base-print-image-version:capture(IMAGE_GIT_VERSION)
   mounts:
     - build-dir-base
     - kas-includes-dir
@@ -50,8 +57,8 @@ job=cpu01-base-yocto-shell:
     - GROUP_ID={user.gid}
     - TERM=xterm-256color
     - SHELL=/bin/bash
-    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
-    - IMAGE_GIT_VERSION=dirty_0.1.0-96.cleanup.heike.20211215.1619
+    - IMAGE_NAME_SUFFIX={env.NAME_SUFFIX}
+    - IMAGE_GIT_VERSION={env.IMAGE_GIT_VERSION}
   command: "shell kasfile-cpu01-base.yaml"
   annotations:
     description: "\t\t--> interactive yocto shell cpu01-base config"
@@ -73,15 +80,12 @@ job=cpu01-base-build-image:
     - GROUP_ID={user.gid}
     - TERM=xterm-256color
     - SHELL=/bin/bash
-    - IMAGE_NAME_SUFFIX={env.IMAGE_NAME_SUFFIX}
-    - IMAGE_GIT_VERSION=dirty_0.1.0-96.cleanup.heike
+    - IMAGE_NAME_SUFFIX={env.NAME_SUFFIX}
+    - IMAGE_GIT_VERSION={env.IMAGE_GIT_VERSION}
   depends:
-    - cpu01-base-gen-image-version
-  sources:
-    - base/kasfile-cpu01-base.yaml
-    - kas-includes/kasfile-tdxbsp.yaml
-    - kas-includes/kasfile-virtualization.yaml
-  command: "build kasfile-cpu01-base.yaml"
+    - yocto-envs
+    - base-print-image-version:capture(IMAGE_GIT_VERSION)
+  command: build kasfile-cpu01-base.yaml
   annotations:
     description: "\t\t--> Build cpu01-base-image"
     tags:
@@ -92,14 +96,16 @@ job=cpu01-base-minio-push:
   mounts:
     - build-dir-base
   entrypoint: /bin/sh
+  depends:
+    - yocto-envs
   command: |
     -c "
-        fileToPush=$(ls -t /work/install/images/moducop-cpu01/*Base-Image*Tezi*.tar | head -n 1)
+        fileToPush=$(ls -t /work/install/images/moducop-cpu01/*Base-Image*ci4rail_tezi.tar | head -n 1)
         echo Push image ${fileToPush} to minio
         mc cp ${fileToPush} ci4rail_endpoint/${BUCKET}/
        "
   env:
-    - MC_HOST_ci4rail_endpoint={env.MC_HOST}
+    - MC_HOST_ci4rail_endpoint=https://{env.MINIO_ACCESS_KEY}:{env.MINIO_SECRET_KEY}@{env.MINIO_ENDPOINT}
     - BUCKET=cpu01-base-dev
   annotations:
     description: "\t\t--> Push cpu01-base image to Minio"
@@ -114,9 +120,11 @@ job=cpu01-base-minio-deploy:
   interactive: true
   net-mode: host
   entrypoint: /bin/bash
+  depends:
+    - yocto-envs
   command: |
     -c '
-      fileToInstall=$(ls -t /work/install/images/moducop-cpu01/*Base-Image*Tezi*.tar | head -n 1 | rev | cut -d"/" -f 1 | rev)
+      fileToInstall=$(ls -t /work/install/images/moducop-cpu01/*Base-Image*ci4rail_tezi.tar | head -n 1 | rev | cut -d"/" -f 1 | rev)
       echo Deploy image ${fileToInstall} using Raspberry Pi with IP ${RASPBERRY_PI_IP} to connected Moducop
       ssh yoda@${RASPBERRY_PI_IP} "
           s3cmd --config=/etc/s3cfg_ci4rail_minio get s3://${BUCKET}/${fileToInstall} /tmp/tezi-image.tar --force

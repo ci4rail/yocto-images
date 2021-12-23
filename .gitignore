@@ -7,6 +7,6 @@ gen/
 */src/
 .env
 cache
-default.env
-mender.env
-.generated*
+custom.env
+secret.env
+*/layer-revs

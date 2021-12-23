@@ -4,7 +4,7 @@
 
 image=image-kas:
   image: ghcr.io/siemens/kas/kas
-  tags: ["2.3.3"]
+  tags: ["2.6.3"]
   pull: once
 
 image=image-curl-jq:
@@ -76,26 +76,72 @@ mount=ssh-dir:
 # ===================================================
 
 env=yocto-envs:
-  files: [mender.env]
+  files:
+    - config/secret.env
+    - config/custom.env
 
 # ===================================================
 # jobs
 # ===================================================
-# Get layer revisions
-job=yocto-layer-revparse:
-  use: image-kas
-  entrypoint: /bin/bash
-  command: /git/scripts/layer-revparse.sh /git/yocto/src /git/yocto/layer-revs
+job=mender-accept-latest-auth:
+  use: image-curl-jq
   mounts:
-    - mount-buildingblock-gitversion-source-dir
-  sources: yocto/src
-  artifact: yocto/layer-revs
+    - scripts-dir
+    - mender-auth-dir
   user: "{user.uid}:{user.gid}"
+  depends:
+    - yocto-envs
+  env:
+    - MENDER_DEVICE_ID={env.MENDER_DEVICE_ID}
+    - MENDER_AUTH_TOKEN=/mender-auth/authtoken
+    - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
+  command: /scripts/mender_accept_new_auth_set.sh
+  annotations:
+    description: "\t\t--> Accept latest auth set for device with MENDER_DEVICE_ID"
 
-alias=build-all:
+alias=all-build:
   tasks:
     - cpu01-base-build-image
     - cpu01-edgefarm-build-image
-    - cpu01-bringup-build-image
+    - cpu01-devtools-build-image
   annotations:
-    description: "\t\t\t--> [alias]build all images in yocto folder"
+    description: "\t\t\t--> [alias] build all images"
+
+alias=all-minio-push:
+  tasks:
+    - cpu01-base-minio-push
+    - cpu01-edgefarm-minio-push
+    - cpu01-devtools-minio-push
+  annotations:
+    description: "\t\t\t--> [alias] push all images to Minio"
+
+alias=all-mender-upload:
+  tasks:
+    - cpu01-edgefarm-mender-upload
+    - cpu01-devtools-mender-upload
+  annotations:
+    description: "\t\t\t--> [alias] upload all images to mender"
+
+alias=cpu01-base-all:
+  tasks:
+    - cpu01-base-build-image
+    - cpu01-base-minio-push
+    - cpu01-base-minio-deploy
+  annotations:
+    description: "\t\t\t--> [alias] build cpu01 base image and install via Minio"
+
+alias=cpu01-devtools-all:
+  tasks:
+    - cpu01-devtools-build-image
+    - cpu01-devtools-minio-push
+    - cpu01-devtools-minio-deploy
+  annotations:
+    description: "\t\t\t--> [alias] build cpu01 devtools image and install via Minio"
+
+alias=cpu01-edgefarm-all:
+  tasks:
+    - cpu01-edgefarm-build-image
+    - cpu01-edgefarm-minio-push
+    - cpu01-edgefarm-minio-deploy
+  annotations:
+    description: "\t\t\t--> [alias] build cpu01 edgefarm image and install via Minio"

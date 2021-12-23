@@ -1,7 +1,0 @@
-header:
-  version: 9
-repos:
-  # docker
-  src/meta-virtualization:
-    url: git://git.yoctoproject.org/meta-virtualization
-    refspec: ff997b6b3ba800978546098ab3cdaa113b6695e1

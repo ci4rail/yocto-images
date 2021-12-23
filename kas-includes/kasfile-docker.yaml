@@ -1,0 +1,13 @@
+header:
+  version: 11
+repos:
+  # docker
+  src/meta-virtualization:
+    url: git://git.yoctoproject.org/meta-virtualization
+    refspec: ff997b6b3ba800978546098ab3cdaa113b6695e1
+
+local_conf_header:
+  src/meta-ci4rail-docker: |
+    DISTRO_FEATURES_append = " virtualization"
+    BBFILE_PRIORITY_openembedded-layer = "4"
+    IMAGE_INSTALL_append = " docker-ce ca-certificates"

@@ -25,7 +25,6 @@ fi
 JWT=$(cat ${MENDER_AUTH_TOKEN})
 
 device_id=${MENDER_DEVICE_ID}
-MENDER_SERVER_URL=https://hosted.mender.io
 
 mender_filename=${1}
 if [ ! -f ${mender_filename} ]; then

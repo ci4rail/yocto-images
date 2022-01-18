@@ -56,7 +56,17 @@ Target Platforms:
 
 ## Building
 
-Images are build automatically via github actions, but this section describes, how to build images locally using dobi.
+### Github Actions
+
+Images are build automatically via github actions.
+
+The following figure shows which steps are executed for corresponding image types:
+
+![Yocto Images Pipelines](doc/yocto-images-pipelines.drawio.svg)
+
+### Local build with dobi
+
+This section describes, how to build images locally using dobi.
 
 First, enter credentials for mender and/or minio `config/secret.env` (using template `config/secret.env.template`).
 

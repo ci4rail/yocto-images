@@ -61,6 +61,7 @@ local_conf_header:
     VIRTUAL-RUNTIME_init_manager = "systemd"
     DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
     VIRTUAL-RUNTIME_initscripts = ""
+    FETCHCMD_wget = "/usr/bin/env wget -t 5 -T 30 --waitretry=10 --passive-ftp --no-check-certificate"
 
 env:
   IMAGE_NAME_SUFFIX: ""

@@ -18,6 +18,7 @@ env:
   MACHINE: cpu01
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.6.3
   TAR_IMAGE_SEARCH_STRING: images/moducop-cpu01/Moducop-CPU01_Devtools*.mender_tezi.tar
+  DOCKER_USERNAME: ci4rail
 
 jobs:
   calculate-version:
@@ -81,7 +82,6 @@ jobs:
 
       - name: Log into Docker
         env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
         run: echo ${DOCKER_PASSWORD} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin
 

@@ -1,7 +1,0 @@
-sstate-cache
-build
-install
-src
-.generated*
-layer-revs
-TODO

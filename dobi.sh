@@ -32,7 +32,7 @@ dobi_version() {
 
 # load and export env files
 set -o allexport
-source default.env
+source config/default.env
 set +o allexport
 
 # check for docker
@@ -75,9 +75,6 @@ fi
 # generate actual version files
 ${dobi} --filename meta.yaml version
 
-# generate the image specific dobi files
-${dobi} --filename yocto/dobi_gen.yaml all
-
 # check argument count
 if [ -z ${1} ]; then
     echo "no arguments!"
@@ -88,8 +85,8 @@ fi
 # load generated version infos
 source gen/gitversion/env/gitversion.env
 
-if [ -f default.env ]; then
-  source default.env
+if [ -f config/default.env ]; then
+  source config/default.env
   if [[ ! -z "${YOCTO_SSTATE_CACHE_DIR}" ]]; then
     if [[ "${YOCTO_SSTATE_CACHE_DIR}" != *\/ ]]; then
       echo "Error: make sure that value for YOCTO_SSTATE_CACHE_DIR ends with  '/'"

@@ -7,4 +7,6 @@ gen/
 */src/
 .env
 cache
-default.env
+custom.env
+secret.env
+*/layer-revs

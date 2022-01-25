@@ -165,8 +165,8 @@ job=cpu01-edgefarm-minio-deploy:
   command: |
     -c '
       fileToInstall=$(ls -t /work/install/images/moducop-cpu01/Moducop-CPU01_EdgeFarm*.mender_tezi.tar| head -n 1 | rev | cut -d"/" -f 1 | rev)
-      echo Deploy image ${fileToInstall} using Raspberry Pi with IP ${RASPBERRY_PI_IP} to connected Moducop
-      ssh yoda@${RASPBERRY_PI_IP} "
+      echo Deploy image ${fileToInstall} using Raspberry Pi with IP ${TEST_COMPUTER_IP} to connected Moducop
+      ssh yoda@${TEST_COMPUTER_IP} "
           s3cmd --config=/etc/s3cfg_ci4rail_minio get s3://${BUCKET}/${fileToInstall} /tmp/tezi-image.tar --force
           sudo make-gadget-image /tmp/tezi-image.tar /tmp/tezi.img
           docker run \
@@ -191,11 +191,11 @@ job=cpu01-edgefarm-minio-deploy:
   env:
     - USER_ID={user.uid}
     - GROUP_ID={user.gid}
-    - RASPBERRY_PI_IP={env.RASPBERRY_PI_IP}
+    - TEST_COMPUTER_IP={env.TEST_COMPUTER_IP}
     - BUCKET=cpu01-edgefarm-dev
     - CONSOLE_PORT={env.CONSOLE_PORT}
     - TDX_INSTALLER_IMAGE_TAG={env.TDX_INSTALLER_IMAGE_TAG}
   annotations:
-    description: "\t\t--> Deploy cpu01-edgefarm image via Raspberry Pi with RASPBERRY_PI_IP to connected Moducop"
+    description: "\t\t--> Deploy cpu01-edgefarm image via Raspberry Pi with TEST_COMPUTER_IP to connected Moducop"
     tags:
       - edgefarm

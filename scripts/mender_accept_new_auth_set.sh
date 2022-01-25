@@ -22,7 +22,7 @@ JWT=$(cat ${MENDER_AUTH_TOKEN})
 
 deviceStatus=$(curl -H "Authorization: Bearer ${JWT}" -H 'Accept: application/json' -X GET  ${MENDER_SERVER_URL}/api/management/v2/devauth/devices/${MENDER_DEVICE_ID})
 
-if ($(echo $deviceStatus | jq 'has("error")')); then 
+if ($(echo $deviceStatus | jq 'has("error")')); then
   error=$(echo $deviceStatus | jq -c '.error' | sed 's/"//g')
   if [ "$error" = "invalid jwt" ]; then
     echo "Error, jwt expired, please run 'mender-cli login'"

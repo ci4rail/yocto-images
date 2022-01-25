@@ -60,11 +60,13 @@ Images are build automatically via github actions, but this section describes, h
 
 First, enter credentials for mender and/or minio `config/secret.env` (using template `config/secret.env.template`).
 
-Second, enter your specific data in `config/custom.env` (using template `config/custom.env.template`). You can use the default setting, but MENDER_DEVICE_ID must be adapted to the device you want to use to [deploy locally built images via mender](#deploy-images-via-mender) and RASPBERRY_PI_IP must be adapted to the raspberry pi ip address connected to the device you want to [deploy locally built images via minio](#deploy-images-via-minio):
+Second, enter your specific data in `config/custom.env` (using template `config/custom.env.template`).
+You can use the default setting, but MENDER_DEVICE_ID must be adapted to the device you want to use to [deploy locally built images via mender](#deploy-images-via-mender)
+and TEST_COMPUTER_IP must be adapted to the test-computer ip address connected to the device you want to [deploy locally built images via minio](#deploy-images-via-minio):
 
 ```bash
 MENDER_DEVICE_ID=<device id from mender portal>
-RASPBERRY_PI_IP=<ip address of raspberry pi connected to the device to flash>
+TEST_COMPUTER_IP=<ip address of test-computer connected to the device to flash>
 ```
 
 For example, to build the `edgefarm` image for `cpu01`:
@@ -117,10 +119,10 @@ Upload image to minio, e.g.:
 ./dobi.sh cpu01-edgefarm-minio-push
 ```
 
-To deploy an image to a specific device set the ip address of raspberry pi connected to this device, if you haven't specified it in `config/custom.env`:
+To deploy an image to a specific device set the ip address of test-computer connected to this device, if you haven't specified it in `config/custom.env`:
 
 ```bash
-RASPBERRY_PI_IP=<ip address of raspberry pi connected to the device to flash>
+TEST_COMPUTER_IP=<ip address of test-computer connected to the device to flash>
 ```
 
 Start deployment

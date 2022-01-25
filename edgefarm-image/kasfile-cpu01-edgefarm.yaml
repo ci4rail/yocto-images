@@ -17,7 +17,7 @@ repos:
   # edgefarm
   src/meta-edgefarm:
     url: https://github.com/edgefarm/meta-edgefarm.git
-    refspec: initial
+    refspec: 78889cbca6c07c44e48aa794f11f713f7bb5770f
 
 local_conf_header:
   src/meta-custom: |

@@ -213,8 +213,12 @@ jobs:
                 -c "
                 robot --outputdir /result -l ${imageName}.html -v TEZI_TAR:${TAR_IMAGE_NAME} -v TEZI_TAR_BUCKET:${BUCKET} -v LOCK_NAME:${TAR_IMAGE_NAME} yocto-edgefarm-test
                 "
+
+      - name: Get test results
+        if: always()
+        run: |
           mkdir ${GITHUB_WORKSPACE}/minio
-          cp /result/${imageName}.html ${GITHUB_WORKSPACE}/minio
+          cp /result/${IMAGE_START}*.html ${GITHUB_WORKSPACE}/minio
 
       - name: Push Results to Minio
         if: always()

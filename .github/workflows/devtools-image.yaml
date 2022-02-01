@@ -210,7 +210,7 @@ jobs:
                 --entrypoint=/bin/sh \
                 ${ROBOT_IMAGE} \
                 -c "
-                robot --outputdir /result -l ${imageName}.html -v TEZI_TAR:${TAR_IMAGE_NAME} -v TEZI_TAR_BUCKET:${BUCKET} -v LOCK_NAME:${TAR_IMAGE_NAME} --exclude docker yocto-edgefarm-test
+                robot --outputdir /result -l ${imageName}.html -v TEZI_TAR:${TAR_IMAGE_NAME} -v TEZI_TAR_BUCKET:${BUCKET} -v LOCK_NAME:${TAR_IMAGE_NAME} --exclude docker --exclude serial yocto-edgefarm-test
                 "
 
       - name: Get test results

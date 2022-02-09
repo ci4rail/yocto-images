@@ -171,7 +171,7 @@ jobs:
         name: Checkout ci4rail/cpu01-test
         with:
           repository: ci4rail/cpu01-test
-          ref: adaptionsForGithubActions
+          ref: main
           ssh-key: ${{ secrets.SSH_PRIVATEKEY }}
           submodules: recursive
       - name: Log into Docker

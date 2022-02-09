@@ -61,7 +61,7 @@ job=cpu01-edgefarm-yocto-shell:
     - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
     - IMAGE_NAME_SUFFIX={env.NAME_SUFFIX}
     - IMAGE_GIT_VERSION={env.IMAGE_GIT_VERSION}
-    - MENDER_ARTIFACT_NAME=cpu01-edgefarm-{env.IMAGE_GIT_VERSION}
+    - MENDER_ARTIFACT_NAME=cpu01-edgefarm-{env.IMAGE_GIT_VERSION}{env.NAME_SUFFIX}
   command: shell kasfile-cpu01-edgefarm.yaml
   annotations:
     description: "\t\t--> interactive yocto shell cpu01-edgefarm config"
@@ -87,7 +87,7 @@ job=cpu01-edgefarm-build-image:
     - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
     - IMAGE_NAME_SUFFIX={env.NAME_SUFFIX}
     - IMAGE_GIT_VERSION={env.IMAGE_GIT_VERSION}
-    - MENDER_ARTIFACT_NAME=cpu01-edgefarm-{env.IMAGE_GIT_VERSION}
+    - MENDER_ARTIFACT_NAME=cpu01-edgefarm-{env.IMAGE_GIT_VERSION}{env.NAME_SUFFIX}
   depends:
     - yocto-envs
     - edgefarm-print-image-version:capture(IMAGE_GIT_VERSION)

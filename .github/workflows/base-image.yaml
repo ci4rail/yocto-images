@@ -17,7 +17,11 @@ env:
   IMAGE_TYPE: base
   MACHINE: cpu01
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.6.3
-  TAR_IMAGE_SEARCH_STRING: images/moducop-cpu01/*Base-Image*ci4rail_tezi.tar
+  MACHINE_DIR: moducop-cpu01
+  IMAGE_START: Moducop-CPU01_Base-Image
+  TARFILE_ENDING: ci4rail_tezi
+  ROBOT_IMAGE: ci4rail/robot:latest-2021-03-25
+  TEST_COMPUTER_IP: 192.168.24.12
   DOCKER_USERNAME: ci4rail
 
 jobs:
@@ -68,8 +72,12 @@ jobs:
 
   build-and-push-image:
     needs: calculate-version
+    name: Build and Push Image
     runs-on: [self-hosted, linux, x64, yocto-runner]
-
+    outputs:
+      bucket: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}${{ needs.calculate-version.outputs.name_suffix }}
+      nameSuffix: ${{ needs.calculate-version.outputs.name_suffix }}
+      version: ${{ needs.calculate-version.outputs.version }}
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
@@ -113,10 +121,12 @@ jobs:
 
       - name: Check Build Artefacts are there
         id: artefacts
+        env:
+          TAR_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-${{ env.TARFILE_ENDING }}.tar
         run: |
-          tarImagePath=$(ls -t /install/${TAR_IMAGE_SEARCH_STRING} | head -n 1)
+          ls -t ${TAR_IMAGE_PATH}
           mkdir ${GITHUB_WORKSPACE}/minio
-          cp ${tarImagePath} ${GITHUB_WORKSPACE}/minio
+          cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
 
       - name: Push Images to Minio
         uses: hkdobrev/minio-deploy-action@v1
@@ -125,5 +135,73 @@ jobs:
           access_key: ${{ secrets.MINIO_ACCESS_KEY }}
           secret_key: ${{ secrets.MINIO_SECRET_KEY }}
           bucket: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}${{ needs.calculate-version.outputs.name_suffix }}
+          source_dir: minio
+          target_dir: "/"
+
+  test-image:
+    needs: build-and-push-image
+    name: Test Yocto Image
+    runs-on: [self-hosted, linux, x64, yocto-runner]
+    steps:
+      - uses: actions/checkout@v2
+        name: Checkout ci4rail/cpu01-test
+        with:
+          repository: ci4rail/cpu01-test
+          ref: main
+          ssh-key: ${{ secrets.SSH_PRIVATEKEY }}
+          submodules: recursive
+      - name: Log into Docker
+        env:
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: echo ${DOCKER_PASSWORD} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin
+      - name: Install Image and Execute test
+        env:
+          SSH_PRIVATEKEY: ${{ secrets.SSH_PRIVATEKEY }}
+          TAR_IMAGE_NAME: ${{ env.IMAGE_START }}_${{ needs.build-and-push-image.outputs.version }}${{ needs.build-and-push-image.outputs.nameSuffix }}-${{ env.TARFILE_ENDING }}.tar
+          BUCKET: ${{ needs.build-and-push-image.outputs.bucket }}
+
+          ROBOT_SSH_KEY_FILE: /id_rsa
+          ROBOT_TC_IP: ${{ env.TEST_COMPUTER_IP }}
+          ROBOT_TC_USER: yoda
+          ROBOT_WIFI_AP: hydra-rpi-wifi
+          ROBOT_WIFI_PASS: testfarm
+          ROBOT_LTE_APN: web.vodafone.de
+          ROBOT_DUT_PASSWORD: cheesebread
+          ROBOT_EXPECTED_IMAGE: ${{ env.TAR_IMAGE_NAME }}
+          ROBOT_DOCKER_USER: ${{ env.DOCKER_USER }}
+          ROBOT_DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+
+        run: |
+          printf '%s' "$SSH_PRIVATEKEY" > id_rsa
+          (env | grep ^R[OE]BOT_.*= > env_file ) || :
+
+          imageName=$(echo ${TAR_IMAGE_NAME} | rev | cut -d"/" -f 1 | rev | sed -e "s/.tar$//")
+
+          docker run \
+                -v=${GITHUB_WORKSPACE}:/opt/robotframework/tests \
+                -v /result:/result \
+                -v $(pwd)/id_rsa:/id_rsa \
+                --env-file $(pwd)/env_file \
+                -u `id -u` \
+                --entrypoint=/bin/sh \
+                ${ROBOT_IMAGE} \
+                -c "
+                robot --outputdir /result -l ${imageName}.html -v TEZI_TAR:${TAR_IMAGE_NAME} -v TEZI_TAR_BUCKET:${BUCKET} -v LOCK_NAME:${TAR_IMAGE_NAME} --exclude serial yocto-edgefarm-test
+                "
+
+      - name: Get test results
+        if: always()
+        run: |
+          mkdir ${GITHUB_WORKSPACE}/minio
+          cp /result/${IMAGE_START}*.html ${GITHUB_WORKSPACE}/minio
+
+      - name: Push Results to Minio
+        if: always()
+        uses: hkdobrev/minio-deploy-action@v1
+        with:
+          endpoint: https://minio.ci4rail.com
+          access_key: ${{ secrets.MINIO_ACCESS_KEY }}
+          secret_key: ${{ secrets.MINIO_SECRET_KEY }}
+          bucket: ${{ needs.build-and-push-image.outputs.bucket }}
           source_dir: minio
           target_dir: "/"

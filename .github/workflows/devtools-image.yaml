@@ -1,4 +1,4 @@
-name: Bringup Image
+name: Devtools Image
 on:
   pull_request:
     branches:

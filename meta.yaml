@@ -10,6 +10,7 @@ meta:
     - base-image/dobi.yaml
     - edgefarm-image/dobi.yaml
     - devtools-image/dobi.yaml
+    - edgefarm-devtools-image/dobi.yaml
 
 # ===================================================
 # alias

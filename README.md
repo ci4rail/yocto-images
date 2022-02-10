@@ -97,6 +97,7 @@ To build all images:
 ./dobi.sh all-build
 ```
 
+## Install Images
 ### Deploy images via mender
 
 Download [Mender CLI](https://docs.mender.io/downloads#mender-cli)
@@ -139,4 +140,18 @@ Start deployment
 
 ```bash
 ./dobi.sh cpu01-edgefarm-minio-deploy
+```
+
+### Install Raspberry Pi sdimg on SD Card
+
+Find build images:
+
+```
+ls */install/images/raspberrypi4-64/core-image-base-raspberrypi4-64-*.sdimg
+```
+
+Install on SD Card:
+
+```
+sudo dd if=<PATH-TO-IMAGE>.sdimg of=<DEVICE> bs=1M && sudo sync
 ```

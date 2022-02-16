@@ -90,10 +90,10 @@ local_conf_header:
 
     INHERIT += "mender-full"
 
-    DISTRO_FEATURES_append = " systemd"
-    VIRTUAL-RUNTIME_init_manager = "systemd"
-    DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
-    VIRTUAL-RUNTIME_initscripts = ""
+    # DISTRO_FEATURES_append = " systemd"
+    # VIRTUAL-RUNTIME_init_manager = "systemd"
+    # DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
+    # VIRTUAL-RUNTIME_initscripts = ""
 
     RPI_USE_U_BOOT = "1"
     IMAGE_INSTALL_append = " kernel-image kernel-devicetree"
@@ -109,29 +109,15 @@ local_conf_header:
     MENDER_STORAGE_TOTAL_SIZE_MB = "2000"
     MENDER_BOOT_PART_SIZE_MB = "40"
 
-env:
-  MENDER_SERVER_URL: "https://hosted.mender.io"
-  MENDER_TENANT_TOKEN: "DEFAULT_EMPTY_TENANT_TOKEN"
-  IMAGE_NAME_SUFFIX: ""
-  MENDER_ARTIFACT_NAME: "DEFAULT_EMPTY_ARTIFACT_NAME"
-
-  # ########################
-  # # my changes
-  # ########################
-  # # boot + 2xroot partition must fit in MENDER_STORAGE_TOTAL_SIZE_MB
-  # # Keep it as small as possible, to reduce target programming time
-  # # Reduce size in devtools image
-  # MENDER_STORAGE_TOTAL_SIZE_MB = "2000"
-  # IMAGE_INSTALL += "\
-  #                   openssh \
-  #                   packagegroup-core-ssh-openssh \
-  #                   openssh-sftp-server \
-  #                   "
-
-  # IMAGE_LINGUAS = "en-us"
-  # # Copy Licenses to image /usr/share/common-license
-  # COPY_LIC_MANIFEST ?= "1"
-  # COPY_LIC_DIRS ?= "1"
+    # New changes done by me
+    ################################################################
+    IMAGE_FEATURES += "\
+                      ssh-server-openssh \
+                      "
+    IMAGE_LINGUAS = "en-us"
+    # Copy Licenses to image /usr/share/common-license
+    COPY_LIC_MANIFEST ?= "1"
+    COPY_LIC_DIRS ?= "1"
   # IMAGE_INSTALL += "\
   #               udev-extraconf \
   #               bzip2 \
@@ -159,3 +145,19 @@ env:
   # IMAGE_FEATURES += "\
   #                package-management \
   #                "
+  # IMAGE_INSTALL += "\
+  #               edgecore"
+  # IMAGE_INSTALL += "\
+  #                tailscale \
+  #                jq \
+  #                yq \
+  #                bind-utils \
+  #                termshark \
+  #                nats \
+  #                "
+
+env:
+  MENDER_SERVER_URL: "https://hosted.mender.io"
+  MENDER_TENANT_TOKEN: "DEFAULT_EMPTY_TENANT_TOKEN"
+  IMAGE_NAME_SUFFIX: ""
+  MENDER_ARTIFACT_NAME: "DEFAULT_EMPTY_ARTIFACT_NAME"

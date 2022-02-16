@@ -37,3 +37,4 @@ local_conf_header:
     # Keep it as small as possible, to reduce target programming time
     # Reduce size in devtools image
     MENDER_STORAGE_TOTAL_SIZE_MB = "2000"
+    IMAGE_INSTALL_append = " mender-connect"

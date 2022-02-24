@@ -2,33 +2,33 @@
 # mounts
 # ===================================================
 # Yocto images (DEPLOY_DIR)
-mount=install-dir-devtools:
-  bind: devtools-image/install
+mount=install-dir-cpu01-devtools:
+  bind: cpu01-devtools-image/install
   path: /install
 
 # Where the yocto-build happens
-mount=build-dir-devtools:
-  bind: devtools-image
+mount=build-dir-cpu01-devtools:
+  bind: cpu01-devtools-image
   path: /work
 
 # ===================================================
 # jobs
 # ===================================================
 # Get layer revisions
-job=devtools-yocto-layer-revparse:
+job=cpu01-devtools-yocto-layer-revparse:
   use: image-kas
   entrypoint: /bin/bash
-  command: /git/scripts/layer-revparse.sh /git/devtools-image/src /git/devtools-image/layer-revs
+  command: /git/scripts/layer-revparse.sh /git/cpu01-devtools-image/src /git/cpu01-devtools-image/layer-revs
   mounts:
     - mount-buildingblock-gitversion-source-dir
-  sources: devtools-image/src
-  artifact: devtools-image/layer-revs
+  sources: cpu01-devtools-image/src
+  artifact: cpu01-devtools-image/layer-revs
   user: "{user.uid}:{user.gid}"
 
-job=devtools-print-image-version:
+job=cpu01-devtools-print-image-version:
   use: image-kas
   depends:
-    - devtools-yocto-layer-revparse
+    - cpu01-devtools-yocto-layer-revparse
   mounts:
     - mount-buildingblock-gitversion-source-dir
   user: "{user.uid}:{user.gid}"
@@ -37,19 +37,19 @@ job=devtools-print-image-version:
   entrypoint: /bin/bash
   command: /git/scripts/gen-image-version.sh
     /git
-    /git/devtools-image/layer-revs
+    /git/cpu01-devtools-image/layer-revs
 
 job=cpu01-devtools-yocto-shell:
   use: image-kas
   depends:
     - yocto-envs
-    - devtools-print-image-version:capture(IMAGE_GIT_VERSION)
+    - cpu01-devtools-print-image-version:capture(IMAGE_GIT_VERSION)
   mounts:
-    - build-dir-devtools
+    - build-dir-cpu01-devtools
     - kas-includes-dir
     - download-dir-yocto
     - sstate-dir-yocto
-    - install-dir-devtools
+    - install-dir-cpu01-devtools
   working-dir: /work
   interactive: true
   env:
@@ -62,20 +62,20 @@ job=cpu01-devtools-yocto-shell:
     - IMAGE_NAME_SUFFIX={env.NAME_SUFFIX}
     - IMAGE_GIT_VERSION={env.IMAGE_GIT_VERSION}
     - MENDER_ARTIFACT_NAME=cpu01-devtools-{env.IMAGE_GIT_VERSION}{env.NAME_SUFFIX}
-  command: shell kasfile-cpu01-devtools.yaml
+  command: shell kasfile.yaml
   annotations:
-    description: "\t\t--> interactive yocto shell cpu01-devtools config"
+    description: "\t\t\t\t--> interactive yocto shell cpu01-devtools config"
     tags:
       - devtools
 
 job=cpu01-devtools-build-image:
   use: image-kas
   mounts:
-    - build-dir-devtools
+    - build-dir-cpu01-devtools
     - kas-includes-dir
     - download-dir-yocto
     - sstate-dir-yocto
-    - install-dir-devtools
+    - install-dir-cpu01-devtools
   working-dir: /work
   interactive: true
   env:
@@ -90,10 +90,10 @@ job=cpu01-devtools-build-image:
     - MENDER_ARTIFACT_NAME=cpu01-edgefarm-{env.IMAGE_GIT_VERSION}{env.NAME_SUFFIX}
   depends:
     - yocto-envs
-    - devtools-print-image-version:capture(IMAGE_GIT_VERSION)
-  command: build kasfile-cpu01-devtools.yaml
+    - cpu01-devtools-print-image-version:capture(IMAGE_GIT_VERSION)
+  command: build kasfile.yaml
   annotations:
-    description: "\t\t--> Build cpu01-devtools-image"
+    description: "\t\t\t\t--> Build cpu01-devtools-image"
     tags:
       - devtools
 
@@ -101,20 +101,20 @@ job=cpu01-devtools-mender-upload:
   use: image-mender-cli
   interactive: true
   mounts:
-    - install-dir-devtools
+    - install-dir-cpu01-devtools
     - mender-auth-dir
   user: "{user.uid}:{user.gid}"
   entrypoint: /bin/sh
   command: -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/moducop-cpu01/Moducop-CPU01_Devtools*.mender"
   annotations:
-    description: "\t\t--> Upload cpu01-devtools image to mender"
+    description: "\t\t\t\t--> Upload cpu01-devtools image to mender"
     tags:
       - devtools
 
 job=cpu01-devtools-mender-deploy:
   use: image-curl-jq
   mounts:
-    - install-dir-devtools
+    - install-dir-cpu01-devtools
     - scripts-dir
     - mender-auth-dir
   user: "{user.uid}:{user.gid}"
@@ -127,14 +127,14 @@ job=cpu01-devtools-mender-deploy:
     - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
   command: /scripts/mender_deploy_artifact_to_device.sh /install/images/moducop-cpu01/Moducop-CPU01_Devtools*.mender
   annotations:
-    description: "\t\t--> Deploy cpu01-devtools image to MENDER_DEVICE_ID"
+    description: "\t\t\t\t--> Deploy cpu01-devtools image to MENDER_DEVICE_ID"
     tags:
       - devtools
 
 job=cpu01-devtools-minio-push:
   use: image-minio-client
   mounts:
-    - build-dir-devtools
+    - build-dir-cpu01-devtools
   entrypoint: /bin/sh
   depends:
     - yocto-envs
@@ -148,14 +148,14 @@ job=cpu01-devtools-minio-push:
     - MC_HOST_ci4rail_endpoint=https://{env.MINIO_ACCESS_KEY}:{env.MINIO_SECRET_KEY}@{env.MINIO_ENDPOINT}
     - BUCKET=cpu01-devtools-dev
   annotations:
-    description: "\t\t--> Push cpu01-devtools image to Minio"
+    description: "\t\t\t\t--> Push cpu01-devtools image to Minio"
     tags:
       - devtools
 
 job=cpu01-devtools-minio-deploy:
   use: image-ssh-client
   mounts:
-    - build-dir-devtools
+    - build-dir-cpu01-devtools
     - ssh-dir
   interactive: true
   net-mode: host
@@ -196,6 +196,6 @@ job=cpu01-devtools-minio-deploy:
     - CONSOLE_PORT={env.CONSOLE_PORT}
     - TDX_INSTALLER_IMAGE_TAG={env.TDX_INSTALLER_IMAGE_TAG}
   annotations:
-    description: "\t\t--> Deploy cpu01-devtools image via Raspberry Pi with TEST_COMPUTER_IP to connected Moducop"
+    description: "\t\t\t\t--> Deploy cpu01-devtools image via Raspberry Pi with TEST_COMPUTER_IP to connected Moducop"
     tags:
       - devtools

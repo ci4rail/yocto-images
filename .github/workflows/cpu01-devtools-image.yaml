@@ -1,17 +1,23 @@
-name: Devtools Image
+name: CPU01 Devtools Image
 on:
   pull_request:
     branches:
       - main
     paths:
-      - "devtools-image/kasfile-cpu01-devtools.yaml"
+      - "cpu01-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-mender.yaml"
       - "kas-includes/kasfile-general.yaml"
-      - ".github/workflows/devtools-pull-request.yaml"
+      - ".github/workflows/cpu01-devtools-image.yaml"
   push:
     branches:
       - main
+    paths:
+      - "cpu01-devtools-image/kasfile.yaml"
+      - "kas-includes/kasfile-tdxbsp.yaml"
+      - "kas-includes/kasfile-mender.yaml"
+      - "kas-includes/kasfile-general.yaml"
+      - ".github/workflows/cpu01-devtools-image.yaml"
 
 env:
   IMAGE_TYPE: devtools
@@ -107,7 +113,7 @@ jobs:
                 -v /install:/install \
                 -v /sstate-cache:/sstate-cache \
                 -v /downloads:/downloads \
-                -v ${GITHUB_WORKSPACE}/${IMAGE_TYPE}-image:/work \
+                -v ${GITHUB_WORKSPACE}/${MACHINE}-${IMAGE_TYPE}-image:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -e USER_ID=$(id -u ${USER}) \
                 -e GROUP_ID=$(id -g ${USER}) \
@@ -118,7 +124,7 @@ jobs:
                 -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
                 -w /work \
                 ${BUILDER_IMAGE} \
-                build kasfile-${MACHINE}-${IMAGE_TYPE}.yaml
+                build kasfile.yaml
 
       - name: Store Cache for Yocto Builds
         if: github.event_name == 'pull_request'

@@ -1,0 +1,25 @@
+header:
+  version: 11
+
+repos:
+  src/meta-mender-community:
+    url: "https://github.com/mendersoftware/meta-mender-community"
+    refspec: 2120d69c3d63405da5dcba2cefc678944b85a582
+    layers:
+      meta-mender-toradex-nxp:
+
+env:
+  MENDER_SERVER_URL: "https://hosted.mender.io"
+  MENDER_TENANT_TOKEN: "DEFAULT_EMPTY_TENANT_TOKEN"
+  IMAGE_NAME_SUFFIX: ""
+  MENDER_ARTIFACT_NAME: "DEFAULT_EMPTY_ARTIFACT_NAME"
+
+local_conf_header:
+  src/meta-ci4rail-mender-tdxbsp: |
+    IMAGE_CLASSES += "image_type_mender_tezi"
+    IMAGE_FSTYPES += "mender_tezi"
+    MENDER_FEATURES_ENABLE_append = " mender-uboot mender-image-sd"
+    MENDER_FEATURES_DISABLE_append = " mender-grub mender-image-uefi"
+    KERNEL_IMAGETYPE_aarch64_mender-grub = "Image"
+    IMAGE_BOOT_FILES = ""
+    IMAGE_BOOT_FILES_remove_mender-grub = "boot.scr-verdin-imx8mm;boot.scr"

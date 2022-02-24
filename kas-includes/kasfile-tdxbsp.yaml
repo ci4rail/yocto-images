@@ -4,7 +4,7 @@ repos:
   # ci4rail
   src/meta-ci4rail-bsp:
     url: https://github.com/ci4rail/meta-ci4rail-bsp.git
-    refspec: eff67715b6094300cd9d4d1d25f493e27e5ad7cd
+    refspec: image-name
 
   # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=5.2.0
   src/meta-freescale-3rdparty.git:
@@ -40,6 +40,28 @@ repos:
   src/meta-toradex-distro:
     url: "https://git.toradex.com/meta-toradex-distro.git"
     refspec: 632db61f177acf18df79d40fefdf1c662c6233a8
+
+  src/meta-yocto:
+    url: "https://git.yoctoproject.org/git/meta-yocto.git"
+    refspec: febea5f6be380fed476552d741dc97e9c78ebdd9
+    layers:
+      meta-poky:
+
+  src/openembedded-core:
+    url: "https://github.com/openembedded/openembedded-core.git"
+    refspec: 707036d4ec12ef1a260adcef78627b26e32e6540
+    layers:
+      meta:
+
+  # add meta-gnome here
+  # switch to older commit (2021-03-16) as other
+  # (ab9fca485e13f6f2f9761e1d2810f87c2e4f060a - 2021-12-31)
+  # leads to parsing error
+  src/meta-openembedded:
+    url: "https://github.com/openembedded/meta-openembedded.git"
+    refspec: 389757a7494221fea1d8437e9a01c6e4fb4700af
+    layers:
+      meta-gnome:
 
 local_conf_header:
   src/meta-ci4rail-tdxbsp: |

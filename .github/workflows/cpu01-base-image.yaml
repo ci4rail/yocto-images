@@ -8,7 +8,7 @@ on:
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-docker.yaml"
       - "kas-includes/kasfile-general.yaml"
-      - ".github/workflows/base-pull-request.yaml"
+      - ".github/workflows/cpu01-base-image.yaml"
   push:
     branches:
       - main
@@ -17,7 +17,7 @@ on:
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-docker.yaml"
       - "kas-includes/kasfile-general.yaml"
-      - ".github/workflows/base-pull-request.yaml"
+      - ".github/workflows/cpu01-base-image.yaml"
 
 env:
   IMAGE_TYPE: base

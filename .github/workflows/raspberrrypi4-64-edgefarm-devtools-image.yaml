@@ -5,20 +5,22 @@ on:
       - main
     paths:
       - "raspberrypi4-64-edgefarm-devtools-image/kasfile.yaml"
-      - "kas-includes/kasfile-tdxbsp.yaml"
+      - "kas-includes/kasfile-raspberrypi.yaml"
       - "kas-includes/kasfile-docker.yaml"
       - "kas-includes/kasfile-mender.yaml"
       - "kas-includes/kasfile-general.yaml"
+      - "kas-includes/kasfile-edgefarm-devtools.yaml"
       - ".github/workflows/raspberrypi4-64-edgefarm-devtools-image.yaml"
   push:
     branches:
       - main
     paths:
       - "raspberrypi4-64-edgefarm-devtools-image/kasfile.yaml"
-      - "kas-includes/kasfile-tdxbsp.yaml"
+      - "kas-includes/kasfile-raspberrypi.yaml"
       - "kas-includes/kasfile-docker.yaml"
       - "kas-includes/kasfile-mender.yaml"
       - "kas-includes/kasfile-general.yaml"
+      - "kas-includes/kasfile-edgefarm-devtools.yaml"
       - ".github/workflows/raspberrypi4-64-edgefarm-devtools-image.yaml"
 
 env:

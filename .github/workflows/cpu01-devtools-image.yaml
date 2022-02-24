@@ -7,6 +7,7 @@ on:
       - "cpu01-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-mender.yaml"
+      - "kas-includes/kasfile-mender-tdxbsp.yaml"
       - "kas-includes/kasfile-general.yaml"
       - ".github/workflows/cpu01-devtools-image.yaml"
   push:
@@ -16,6 +17,7 @@ on:
       - "cpu01-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-mender.yaml"
+      - "kas-includes/kasfile-mender-tdxbsp.yaml"
       - "kas-includes/kasfile-general.yaml"
       - ".github/workflows/cpu01-devtools-image.yaml"
 

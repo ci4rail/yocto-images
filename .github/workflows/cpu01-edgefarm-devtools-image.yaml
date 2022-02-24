@@ -8,7 +8,9 @@ on:
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-docker.yaml"
       - "kas-includes/kasfile-mender.yaml"
+      - "kas-includes/kasfile-mender-tdxbsp.yaml"
       - "kas-includes/kasfile-general.yaml"
+      - "kas-includes/kasfile-edgefarm-devtools.yaml"
       - ".github/workflows/cpu01-edgefarm-devtools-image.yaml"
   push:
     branches:
@@ -18,7 +20,9 @@ on:
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-docker.yaml"
       - "kas-includes/kasfile-mender.yaml"
+      - "kas-includes/kasfile-mender-tdxbsp.yaml"
       - "kas-includes/kasfile-general.yaml"
+      - "kas-includes/kasfile-edgefarm-devtools.yaml"
       - ".github/workflows/cpu01-edgefarm-devtools-image.yaml"
 
 env:

@@ -1,0 +1,47 @@
+header:
+  version: 11
+
+repos:
+  src/meta-raspberrypi:
+    url: "https://github.com/agherzan/meta-raspberrypi"
+    refspec: 934064a01903b2ba9a82be93b3f0efdb4543a0e8
+
+  src/poky:
+    url: "https://git.yoctoproject.org/poky"
+    refspec: bba323389749ec3e306509f8fb12649f031be152
+    layers:
+      meta-poky:
+      meta-yocto-bsp:
+      meta:
+
+  src/meta-mender:
+    url: "https://github.com/mendersoftware/meta-mender"
+    refspec: 5b518cc7cf4c6fb9d17fbbb463df3ccd70a9936a
+    layers:
+      meta-mender-raspberrypi:
+      meta-mender-demo:
+
+bblayers_conf_header:
+  src/meta-ci4rail-raspberrypi: |
+    POKY_BBLAYERS_CONF_VERSION = "2"
+
+local_conf_header:
+  src/meta-ci4rail-raspberrypi: |
+    RPI_USE_U_BOOT = "1"
+    IMAGE_INSTALL_append = " kernel-image kernel-devicetree"
+    IMAGE_FSTYPES_remove += " rpi-sdimg"
+    MENDER_FEATURES_ENABLE_append = " mender-uboot mender-image-sd"
+    MENDER_FEATURES_DISABLE_append = " mender-grub mender-image-uefi"
+    ENABLE_UART = "1"
+    MENDER_BOOT_PART_SIZE_MB = "40"
+    IMAGE_FEATURES += "\
+                      ssh-server-openssh \
+                      package-management \
+                      "
+    IMAGE_LINGUAS = "en-us"
+    # Copy Licenses to image /usr/share/common-license
+    COPY_LIC_MANIFEST ?= "1"
+    COPY_LIC_DIRS ?= "1"
+    IMAGE_INSTALL_append = " \
+                             nano \
+                             "

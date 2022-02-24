@@ -4,7 +4,7 @@ repos:
   # docker
   src/meta-virtualization:
     url: git://git.yoctoproject.org/meta-virtualization
-    refspec: ff997b6b3ba800978546098ab3cdaa113b6695e1
+    refspec: c5f61e547b90aa8058cf816f00902afed9c96f72
 
 local_conf_header:
   src/meta-ci4rail-docker: |

@@ -9,33 +9,18 @@ repos:
       # bitbake is no layer. Exclude it from bblayers.conf
       bitbake: "no"
 
-  src/meta-yocto:
-    url: "https://git.yoctoproject.org/git/meta-yocto.git"
-    refspec: febea5f6be380fed476552d741dc97e9c78ebdd9
-    layers:
-      meta-poky:
-
-  src/openembedded-core:
-    url: "https://github.com/openembedded/openembedded-core.git"
-    refspec: 707036d4ec12ef1a260adcef78627b26e32e6540
-    layers:
-      meta:
-
   src/meta-openembedded:
     url: "https://github.com/openembedded/meta-openembedded.git"
-    refspec: 389757a7494221fea1d8437e9a01c6e4fb4700af
+    refspec: ab9fca485e13f6f2f9761e1d2810f87c2e4f060a
     layers:
       meta-oe:
       meta-networking:
       meta-filesystems:
       meta-python:
-      meta-xfce:
-      meta-gnome:
       meta-multimedia:
-      meta-initramfs:
 
 bblayers_conf_header:
-  src/meta-custom: |
+  src/meta-general: |
     BBPATH = "${TOPDIR}"
     BBFILES ?= ""
 
@@ -61,7 +46,7 @@ local_conf_header:
     VIRTUAL-RUNTIME_init_manager = "systemd"
     DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
     VIRTUAL-RUNTIME_initscripts = ""
-    FETCHCMD_wget = "/usr/bin/env wget -t 5 -T 30 --waitretry=10 --passive-ftp --no-check-certificate"
+    FETCHCMD_wget = "/usr/bin/env wget -t 50 -T 30 --waitretry=5 --passive-ftp --no-check-certificate"
 
 env:
   IMAGE_NAME_SUFFIX: ""

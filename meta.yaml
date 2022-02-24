@@ -7,7 +7,7 @@ meta:
   include:
     - version.yaml
     - dobi.yaml
-    - base-image/dobi.yaml
+    - cpu01-base-image/dobi.yaml
     - edgefarm-image/dobi.yaml
     - devtools-image/dobi.yaml
     - edgefarm-devtools-image/dobi.yaml

@@ -2,33 +2,33 @@
 # mounts
 # ===================================================
 # Yocto images (DEPLOY_DIR)
-mount=install-dir-base:
-  bind: base-image/install
+mount=install-dir-cpu01-base:
+  bind: cpu01-base-image/install
   path: /install
 
 # Where the yocto-build happens
-mount=build-dir-base:
-  bind: base-image
+mount=build-dir-cpu01-base:
+  bind: cpu01-base-image
   path: /work
 
 # ===================================================
 # jobs
 # ===================================================
 # Get layer revisions
-job=base-yocto-layer-revparse:
+job=cpu01-base-yocto-layer-revparse:
   use: image-kas
   entrypoint: /bin/bash
-  command: /git/scripts/layer-revparse.sh /git/base-image/src /git/base-image/layer-revs
+  command: /git/scripts/layer-revparse.sh /git/cpu01-base-image/src /git/cpu01-base-image/layer-revs
   mounts:
     - mount-buildingblock-gitversion-source-dir
-  sources: base-image/src
-  artifact: base-image/layer-revs
+  sources: cpu01-base-image/src
+  artifact: cpu01-base-image/layer-revs
   user: "{user.uid}:{user.gid}"
 
-job=base-print-image-version:
+job=cpu01-base-print-image-version:
   use: image-kas
   depends:
-    - base-yocto-layer-revparse
+    - cpu01-base-yocto-layer-revparse
   mounts:
     - mount-buildingblock-gitversion-source-dir
   user: "{user.uid}:{user.gid}"
@@ -37,19 +37,19 @@ job=base-print-image-version:
   entrypoint: /bin/bash
   command: /git/scripts/gen-image-version.sh
     /git
-    /git/base-image/layer-revs
+    /git/cpu01-base-image/layer-revs
 
 job=cpu01-base-yocto-shell:
   use: image-kas
   depends:
     - yocto-envs
-    - base-print-image-version:capture(IMAGE_GIT_VERSION)
+    - cpu01-base-print-image-version:capture(IMAGE_GIT_VERSION)
   mounts:
-    - build-dir-base
+    - build-dir-cpu01-base
     - kas-includes-dir
     - download-dir-yocto
     - sstate-dir-yocto
-    - install-dir-base
+    - install-dir-cpu01-base
   working-dir: /work
   interactive: true
   env:
@@ -59,20 +59,20 @@ job=cpu01-base-yocto-shell:
     - SHELL=/bin/bash
     - IMAGE_NAME_SUFFIX={env.NAME_SUFFIX}
     - IMAGE_GIT_VERSION={env.IMAGE_GIT_VERSION}
-  command: "shell kasfile-cpu01-base.yaml"
+  command: "shell kasfile.yaml"
   annotations:
-    description: "\t\t--> interactive yocto shell cpu01-base config"
+    description: "\t\t\t\t--> interactive yocto shell cpu01-base config"
     tags:
       - base
 
 job=cpu01-base-build-image:
   use: image-kas
   mounts:
-    - build-dir-base
+    - build-dir-cpu01-base
     - kas-includes-dir
     - download-dir-yocto
     - sstate-dir-yocto
-    - install-dir-base
+    - install-dir-cpu01-base
   working-dir: /work
   interactive: true
   env:
@@ -84,17 +84,17 @@ job=cpu01-base-build-image:
     - IMAGE_GIT_VERSION={env.IMAGE_GIT_VERSION}
   depends:
     - yocto-envs
-    - base-print-image-version:capture(IMAGE_GIT_VERSION)
-  command: build kasfile-cpu01-base.yaml
+    - cpu01-base-print-image-version:capture(IMAGE_GIT_VERSION)
+  command: build kasfile.yaml
   annotations:
-    description: "\t\t--> Build cpu01-base-image"
+    description: "\t\t\t\t--> Build cpu01-base-image"
     tags:
       - base
 
 job=cpu01-base-minio-push:
   use: image-minio-client
   mounts:
-    - build-dir-base
+    - build-dir-cpu01-base
   entrypoint: /bin/sh
   depends:
     - yocto-envs
@@ -108,14 +108,14 @@ job=cpu01-base-minio-push:
     - MC_HOST_ci4rail_endpoint=https://{env.MINIO_ACCESS_KEY}:{env.MINIO_SECRET_KEY}@{env.MINIO_ENDPOINT}
     - BUCKET=cpu01-base-dev
   annotations:
-    description: "\t\t--> Push cpu01-base image to Minio"
+    description: "\t\t\t\t--> Push cpu01-base image to Minio"
     tags:
       - base
 
 job=cpu01-base-minio-deploy:
   use: image-ssh-client
   mounts:
-    - build-dir-base
+    - build-dir-cpu01-base
     - ssh-dir
   interactive: true
   net-mode: host
@@ -156,6 +156,6 @@ job=cpu01-base-minio-deploy:
     - CONSOLE_PORT={env.CONSOLE_PORT}
     - TDX_INSTALLER_IMAGE_TAG={env.TDX_INSTALLER_IMAGE_TAG}
   annotations:
-    description: "\t\t--> Deploy cpu01-base image via Raspberry Pi with TEST_COMPUTER_IP to connected Moducop"
+    description: "\t\t\t\t--> Deploy cpu01-base image via Raspberry Pi with TEST_COMPUTER_IP to connected Moducop"
     tags:
       - base

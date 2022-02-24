@@ -1,10 +1,10 @@
-name: Base Image
+name: CPU01 Base Image
 on:
   pull_request:
     branches:
       - main
     paths:
-      - "base-image/kasfile-cpu01-base.yaml"
+      - "cpu01-base-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-docker.yaml"
       - "kas-includes/kasfile-general.yaml"
@@ -12,6 +12,12 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "cpu01-base-image/kasfile.yaml"
+      - "kas-includes/kasfile-tdxbsp.yaml"
+      - "kas-includes/kasfile-docker.yaml"
+      - "kas-includes/kasfile-general.yaml"
+      - ".github/workflows/base-pull-request.yaml"
 
 env:
   IMAGE_TYPE: base
@@ -103,7 +109,7 @@ jobs:
                 -v /install:/install \
                 -v /sstate-cache:/sstate-cache \
                 -v /downloads:/downloads \
-                -v ${GITHUB_WORKSPACE}/${IMAGE_TYPE}-image:/work \
+                -v ${GITHUB_WORKSPACE}/${MACHINE}-${IMAGE_TYPE}-image:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -e USER_ID=$(id -u ${USER}) \
                 -e GROUP_ID=$(id -g ${USER}) \
@@ -111,7 +117,7 @@ jobs:
                 -e IMAGE_GIT_VERSION=${IMAGE_GIT_VERSION} \
                 -w /work \
                 ${BUILDER_IMAGE} \
-                build kasfile-${MACHINE}-${IMAGE_TYPE}.yaml
+                build kasfile.yaml
 
       - name: Store Cache for Yocto Builds
         if: github.event_name == 'pull_request'

@@ -3,25 +3,19 @@ header:
   includes:
     - ../kas-includes/kasfile-general.yaml
     - ../kas-includes/kasfile-tdxbsp.yaml
-    - ../kas-includes/kasfile-mender.yaml
     - ../kas-includes/kasfile-docker.yaml
+    - ../kas-includes/kasfile-mender.yaml
+    - ../kas-includes/kasfile-mender-tdxbsp.yaml
+    - ../kas-includes/kasfile-edgefarm.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01
 # The distro name as it is written into the `local.conf` of bitbake.
 distro: tdx-xwayland
 # The target that is built by bitbake
-target: edgefarm-image
-
-repos:
-  # edgefarm
-  src/meta-edgefarm:
-    url: https://github.com/edgefarm/meta-edgefarm.git
-    refspec: kubeedge
-    layers:
-      meta-edgefarm-core:
+target: ci4rail-base-image
 
 local_conf_header:
   src/meta-custom: |
-    INHERIT += "extrausers"
-    EXTRA_USERS_PARAMS = "usermod -P cheesebread root; "
+    #Prefix to the resulting deployable tarball name
+    BASENAME = "EdgeFarm-Image"

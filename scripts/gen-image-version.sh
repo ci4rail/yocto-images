@@ -38,9 +38,12 @@ if [ ! -z "${stat}" ]; then
 fi
 
 # check if one of the layer repos is dirty
-if grep -q \(dirty\) ${layer_refs}; then
-    is_dirty=1
+if [ -f "${layer_refs}" ]; then
+    if grep -q \(dirty\) ${layer_refs}; then
+        is_dirty=1
+    fi
 fi
+
 
 # replace slashes in branch name with -
 branch=`echo ${GitVersion_BranchName} | sed -e "s/\//-/g"`

@@ -138,14 +138,14 @@ jobs:
       - name: Check Build Artefacts are there
         id: artefacts
         env:
-          SDIMG_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}_*.sdimg
-          MENDER_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}_*.mender
+          SDIMG_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}*.sdimg
+          MENDER_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}*.mender
           VERSION: ${{ needs.calculate-version.outputs.version }}
           SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
         run: |
-          ls -t ${TAR_IMAGE_PATH}
+          ls -t ${SDIMG_IMAGE_PATH}
           mkdir ${GITHUB_WORKSPACE}/minio
-          cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${IMAGE_START}_${VERSION}${SUFFIX}.sdimg
+          cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${IMAGE_START}_${VERSION}${SUFFIX}.sdimg
 
           ls -t ${MENDER_IMAGE_PATH}
           mv ${MENDER_IMAGE_PATH} /install/images/${MACHINE_DIR}/${IMAGE_START}_${VERSION}${SUFFIX}.mender

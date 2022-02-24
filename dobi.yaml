@@ -101,13 +101,12 @@ job=mender-accept-latest-auth:
 
 alias=all-build:
   tasks:
-    # - cpu01-base-build-image
-    # - cpu01-devtools-build-image
+    - cpu01-base-build-image
+    - cpu01-devtools-build-image
     - cpu01-edgefarm-build-image
     - cpu01-edgefarm-devtools-build-image
     - raspberrypi4-64-edgefarm-build-image
     - raspberrypi4-64-edgefarm-devtools-build-image
-    - qemux86-64-edgefarm-devtools-build-image
   annotations:
     tags:
       - alias
@@ -128,7 +127,7 @@ alias=all-minio-push:
 
 alias=all-mender-upload:
   tasks:
-    # - cpu01-devtools-mender-upload
+    - cpu01-devtools-mender-upload
     - cpu01-edgefarm-mender-upload
     - cpu01-edgefarm-devtools-mender-upload
     - raspberrypi4-64-edgefarm-mender-upload

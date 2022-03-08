@@ -75,7 +75,7 @@ jobs:
           if [ "$EVENT_NAME" = "pull_request" ]; then
               echo "::set-output name=nameSuffix::-pr"
           elif [ "$EVENT_NAME" = "push" ]; then
-              echo "::set-output name=nameSuffix::-testing"
+              echo "::set-output name=nameSuffix::"
           else
               echo "::set-output name=nameSuffix::-invalid"
           fi

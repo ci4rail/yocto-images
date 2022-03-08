@@ -7,9 +7,12 @@ meta:
   include:
     - version.yaml
     - dobi.yaml
-    - base-image/dobi.yaml
-    - edgefarm-image/dobi.yaml
-    - devtools-image/dobi.yaml
+    - cpu01-base-image/dobi.yaml
+    - cpu01-devtools-image/dobi.yaml
+    - cpu01-edgefarm-image/dobi.yaml
+    - cpu01-edgefarm-devtools-image/dobi.yaml
+    - raspberrypi4-64-edgefarm-devtools-image/dobi.yaml
+    - raspberrypi4-64-edgefarm-image/dobi.yaml
 
 # ===================================================
 # alias

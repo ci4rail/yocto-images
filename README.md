@@ -12,7 +12,7 @@ The following images are currently built by this repo.
 
 ### base-image
 
-![Build](https://github.com/ci4rail/yocto-images/actions/workflows/base-image.yml/badge.svg?event=pull_request)
+![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-base-image.yml/badge.svg)
 
 An minimal image for the Ci4Rail Hardware including the follwing features:
 
@@ -26,7 +26,8 @@ Target Platforms:
 
 ### edgefarm-image
 
-![Build](https://github.com/ci4rail/yocto-images/actions/workflows/edgefarm-image.yml/badge.svg?event=pull_request)
+![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-image.yml/badge.svg)
+![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrrypi4-64-edgefarm-image.yml/badge.svg)
 
 An image for the Ci4Rail EdgeFarm Services case including the following features:
 
@@ -34,14 +35,36 @@ An image for the Ci4Rail EdgeFarm Services case including the following features
 - Read Only Filesystem
 - RW Data Partition
 - Mender
+- kubeedge
 
 Target Platforms:
 
 - Ci4Rail Moducop CPU01
+- Raspberry Pi 4
+
+### edgefarm-devtools-image
+
+![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-devtools-image.yml/badge.svg)
+![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrrypi4-64-edgefarm-devtools-image.yml/badge.svg)
+
+An image for the Ci4Rail EdgeFarm Services case including the following features:
+
+- Docker
+- Read Only Filesystem
+- RW Data Partition
+- Mender
+- kubeedge
+- development tools for edgefarm
+- no login password
+
+Target Platforms:
+
+- Ci4Rail Moducop CPU01
+- Raspberry Pi 4
 
 ### devtools-image
 
-![Build](https://github.com/ci4rail/yocto-images/actions/workflows/devtools-image.yml/badge.svg?event=pull_request)
+![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-devtools-image.yml/badge.svg)
 
 An image for HW platform tests and bringup including the following features:
 
@@ -49,6 +72,7 @@ An image for HW platform tests and bringup including the following features:
 - RW Data Partition
 - Mender
 - Tools for HW testing
+- no login password
 
 Target Platforms:
 
@@ -97,6 +121,7 @@ To build all images:
 ./dobi.sh all-build
 ```
 
+## Install Images
 ### Deploy images via mender
 
 Download [Mender CLI](https://docs.mender.io/downloads#mender-cli)
@@ -140,3 +165,23 @@ Start deployment
 ```bash
 ./dobi.sh cpu01-edgefarm-minio-deploy
 ```
+
+### Install Raspberry Pi sdimg on SD Card
+
+Find build images:
+
+```
+ls raspberrypi4-64-edgefarm*-image/install/images/raspberrypi4-64/EdgeFarm*-Image-raspberrypi4-64-*.sdimg
+```
+
+Install on SD Card (Linux):
+
+```
+sudo dd if=<PATH-TO-IMAGE>.sdimg of=<DEVICE> bs=1M && sudo sync
+```
+
+Or use [Raspberry Pi Imager](https://www.raspberrypi.org/downloads/):
+- Click on `Select OS` and select `Own Image`
+- Browse to build images directory and select the *.sdimg file
+- Select SD Card to install on
+- Press `write`

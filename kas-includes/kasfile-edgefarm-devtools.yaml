@@ -1,0 +1,19 @@
+header:
+  version: 11
+
+repos:
+  # edgefarm
+  src/meta-edgefarm:
+    url: https://github.com/edgefarm/meta-edgefarm.git
+    refspec: 0ab7af8d778164e5df172547281d947c7dac8681
+    layers:
+      meta-edgefarm-core:
+      meta-edgefarm-devtools:
+
+local_conf_header:
+  src/meta-ci4rail-edgefarm-devtools: |
+    EXTRA_IMAGE_FEATURES ?= "debug-tweaks"
+    IMAGE_INSTALL_append = " \
+                             packagegroup-edgefarm-base \
+                             packagegroup-edgefarm-devtools \
+                             "

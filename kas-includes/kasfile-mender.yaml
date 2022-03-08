@@ -9,12 +9,6 @@ repos:
     layers:
       meta-mender-core:
 
-  src/meta-mender-community:
-    url: "https://github.com/mendersoftware/meta-mender-community"
-    refspec: 2120d69c3d63405da5dcba2cefc678944b85a582
-    layers:
-      meta-mender-toradex-nxp:
-
 env:
   MENDER_SERVER_URL: "https://hosted.mender.io"
   MENDER_TENANT_TOKEN: "DEFAULT_EMPTY_TENANT_TOKEN"
@@ -24,17 +18,10 @@ env:
 local_conf_header:
   src/meta-ci4rail-mender: |
     INHERIT += "mender-full"
-    IMAGE_CLASSES += "image_type_mender_tezi"
-    IMAGE_FSTYPES += "mender_tezi"
-    MENDER_FEATURES_ENABLE_append = " mender-uboot mender-image-sd"
-    MENDER_FEATURES_DISABLE_append = " mender-grub mender-image-uefi"
-    KERNEL_IMAGETYPE_aarch64_mender-grub = "Image"
-    IMAGE_BOOT_FILES = ""
-    IMAGE_BOOT_FILES_remove_mender-grub = "boot.scr-verdin-imx8mm;boot.scr"
-    MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
-    MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "20"
     # boot + 2xroot partition must fit in MENDER_STORAGE_TOTAL_SIZE_MB
     # Keep it as small as possible, to reduce target programming time
     # Reduce size in devtools image
     MENDER_STORAGE_TOTAL_SIZE_MB = "2000"
     IMAGE_INSTALL_append = " mender-connect"
+    MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
+    MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "2000"

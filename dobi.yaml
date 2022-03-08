@@ -97,51 +97,102 @@ job=mender-accept-latest-auth:
     - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
   command: /scripts/mender_accept_new_auth_set.sh
   annotations:
-    description: "\t\t--> Accept latest auth set for device with MENDER_DEVICE_ID"
+    description: "\t\t\t\t--> Accept latest auth set for device with MENDER_DEVICE_ID"
 
 alias=all-build:
   tasks:
     - cpu01-base-build-image
-    - cpu01-edgefarm-build-image
     - cpu01-devtools-build-image
+    - cpu01-edgefarm-build-image
+    - cpu01-edgefarm-devtools-build-image
+    - raspberrypi4-64-edgefarm-build-image
+    - raspberrypi4-64-edgefarm-devtools-build-image
   annotations:
-    description: "\t\t\t--> [alias] build all images"
+    tags:
+      - alias
+    description: "\t\t\t\t\t--> [alias] build all images"
 
 alias=all-minio-push:
   tasks:
     - cpu01-base-minio-push
-    - cpu01-edgefarm-minio-push
     - cpu01-devtools-minio-push
+    - cpu01-edgefarm-minio-push
+    - cpu01-edgefarm-devtools-minio-push
+    - raspberrypi4-64-edgefarm-minio-push
+    - raspberrypi4-64-edgefarm-devtools-minio-push
   annotations:
-    description: "\t\t\t--> [alias] push all images to Minio"
+    tags:
+      - alias
+    description: "\t\t\t\t\t--> [alias] push all images to Minio"
 
 alias=all-mender-upload:
   tasks:
-    - cpu01-edgefarm-mender-upload
     - cpu01-devtools-mender-upload
+    - cpu01-edgefarm-mender-upload
+    - cpu01-edgefarm-devtools-mender-upload
+    - raspberrypi4-64-edgefarm-mender-upload
+    - raspberrypi4-64-edgefarm-devtools-mender-upload
   annotations:
-    description: "\t\t\t--> [alias] upload all images to mender"
+    tags:
+      - alias
+    description: "\t\t\t\t\t--> [alias] upload all images to mender"
 
-alias=cpu01-base-all:
+alias=cpu01-base-minio:
   tasks:
     - cpu01-base-build-image
     - cpu01-base-minio-push
     - cpu01-base-minio-deploy
   annotations:
-    description: "\t\t\t--> [alias] build cpu01 base image and install via Minio"
+    tags:
+      - alias
+    description: "\t\t\t\t\t--> [alias] build cpu01 base image and install via Minio"
 
-alias=cpu01-devtools-all:
+alias=cpu01-devtools-minio:
   tasks:
     - cpu01-devtools-build-image
     - cpu01-devtools-minio-push
     - cpu01-devtools-minio-deploy
   annotations:
-    description: "\t\t\t--> [alias] build cpu01 devtools image and install via Minio"
+    tags:
+      - alias
+    description: "\t\t\t\t\t--> [alias] build cpu01 devtools image and install via Minio"
 
-alias=cpu01-edgefarm-all:
+alias=cpu01-edgefarm-minio:
   tasks:
     - cpu01-edgefarm-build-image
     - cpu01-edgefarm-minio-push
     - cpu01-edgefarm-minio-deploy
   annotations:
-    description: "\t\t\t--> [alias] build cpu01 edgefarm image and install via Minio"
+    tags:
+      - alias
+    description: "\t\t\t\t\t--> [alias] build cpu01 edgefarm image and install via Minio"
+
+alias=cpu01-edgefarm-mender:
+  tasks:
+    - cpu01-edgefarm-build-image
+    - cpu01-edgefarm-mender-upload
+    - cpu01-edgefarm-mender-deploy
+  annotations:
+    tags:
+      - alias
+    description: "\t\t\t\t--> [alias] build cpu01 edgefarm image and install via Mender"
+
+alias=cpu01-edgefarm-devtools-minio:
+  tasks:
+    - cpu01-edgefarm-devtools-build-image
+    - cpu01-edgefarm-devtools-minio-push
+    - cpu01-edgefarm-devtools-minio-deploy
+  annotations:
+    tags:
+      - alias
+    description: "\t\t\t--> [alias] build cpu01 edgefarm devtools image and install via Minio"
+
+alias=cpu01-edgefarm-devtools-mender:
+  tasks:
+    - cpu01-edgefarm-devtools-build-image
+    - cpu01-edgefarm-devtools-mender-upload
+    - cpu01-edgefarm-devtools-mender-deploy
+  annotations:
+    tags:
+      - alias
+    description: "\t\t\t--> [alias] build cpu01 edgefarm devtools image and install via Mender"

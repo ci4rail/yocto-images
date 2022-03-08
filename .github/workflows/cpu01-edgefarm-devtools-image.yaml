@@ -1,24 +1,36 @@
-name: Bringup Image
+name: CPU01 EdgeFarm Devtools Image
 on:
   pull_request:
     branches:
       - main
     paths:
-      - "devtools-image/kasfile-cpu01-devtools.yaml"
+      - "cpu01-edgefarm-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
+      - "kas-includes/kasfile-docker.yaml"
       - "kas-includes/kasfile-mender.yaml"
+      - "kas-includes/kasfile-mender-tdxbsp.yaml"
       - "kas-includes/kasfile-general.yaml"
-      - ".github/workflows/devtools-pull-request.yaml"
+      - "kas-includes/kasfile-edgefarm-devtools.yaml"
+      - ".github/workflows/cpu01-edgefarm-devtools-image.yaml"
   push:
     branches:
       - main
+    paths:
+      - "cpu01-edgefarm-devtools-image/kasfile.yaml"
+      - "kas-includes/kasfile-tdxbsp.yaml"
+      - "kas-includes/kasfile-docker.yaml"
+      - "kas-includes/kasfile-mender.yaml"
+      - "kas-includes/kasfile-mender-tdxbsp.yaml"
+      - "kas-includes/kasfile-general.yaml"
+      - "kas-includes/kasfile-edgefarm-devtools.yaml"
+      - ".github/workflows/cpu01-edgefarm-devtools-image.yaml"
 
 env:
-  IMAGE_TYPE: devtools
+  IMAGE_TYPE: edgefarm-devtools
   MACHINE: cpu01
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.6.3
   MACHINE_DIR: moducop-cpu01
-  IMAGE_START: Moducop-CPU01_Devtools-Image
+  IMAGE_START: Moducop-CPU01_EdgeFarm-Devtools-Image
   TARFILE_ENDING: mender_tezi
   MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
   ROBOT_IMAGE: ci4rail/robot:latest-2021-03-25
@@ -66,7 +78,7 @@ jobs:
           if [ "$EVENT_NAME" = "pull_request" ]; then
               echo "::set-output name=nameSuffix::-pr"
           elif [ "$EVENT_NAME" = "push" ]; then
-              echo "::set-output name=nameSuffix::"
+              echo "::set-output name=nameSuffix::-testing"
           else
               echo "::set-output name=nameSuffix::-invalid"
           fi
@@ -107,7 +119,7 @@ jobs:
                 -v /install:/install \
                 -v /sstate-cache:/sstate-cache \
                 -v /downloads:/downloads \
-                -v ${GITHUB_WORKSPACE}/${IMAGE_TYPE}-image:/work \
+                -v ${GITHUB_WORKSPACE}/${MACHINE}-${IMAGE_TYPE}-image:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -e USER_ID=$(id -u ${USER}) \
                 -e GROUP_ID=$(id -g ${USER}) \
@@ -118,7 +130,7 @@ jobs:
                 -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
                 -w /work \
                 ${BUILDER_IMAGE} \
-                build kasfile-${MACHINE}-${IMAGE_TYPE}.yaml
+                build kasfile.yaml
 
       - name: Store Cache for Yocto Builds
         if: github.event_name == 'pull_request'
@@ -191,15 +203,13 @@ jobs:
           ROBOT_WIFI_PASS: testfarm
           ROBOT_LTE_APN: web.vodafone.de
           ROBOT_DUT_PASSWORD: ""
-          ROBOT_EXPECTED_IMAGE: ${{ env.TAR_IMAGE_NAME }}
+          ROBOT_EXPECTED_IMAGE: ${{ env.IMAGE_START }}_${{ needs.build-and-push-image.outputs.version }}${{ needs.build-and-push-image.outputs.nameSuffix }}
           ROBOT_DOCKER_USER: ${{ env.DOCKER_USER }}
           ROBOT_DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
 
         run: |
           printf '%s' "$SSH_PRIVATEKEY" > id_rsa
           (env | grep ^R[OE]BOT_.*= > env_file ) || :
-
-          imageName=$(echo ${TAR_IMAGE_NAME} | rev | cut -d"/" -f 1 | rev | sed -e "s/.tar$//")
 
           docker run \
                 -v=${GITHUB_WORKSPACE}:/opt/robotframework/tests \
@@ -210,7 +220,7 @@ jobs:
                 --entrypoint=/bin/sh \
                 ${ROBOT_IMAGE} \
                 -c "
-                robot --outputdir /result -l ${imageName}.html -v TEZI_TAR:${TAR_IMAGE_NAME} -v TEZI_TAR_BUCKET:${BUCKET} -v LOCK_NAME:${TAR_IMAGE_NAME} --exclude docker --exclude serial yocto-edgefarm-test
+                robot --outputdir /result -l ${ROBOT_EXPECTED_IMAGE}.${TARFILE_ENDING}.html -v TEZI_TAR:${TAR_IMAGE_NAME} -v TEZI_TAR_BUCKET:${BUCKET} -v LOCK_NAME:${TAR_IMAGE_NAME} --exclude serial yocto-edgefarm-test
                 "
 
       - name: Get test results

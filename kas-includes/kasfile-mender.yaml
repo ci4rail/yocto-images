@@ -14,10 +14,6 @@ env:
   MENDER_TENANT_TOKEN: "DEFAULT_EMPTY_TENANT_TOKEN"
   IMAGE_NAME_SUFFIX: ""
   MENDER_ARTIFACT_NAME: "DEFAULT_EMPTY_ARTIFACT_NAME"
-  PREFERRED_VERSION_mender-client: "3.2.1"
-  PREFERRED_VERSION_mender-artifact: "3.7.0"
-  PREFERRED_VERSION_mender-artifact-native: "3.7.0"
-  PREFERRED_VERSION_mender-connect: "2.0.1"
 
 local_conf_header:
   src/meta-ci4rail-mender: |

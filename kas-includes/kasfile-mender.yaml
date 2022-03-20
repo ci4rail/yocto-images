@@ -5,7 +5,7 @@ repos:
   # mender
   src/meta-mender:
     url: "https://github.com/mendersoftware/meta-mender"
-    refspec: f5864bfb32906b87cc24d5b84e74805994f0ef3e
+    refspec: dunfell-v2022.03
     layers:
       meta-mender-core:
 
@@ -14,6 +14,10 @@ env:
   MENDER_TENANT_TOKEN: "DEFAULT_EMPTY_TENANT_TOKEN"
   IMAGE_NAME_SUFFIX: ""
   MENDER_ARTIFACT_NAME: "DEFAULT_EMPTY_ARTIFACT_NAME"
+  PREFERRED_VERSION_mender-client: "3.2.1"
+  PREFERRED_VERSION_mender-artifact: "3.7.0"
+  PREFERRED_VERSION_mender-artifact-native: "3.7.0"
+  PREFERRED_VERSION_mender-connect: "2.0.1"
 
 local_conf_header:
   src/meta-ci4rail-mender: |
@@ -24,4 +28,6 @@ local_conf_header:
     MENDER_STORAGE_TOTAL_SIZE_MB = "2000"
     IMAGE_INSTALL_append = " mender-connect"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
+    MENDER_RETRY_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "2000"
+    MENDER_CONNECT_USER = "root"

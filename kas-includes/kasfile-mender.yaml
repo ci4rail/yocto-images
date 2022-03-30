@@ -5,7 +5,7 @@ repos:
   # mender
   src/meta-mender:
     url: "https://github.com/mendersoftware/meta-mender"
-    refspec: f5864bfb32906b87cc24d5b84e74805994f0ef3e
+    refspec: dunfell-v2022.03
     layers:
       meta-mender-core:
 
@@ -24,4 +24,6 @@ local_conf_header:
     MENDER_STORAGE_TOTAL_SIZE_MB = "2000"
     IMAGE_INSTALL_append = " mender-connect"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
+    MENDER_RETRY_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "2000"
+    MENDER_CONNECT_USER = "root"

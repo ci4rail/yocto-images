@@ -44,4 +44,7 @@ local_conf_header:
     COPY_LIC_DIRS ?= "1"
     IMAGE_INSTALL_append = " \
                              nano \
+                             networkmanager \
+                             less \
                              "
+    PACKAGECONFIG_append_pn-systemd = "--disable-resolved"

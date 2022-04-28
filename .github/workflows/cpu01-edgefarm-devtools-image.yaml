@@ -147,7 +147,7 @@ jobs:
           ls -t ${TAR_IMAGE_PATH}
           mkdir ${GITHUB_WORKSPACE}/minio
           cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
-
+          cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
           ls -t ${MENDER_IMAGE_PATH}
 
       - name: Push Images to Minio

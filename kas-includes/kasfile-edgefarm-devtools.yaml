@@ -5,7 +5,7 @@ repos:
   # edgefarm
   src/meta-edgefarm:
     url: https://github.com/edgefarm/meta-edgefarm.git
-    refspec: 793aa9747cfcadf133a5ebbc429af70900441e53
+    refspec: cc2ca031e9430ecc943eb9db4338d99d19394d1c
     layers:
       meta-edgefarm-core:
       meta-edgefarm-devtools:

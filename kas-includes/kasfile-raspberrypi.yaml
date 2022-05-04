@@ -34,6 +34,7 @@ local_conf_header:
     MENDER_FEATURES_DISABLE_append = " mender-grub mender-image-uefi"
     ENABLE_UART = "1"
     MENDER_BOOT_PART_SIZE_MB = "40"
+    MENDER_STORAGE_TOTAL_SIZE_MB = "3000"
     IMAGE_FEATURES += "\
                       ssh-server-openssh \
                       package-management \
@@ -44,4 +45,7 @@ local_conf_header:
     COPY_LIC_DIRS ?= "1"
     IMAGE_INSTALL_append = " \
                              nano \
+                             networkmanager \
+                             less \
                              "
+    PACKAGECONFIG_append_pn-systemd = "--disable-resolved"

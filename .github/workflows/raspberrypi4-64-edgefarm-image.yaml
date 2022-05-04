@@ -1,4 +1,4 @@
-name: Raspberry Pi 4 EdgeFarm Devtools Image
+name: Raspberry Pi 4 EdgeFarm Image
 on:
   pull_request:
     branches:

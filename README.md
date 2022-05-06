@@ -137,7 +137,8 @@ Upload image to mender, e.g.:
 To deploy an image to a specific device set the device ID you want to use for deployment, if you haven't specified it in `config/custom.env`:
 
 ```bash
-MENDER_DEVICE_ID=<device id from mender portal>
+MENDER_DEVICE_ID=<device id of cpu01 from mender portal>
+RPI_MENDER_DEVICE_ID=<device id of raspberry pi from mender portal>
 ```
 
 Start deployment

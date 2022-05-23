@@ -28,7 +28,7 @@ env:
   MACHINE: raspberrypi4-64
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.6.3
   MACHINE_DIR: raspberrypi4-64
-  IMAGE_START: EdgeFarm-Devtools-Image-raspberrypi4-64-
+  IMAGE_START: raspberrypi4-64_EdgeFarm-Devtools-Image
   MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
   # ROBOT_IMAGE: ci4rail/robot:latest-2021-03-25
   # TEST_COMPUTER_IP: 192.168.24.12
@@ -138,17 +138,14 @@ jobs:
       - name: Check Build Artefacts are there
         id: artefacts
         env:
-          SDIMG_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}*.sdimg
-          MENDER_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}*.mender
-          VERSION: ${{ needs.calculate-version.outputs.version }}
-          SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
+          SD_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.sdimg
+          MENDER_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
         run: |
-          ls -t ${SDIMG_IMAGE_PATH}
+          ls -t ${SD_IMAGE_PATH}
           mkdir ${GITHUB_WORKSPACE}/minio
-          cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${IMAGE_START}_${VERSION}${SUFFIX}.sdimg
-
+          cp ${SD_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+          cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
           ls -t ${MENDER_IMAGE_PATH}
-          mv ${MENDER_IMAGE_PATH} /install/images/${MACHINE_DIR}/${IMAGE_START}_${VERSION}${SUFFIX}.mender
 
       - name: Push Images to Minio
         uses: hkdobrev/minio-deploy-action@v1

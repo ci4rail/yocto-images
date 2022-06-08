@@ -158,7 +158,7 @@ jobs:
           test-name: "moducop base-image test"
           artifact-override: |
             {
-              \"desired_versions.cpu_firmware.version\": \"${{ env.ARTEFACT_IMAGE_NAME }}-${{ needs.calculate-version.outputs.version }}-${{ needs.calculate-version.outputs.name_suffix }}\",
+              \"desired_versions.cpu_firmware.version\": \"${{ env.ARTEFACT_IMAGE_NAME }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
               \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
               \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
               \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
@@ -166,15 +166,3 @@ jobs:
             }
           access-token: ${{ secrets.FW_CI_TOKEN }}
           tailscale-key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}
-
-      - name: Push Results to Minio
-        if: always()
-        uses: hkdobrev/minio-deploy-action@v1
-        with:
-          endpoint: https://minio.ci4rail.com
-          access_key: ${{ secrets.MINIO_ACCESS_KEY }}
-          secret_key: ${{ secrets.MINIO_SECRET_KEY }}
-          bucket: ${{ needs.build-and-push-image.outputs.bucket }}
-          source_dir: minio
-          target_dir: "/"
-

@@ -154,7 +154,7 @@ jobs:
         with:
           pipeline-name: "${{ github.repository }}"
           # This name is resolved by tailscale magic DNS
-          teststation-broker-url: "lizard-rpi:1883"
+          mqtt-broker-url: "lizard-rpi:1883"
           test-name: "moducop base-image test"
           artifact-override: |
             {

@@ -29,7 +29,6 @@ env:
   ROBOT_IMAGE: ci4rail/robot:latest-2021-03-25
   TEST_COMPUTER_IP: 192.168.24.12
   DOCKER_USERNAME: ci4rail
-  ARTEFACT_IMAGE_NAME: cpu01-base-image
 
 jobs:
   calculate-version:
@@ -158,7 +157,7 @@ jobs:
           test-name: "moducop base-image test"
           artifact-override: |
             {
-              \"desired_versions.cpu_firmware.version\": \"${{ env.ARTEFACT_IMAGE_NAME }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
+              \"desired_versions.cpu_firmware.version\": \"${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
               \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
               \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
               \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",

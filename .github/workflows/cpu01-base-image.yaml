@@ -154,7 +154,7 @@ jobs:
           pipeline-name: "${{ github.repository }}"
           # This name is resolved by tailscale magic DNS
           mqtt-broker-url: "lizard-rpi:1883"
-          test-name: "moducop base-image test"
+          test-name: "cpu01-base-image test"
           artifact-override: |
             {
               \"desired_versions.cpu_firmware.version\": \"${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",

@@ -190,7 +190,7 @@ jobs:
               \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
               \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
               \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
-              \"desired_versions.cpu_firmware.source.file\": \"${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-${{ env.TARFILE_ENDING }}.tar\"
+              \"desired_versions.cpu_firmware.source.file\": \"${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar\"
             }
           access-token: ${{ secrets.FW_CI_TOKEN }}
           tailscale-key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}

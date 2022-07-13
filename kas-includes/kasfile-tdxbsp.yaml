@@ -4,12 +4,12 @@ repos:
   # ci4rail
   src/meta-ci4rail-bsp:
     url: https://github.com/ci4rail/meta-ci4rail-bsp.git
-    refspec: 4810b66b88a6162bdcfde4a3e993821471b4f9f8
+    refspec: 2f683ec73fbd0c935de6775c6e50db765c80ceee
 
-  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=5.2.0
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=5.6.0
   src/meta-freescale-3rdparty.git:
     url: "https://github.com/Freescale/meta-freescale-3rdparty.git"
-    refspec: 50551f0576c00bad71b1496ff2af8eaa6d7f9ca4
+    refspec: c52f64973cd4043a5e8be1c7e29bb9690eb4c3e5
 
   src/meta-freescale-distro:
     url: "https://github.com/Freescale/meta-freescale-distro.git"
@@ -17,29 +17,29 @@ repos:
 
   src/meta-freescale:
     url: "https://github.com/Freescale/meta-freescale.git"
-    refspec: 468e157b4cff033694837db7a8bf7f39be2ea6c7
+    refspec: 5a026be5a6b29a27a7754d7fa5d4765c99f98ed9
 
-  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-tdx.xml?h=5.2.0
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-tdx.xml?h=5.6.0
   src/meta-toradex-bsp-common:
     url: "https://git.toradex.com/meta-toradex-bsp-common.git"
-    refspec: 5234d3b8bc7f1fb6269a350213e93a0f8f66d6aa
+    refspec: 4487e89561252487608e227d7077cb2b2d79f37c
 
   src/meta-toradex-nxp:
     url: "https://git.toradex.com/meta-toradex-nxp.git"
-    refspec: a9ae3ea1f4ad181edbe940a99943a8256a811326
+    refspec: 274b960cffb51b7ca4505ca06c530b0b2df603e0
 
-  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/tdxref/default.xml?h=5.2.0
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/tdxref/default.xml?h=5.6.0
   src/meta-qt5:
     url: "https://github.com/meta-qt5/meta-qt5.git"
-    refspec: 0d8eb956015acdea7e77cd6672d08dce18061510
+    refspec: 6bfe29d9e8fdd5c2fd17c736814b6df859b3af50
 
   src/meta-toradex-demos:
     url: "https://git.toradex.com/meta-toradex-demos.git"
-    refspec: 82e3d7b2b56fccabcd52708314acc9dfd6bb24d1
+    refspec: ff479c129366b7f67945e661472762ae6cb541f2
 
   src/meta-toradex-distro:
     url: "https://git.toradex.com/meta-toradex-distro.git"
-    refspec: 632db61f177acf18df79d40fefdf1c662c6233a8
+    refspec: a991a45459b7f3c0870ef94da6e48c279eaa97f0
 
   src/meta-yocto:
     url: "https://git.yoctoproject.org/git/meta-yocto.git"

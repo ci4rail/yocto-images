@@ -175,67 +175,24 @@ jobs:
             "
 
   test-image:
-    needs: build-and-push-image
+    needs: [calculate-version, build-and-push-image]
     name: Test Yocto Image
-    runs-on: [self-hosted, linux, x64, yocto-runner]
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-        name: Checkout ci4rail/cpu01-test
+      - uses: ci4rail/teststation-action@v1
         with:
-          repository: ci4rail/cpu01-test
-          ref: main
-          ssh-key: ${{ secrets.SSH_PRIVATEKEY }}
-          submodules: recursive
-      - name: Log into Docker
-        env:
-          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-        run: echo ${DOCKER_PASSWORD} | docker login ${DOCKER_REGISTRY} -u ${DOCKER_USERNAME} --password-stdin
-      - name: Install Image and Execute test
-        env:
-          SSH_PRIVATEKEY: ${{ secrets.SSH_PRIVATEKEY }}
-          TAR_IMAGE_NAME: ${{ env.IMAGE_START }}_${{ needs.build-and-push-image.outputs.version }}${{ needs.build-and-push-image.outputs.nameSuffix }}.${{ env.TARFILE_ENDING }}.tar
-          BUCKET: ${{ needs.build-and-push-image.outputs.bucket }}
+          pipeline-name: "${{ github.repository }}"
+          # This name is resolved by tailscale magic DNS
+          mqtt-broker-url: "lizard-rpi:1883"
+          test-name: "cpu01-edgefarm-devtools-image test"
+          artifact-override: |
+            {
+              \"desired_versions.cpu_firmware.version\": \"${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
+              \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
+              \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
+              \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
+              \"desired_versions.cpu_firmware.source.file\": \"${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar\"
+            }
+          access-token: ${{ secrets.FW_CI_TOKEN }}
+          tailscale-key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}
 
-          ROBOT_SSH_KEY_FILE: /id_rsa
-          ROBOT_TC_IP: ${{ env.TEST_COMPUTER_IP }}
-          ROBOT_TC_USER: yoda
-          ROBOT_WIFI_AP: hydra-rpi-wifi
-          ROBOT_WIFI_PASS: testfarm
-          ROBOT_LTE_APN: web.vodafone.de
-          ROBOT_DUT_PASSWORD: ""
-          ROBOT_EXPECTED_IMAGE: ${{ env.IMAGE_START }}_${{ needs.build-and-push-image.outputs.version }}${{ needs.build-and-push-image.outputs.nameSuffix }}
-          ROBOT_DOCKER_USER: ${{ env.DOCKER_USER }}
-          ROBOT_DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-
-        run: |
-          printf '%s' "$SSH_PRIVATEKEY" > id_rsa
-          (env | grep ^R[OE]BOT_.*= > env_file ) || :
-
-          docker run \
-                -v=${GITHUB_WORKSPACE}:/opt/robotframework/tests \
-                -v /result:/result \
-                -v $(pwd)/id_rsa:/id_rsa \
-                --env-file $(pwd)/env_file \
-                -u `id -u` \
-                --entrypoint=/bin/sh \
-                ${ROBOT_IMAGE} \
-                -c "
-                robot --outputdir /result -l ${ROBOT_EXPECTED_IMAGE}.${TARFILE_ENDING}.html -v TEZI_TAR:${TAR_IMAGE_NAME} -v TEZI_TAR_BUCKET:${BUCKET} -v LOCK_NAME:${TAR_IMAGE_NAME} --exclude serial yocto-edgefarm-test
-                "
-
-      - name: Get test results
-        if: always()
-        run: |
-          mkdir ${GITHUB_WORKSPACE}/minio
-          cp /result/${IMAGE_START}*.html ${GITHUB_WORKSPACE}/minio
-
-      - name: Push Results to Minio
-        if: always()
-        uses: hkdobrev/minio-deploy-action@v1
-        with:
-          endpoint: https://minio.ci4rail.com
-          access_key: ${{ secrets.MINIO_ACCESS_KEY }}
-          secret_key: ${{ secrets.MINIO_SECRET_KEY }}
-          bucket: ${{ needs.build-and-push-image.outputs.bucket }}
-          source_dir: minio
-          target_dir: "/"

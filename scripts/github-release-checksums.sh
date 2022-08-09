@@ -3,8 +3,8 @@
 # Get checksums for github release files
 # Generates snippet that can be pasted into .bb files
 #
-if [ "$#" -ne 2 ] ; then
-    echo "no arguments. Use ${0} <repo> <tag"
+if [ "$#" -le 2 ] ; then
+    echo "no arguments. Use ${0} <repo> <tag> <pattern>"
     exit 1
 fi
 
@@ -16,9 +16,15 @@ fi
 repo="$1"
 tag="$2"
 
+pattern=""
+if [ "$#" -gt 2 ] ; then
+    pattern="-p $3"
+fi
+
+
 dldir=`mktemp -d`
 
-gh release download -D ${dldir} -R ${repo} ${tag}
+gh release download -D ${dldir} -R ${repo} ${tag} ${pattern}
 
 (
     cd ${dldir}

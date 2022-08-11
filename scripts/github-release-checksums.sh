@@ -3,8 +3,8 @@
 # Get checksums for github release files
 # Generates snippet that can be pasted into .bb files
 #
-if [ "$#" -le 2 ] ; then
-    echo "no arguments. Use ${0} <repo> <tag> <pattern>"
+if [ "$#" -le 1 ] ; then
+    echo "Use ${0} <repo> <tag> <pattern>"
     exit 1
 fi
 

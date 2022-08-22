@@ -33,8 +33,7 @@ env:
 jobs:
   calculate-version:
     name: Calculate Version
-    # Currently not working with Ubuntu 20.04
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-22.04
     outputs:
       #0.1.0-36.cleanup.e3132eb42a917c62b1f9198def62e78a4346c35d
       version: ${{ steps.gitversion.outputs.majorMinorPatch }}-${{ steps.gitversion.outputs.commitsSinceVersionSource }}.${{ github.event.pull_request.head.ref }}.${{ steps.shortSha.outputs.shortSha }}
@@ -45,12 +44,12 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v0.9.7
+        uses: gittools/actions/gitversion/setup@v0.9.13
         with:
           versionSpec: "5.x"
       - name: Determine Version
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.9.7
+        uses: gittools/actions/gitversion/execute@v0.9.13
       - name: Get git sha as on PR gitversion provides incorrect sha
         id: shortSha
         env:

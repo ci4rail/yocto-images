@@ -158,6 +158,7 @@ jobs:
           bucket: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}${{ needs.calculate-version.outputs.name_suffix }}
           source_dir: minio
           target_dir: "/"
+          insecure: "true"
       - name: Push Images to Mender
         env:
           MENDER_USER_EMAIL: ${{ secrets.MENDER_USER_EMAIL }}

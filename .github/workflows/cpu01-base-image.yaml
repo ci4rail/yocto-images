@@ -142,6 +142,7 @@ jobs:
           bucket: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}${{ needs.calculate-version.outputs.name_suffix }}
           source_dir: minio
           target_dir: "/"
+          insecure: "true"
 
   # test-image:
   #   needs: [calculate-version, build-and-push-image]

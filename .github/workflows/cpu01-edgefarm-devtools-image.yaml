@@ -150,7 +150,7 @@ jobs:
           ls -t ${MENDER_IMAGE_PATH}
 
       - name: Push Images to Minio
-        uses: hkdobrev/minio-deploy-action@v1
+        uses: hkdobrev/minio-deploy-action@1f4fafcee58750ebe8f726d33a55d926d2224065
         with:
           endpoint: https://minio.ci4rail.com
           access_key: ${{ secrets.MINIO_ACCESS_KEY }}
@@ -158,7 +158,7 @@ jobs:
           bucket: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}${{ needs.calculate-version.outputs.name_suffix }}
           source_dir: minio
           target_dir: "/"
-          insecure: "true"
+
       - name: Push Images to Mender
         env:
           MENDER_USER_EMAIL: ${{ secrets.MENDER_USER_EMAIL }}

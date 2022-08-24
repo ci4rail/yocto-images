@@ -1,0 +1,98 @@
+name: "Build Image"
+description: "Build image and deploy to mender/minio"
+inputs:
+  docker_registry:
+    description: "docker registry"
+    required: false
+    default: ""
+  docker_username:
+    description: "username for docker registry"
+    required: true
+  docker_password:
+    description: "password for docker registry"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+    - name: Get Cache for Yocto Builds
+    - uses: actions/checkout@v2
+      if: github.event_name == 'pull_request'
+      run: |
+        rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
+        rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
+
+    - name: Log into Docker
+      env:
+        DOCKER_PASSWORD: ${{ inputs.docker_password }}
+      run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
+
+    # - name: Build Yocto
+    #   env:
+    #     Required internally for build
+    #     MENDER_SERVER_URL: https://hosted.mender.io
+    #     MENDER_TENANT_TOKEN: ${{ secrets.MENDER_TENANT_TOKEN }}
+    #     IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
+    #     IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.version }}
+    #     MENDER_ARTIFACT_NAME: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
+    #   run: |
+    #     docker run \
+    #           -v /install:/install \
+    #           -v /sstate-cache:/sstate-cache \
+    #           -v /downloads:/downloads \
+    #           -v ${GITHUB_WORKSPACE}/${MACHINE}-${IMAGE_TYPE}-image:/work \
+    #           -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
+    #           -e USER_ID=$(id -u ${USER}) \
+    #           -e GROUP_ID=$(id -g ${USER}) \
+    #           -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
+    #           -e MENDER_TENANT_TOKEN=${MENDER_TENANT_TOKEN} \
+    #           -e IMAGE_NAME_SUFFIX=${IMAGE_NAME_SUFFIX} \
+    #           -e IMAGE_GIT_VERSION=${IMAGE_GIT_VERSION} \
+    #           -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
+    #           -w /work \
+    #           ${BUILDER_IMAGE} \
+    #           build kasfile.yaml
+
+    # - name: Store Cache for Yocto Builds
+    #   if: github.event_name == 'pull_request'
+    #   run: |
+    #     rsync -rht /downloads/* /yocto-cache/downloads/
+    #     rsync -rht /sstate-cache/* /yocto-cache/sstate-cache/
+
+    # - name: Check Build Artefacts are there
+    #   id: artefacts
+    #   env:
+    #     TAR_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar
+    #     MENDER_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
+    #   run: |
+    #     ls -t ${TAR_IMAGE_PATH}
+    #     mkdir ${GITHUB_WORKSPACE}/minio
+    #     cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+    #     cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+    #     ls -t ${MENDER_IMAGE_PATH}
+
+    # - name: Push Images to Minio
+    #   uses: hkdobrev/minio-deploy-action@v1
+    #   with:
+    #     endpoint: https://minio.ci4rail.com
+    #     access_key: ${{ secrets.MINIO_ACCESS_KEY }}
+    #     secret_key: ${{ secrets.MINIO_SECRET_KEY }}
+    #     bucket: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}${{ needs.calculate-version.outputs.name_suffix }}
+    #     source_dir: minio
+    #     target_dir: "/"
+    #     insecure: "true"
+    # - name: Push Images to Mender
+    #   env:
+    #     MENDER_USER_EMAIL: ${{ secrets.MENDER_USER_EMAIL }}
+    #     MENDER_PASSWORD: ${{ secrets.MENDER_PASSWORD }}
+    #     IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.version }}
+    #     IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
+    #   run: |
+    #     docker run \
+    #       -v /install:/install \
+    #       --entrypoint=/bin/sh \
+    #       ${MENDER_CLI_IMAGE} -c "
+    #         /mender-cli login --username ${MENDER_USER_EMAIL} --password ${MENDER_PASSWORD}
+    #         /mender-cli artifacts upload /install/images/${MACHINE_DIR}/${IMAGE_START}_${IMAGE_GIT_VERSION}${IMAGE_NAME_SUFFIX}.mender
+    #       "

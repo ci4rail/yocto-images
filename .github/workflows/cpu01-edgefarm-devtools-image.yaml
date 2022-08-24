@@ -185,7 +185,7 @@ jobs:
           # This name is resolved by tailscale magic DNS
           mqtt-broker-url: "lizard-rpi:1883"
           #test-name: "cpu01-edgefarm-devtools-image test"
-          test-name: "iou04"
+          test-name: "iou03 external generator"
           artifact-override: |
             {
             }

@@ -33,8 +33,6 @@ env:
   IMAGE_START: Moducop-CPU01_EdgeFarm-Devtools-Image
   TARFILE_ENDING: mender_tezi
   MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
-  ROBOT_IMAGE: ci4rail/robot:latest-2021-03-25
-  TEST_COMPUTER_IP: 192.168.24.12
   DOCKER_USERNAME: ci4rail
 
 jobs:
@@ -179,21 +177,20 @@ jobs:
     name: Test Yocto Image
     runs-on: ubuntu-latest
     steps:
-      - uses: ci4rail/teststation-action@v1
+      - uses: ci4rail/teststation-action@v2
         with:
           pipeline-name: "${{ github.repository }}"
           # This name is resolved by tailscale magic DNS
           mqtt-broker-url: "lizard-rpi:1883"
           #test-name: "cpu01-edgefarm-devtools-image test"
           test-name: "iou04"
-          # artifact-override: |
-          #   {
-          #     \"desired_versions.cpu_firmware.version\": \"${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
-          #     \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
-          #     \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
-          #     \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
-          #     \"desired_versions.cpu_firmware.source.file\": \"${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar\"
-          #   }
+          artifact-override: |
+            {
+              \"desired_versions.cpu_firmware.version\": \"${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
+              \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
+              \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
+              \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
+              \"desired_versions.cpu_firmware.source.file\": \"${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar\"
+            }
           access-token: ${{ secrets.FW_CI_TOKEN }}
           tailscale-key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}
-          requester-version: "v1.2.3-exp1"

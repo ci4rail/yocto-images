@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - main
+      - wireguard
     paths:
       - "cpu01-edgefarm-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"

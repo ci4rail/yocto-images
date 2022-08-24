@@ -187,8 +187,8 @@ jobs:
           #test-name: "cpu01-edgefarm-devtools-image test"
           test-name: "iou04"
           artifact-override: |
-          {
-          }
+            {
+            }
           access-token: ${{ secrets.FW_CI_TOKEN }}
           tailscale-key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}
           requester-version: "v1.2.3-exp1"

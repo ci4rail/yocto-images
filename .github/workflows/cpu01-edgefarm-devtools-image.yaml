@@ -175,7 +175,7 @@ jobs:
   #          "
 
   test-image:
-    needs: [calculate-version, build-and-push-image]
+    #needs: [calculate-version, build-and-push-image]
     name: Test Yocto Image
     runs-on: ubuntu-latest
     steps:

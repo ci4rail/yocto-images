@@ -179,7 +179,7 @@ jobs:
     name: Test Yocto Image
     runs-on: ubuntu-latest
     steps:
-      - uses: ci4rail/teststation-action@c7b692c1bb89d5022f2b002f46e09e77a554e1b0
+      - uses: ci4rail/teststation-action@main
         with:
           pipeline-name: "${{ github.repository }}"
           # This name is resolved by tailscale magic DNS

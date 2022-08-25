@@ -89,32 +89,39 @@ jobs:
     name: Build and Push Image
     runs-on: [self-hosted, linux, x64, yocto-runner]
     outputs:
+      # NEEDED???
       bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
     steps:
       - uses: actions/checkout@v2
-
-      - name: Get Cache for Yocto Builds
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "The runner name is ${{ runner.name }}"
-          ls -l /yocto-cache /yocto-cache/downloads
-          echo "my current dir is $(pwd)"
-        #rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
-        #rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
 
       - name: Log into Docker
         env:
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
         run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
 
+      - name: Get directories for yocto build
+        id: gen_dirs
+        ## For pull request, use a persistent store (downloads, sstate) for each runner (e.g. yocto-runner-lbmnn-grbvq)
+        ## For non-pull request, build in local directory from scratch
+        run: |
+          if [ "${{ github.event_name }}"" = "pull_request" ]; then
+              PERS_DIR=yocto-cache/${{ runner.name }}
+          else
+              PERS_DIR=$(pwd)
+          fi
+          echo "PERS_DIR is ${PERS_DIR}"
+          echo "::set-output name=download_dir::${PERS_DIR}/downloads"
+          echo "::set-output name=state_dir::${PERS_DIR}/sstate"
+          echo "::set-output name=install_dir::${PERS_DIR}/install"
+
       - name: Build Yocto
         env:
           MENDER_ARTIFACT_NAME: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
         run: |
           docker run \
-                -v /install:/install \
-                -v /sstate-cache:/sstate-cache \
-                -v /downloads:/downloads \
+                -v ${{ steps.gen_dirs.outputs.install_dir }}:/install \
+                -v ${{ steps.gen_dirs.outputs.sstate_dir }}:/sstate-cache \
+                -v ${{ steps.gen_dirs.outputs.download_dir }}:/downloads \
                 -v ${GITHUB_WORKSPACE}/${{ inputs.machine }}-${{ inputs.image_type }}-image:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -e USER_ID=$(id -u ${USER}) \
@@ -127,12 +134,6 @@ jobs:
                 -w /work \
                 ${BUILDER_IMAGE} \
                 build kasfile.yaml
-
-      - name: Store Cache for Yocto Builds
-        if: github.event_name == 'pull_request'
-        run: |
-          rsync -rht /downloads/* /yocto-cache/downloads/
-          rsync -rht /sstate-cache/* /yocto-cache/sstate-cache/
 
 
   dump2:

@@ -91,12 +91,12 @@ jobs:
     outputs:
       bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
       - name: Get Cache for Yocto Builds
         if: github.event_name == 'pull_request'
         run: |
+          echo "The runner name is ${{ runner.name }}"
           ls -l /yocto-cache /yocto-cache/downloads
           echo "my current dir is $(pwd)"
         #rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/

@@ -83,8 +83,6 @@ jobs:
         run: |
           echo "image name is ${{ needs.calculate-version.outputs.version }}"
           echo "name suffix is ${{ needs.calculate-version.outputs.name_suffix }}"
-          cat /etc/os-release
-          pwd
 
   build-and-push-image:
     needs: calculate-version
@@ -106,6 +104,9 @@ jobs:
         ## For pull request, use a persistent store (downloads, sstate) for each runner (e.g. yocto-runner-lbmnn-grbvq)
         ## For non-pull request, build in local directory from scratch
         run: |
+          cat /etc/os-release
+          pwd
+          ls -la /
           if [ "${{ github.event_name }}" = "pull_request" ]; then
               PERS_DIR=/yocto-cache/${{ runner.name }}
           else

@@ -12,3 +12,4 @@ jobs:
       docker_username: "ci4rail"
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}
+      mender_tenant_token: ${{ secrets.MENDER_TENANT_TOKEN }}

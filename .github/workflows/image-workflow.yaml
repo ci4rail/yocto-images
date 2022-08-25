@@ -20,6 +20,13 @@ on:
     secrets:
       docker_password:
         required: true
+      mender_tenant_token:
+        required: true
+
+env:
+  BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.6.3
+  MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
+  MENDER_SERVER_URL: https://hosted.mender.io
 
 jobs:
   calculate-version:
@@ -91,13 +98,42 @@ jobs:
         if: github.event_name == 'pull_request'
         run: |
           ls -l /yocto-cache /yocto-cache/downloads
+          echo "my current dir is $(pwd)"
         #rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
         #rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
 
       - name: Log into Docker
         env:
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
-        run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_registry }} --password-stdin
+        run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
+
+      - name: Build Yocto
+        env:
+          MENDER_ARTIFACT_NAME: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
+        run: |
+          docker run \
+                -v /install:/install \
+                -v /sstate-cache:/sstate-cache \
+                -v /downloads:/downloads \
+                -v ${GITHUB_WORKSPACE}/${{ inputs.machine }}-${{ inputs.image_type }}-image:/work \
+                -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
+                -e USER_ID=$(id -u ${USER}) \
+                -e GROUP_ID=$(id -g ${USER}) \
+                -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
+                -e MENDER_TENANT_TOKEN=${{ secrets.mender_tenant_token }} \
+                -e IMAGE_NAME_SUFFIX=${{ needs.calculate-version.outputs.name_suffix }} \
+                -e IMAGE_GIT_VERSION=${{ needs.calculate-version.outputs.version }} \
+                -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
+                -w /work \
+                ${BUILDER_IMAGE} \
+                build kasfile.yaml
+
+      - name: Store Cache for Yocto Builds
+        if: github.event_name == 'pull_request'
+        run: |
+          rsync -rht /downloads/* /yocto-cache/downloads/
+          rsync -rht /sstate-cache/* /yocto-cache/sstate-cache/
+
 
   dump2:
     name: "Dump2"

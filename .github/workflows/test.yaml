@@ -8,8 +8,14 @@ jobs:
     uses: ./.github/workflows/image-workflow.yaml
     with: 
       machine: "cpu01"
+      machine_dir: "moducop-cpu01"
       image_type: "edgefarm-devtools"
+      image_start: "Moducop-CPU01_EdgeFarm-Devtools-Image"
       docker_username: "ci4rail"
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}
       mender_tenant_token: ${{ secrets.MENDER_TENANT_TOKEN }}
+      minio_access_key: ${{ secrets.MINIO_ACCESS_KEY }}
+      minio_secret_key: ${{ secrets.MINIO_SECRET_KEY }}
+      mender_user_email: ${{ secrets.MENDER_USER_EMAIL }}
+      mender_password: ${{ secrets.MENDER_PASSWORD }}

@@ -4,9 +4,19 @@ on:
   workflow_call:
     inputs:
       machine:
+        description: "e.g. cpu01"
+        required: true
+        type: string
+      machine_dir:
+        description: "e.g. moducop-cpu01"
         required: true
         type: string
       image_type:
+        description: "e.g. edgefarm-devtools"
+        required: true
+        type: string
+      image_start:
+        description: "e.g. Moducop-CPU01_EdgeFarm-Devtools-Image"
         required: true
         type: string
       docker_username:
@@ -22,11 +32,22 @@ on:
         required: true
       mender_tenant_token:
         required: true
+      minio_access_key:
+        required: true
+      minio_secret_key:
+        required: true
+      mender_user_email:
+        required: true
+      mender_password:
+        required: true
+      
 
 env:
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.6.3
   MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
   MENDER_SERVER_URL: https://hosted.mender.io
+  TARFILE_ENDING: mender_tezi
+  MINIO_ACTION_VERSION: 1f4fafcee58750ebe8f726d33a55d926d2224065
 
 jobs:
   calculate-version:
@@ -99,40 +120,25 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
         run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
 
-      - name: Get directories for yocto build
-        id: gen_dirs
-        ## For pull request, use a persistent store (downloads, sstate) for each runner (e.g. yocto-runner-lbmnn-grbvq)
-        ## For non-pull request, build in local directory from scratch
+      - name: Get Cache for Yocto Builds
+        if: github.event_name == 'pull_request'
+        #
+        # We are in a docker container within the docker:dind image
+        # /yocto-cache is bound to the hosts /yocto-cache directory. 
+        # /downloads /sstate-cache and /install are temporary mounts local for that container
         run: |
-          cat /etc/os-release
-          pwd
-          ls -la /
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-              PERS_DIR=/yocto-cache/${{ runner.name }}
-          else
-              PERS_DIR=$(pwd)
-          fi
-          echo "PERS_DIR is ${PERS_DIR}"
-          echo "::set-output name=download_dir::${PERS_DIR}/downloads"
-          echo "::set-output name=sstate_dir::${PERS_DIR}/sstate"
-          echo "::set-output name=install_dir::${PERS_DIR}/install"
+          rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
+          rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
 
       - name: Build Yocto
         env:
-          MENDER_ARTIFACT_NAME: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
+          MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
         run: |
-          echo "using install: ${{ steps.gen_dirs.outputs.install_dir }}"
-          echo "using downloads: ${{ steps.gen_dirs.outputs.download_dir }}"
-          echo "using sstate: ${{ steps.gen_dirs.outputs.sstate_dir }}"
-
-          mkdir -p ${{ steps.gen_dirs.outputs.install_dir }} ${{ steps.gen_dirs.outputs.download_dir }} ${{ steps.gen_dirs.outputs.sstate_dir }}
-          ls -lan ${{ steps.gen_dirs.outputs.sstate_dir }}
-          id -u
 
           docker run \
-                -v ${{ steps.gen_dirs.outputs.install_dir }}:/install \
-                -v ${{ steps.gen_dirs.outputs.sstate_dir }}:/sstate-cache \
-                -v ${{ steps.gen_dirs.outputs.download_dir }}:/downloads \
+                -v /install:/install \
+                -v /sstate-cache:/sstate-cache \
+                -v /downloads:/downloads \
                 -v ${GITHUB_WORKSPACE}/${{ inputs.machine }}-${{ inputs.image_type }}-image:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -e USER_ID=$(id -u ${USER}) \
@@ -143,24 +149,51 @@ jobs:
                 -e IMAGE_GIT_VERSION=${{ needs.calculate-version.outputs.version }} \
                 -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
                 -w /work \
-                -u $(id -u) \
                 ${BUILDER_IMAGE} \
                 build kasfile.yaml
 
-      - name: Check Build Artefacts are there
+      - name: Store Cache for Yocto Builds
+        if: github.event_name == 'pull_request'
+        run: |
+          rsync -rht /downloads/* /yocto-cache/downloads/
+          rsync -rht /sstate-cache/* /yocto-cache/sstate-cache/
+
+      - name: Check Build Artefacts and copy for minio
         id: artefacts
         env:
-          TAR_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar
-          MENDER_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
+          TAR_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar
+          MENDER_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
         run: |
           ls -t ${TAR_IMAGE_PATH}
+          ls -t ${MENDER_IMAGE_PATH}
           mkdir ${GITHUB_WORKSPACE}/minio
           cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
           cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
-          ls -t ${MENDER_IMAGE_PATH}
 
+      - name: Push Images to Minio
+        uses: hkdobrev/minio-deploy-action@${MINIO_ACTION_VERSION}
+        with:
+          endpoint: https://minio.ci4rail.com
+          access_key: ${{ secrets.MINIO_ACCESS_KEY }}
+          secret_key: ${{ secrets.MINIO_SECRET_KEY }}
+          bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
+          source_dir: minio
+          target_dir: "/"
 
-
+      - name: Push Images to Mender
+        env:
+          MENDER_USER_EMAIL: ${{ secrets.mender_user_email }}
+          MENDER_PASSWORD: ${{ secrets.mender_password }}
+          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.version }}
+          IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
+        run: |
+          docker run \
+            -v /install:/install \
+            --entrypoint=/bin/sh \
+            ${MENDER_CLI_IMAGE} -c "
+              /mender-cli login --username ${MENDER_USER_EMAIL} --password ${MENDER_PASSWORD}
+              /mender-cli artifacts upload /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${IMAGE_GIT_VERSION}${IMAGE_NAME_SUFFIX}.mender
+            "
   dump2:
     name: "Dump2"
     runs-on: ubuntu-latest

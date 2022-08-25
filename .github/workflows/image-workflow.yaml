@@ -104,7 +104,7 @@ jobs:
         ## For pull request, use a persistent store (downloads, sstate) for each runner (e.g. yocto-runner-lbmnn-grbvq)
         ## For non-pull request, build in local directory from scratch
         run: |
-          if [ "${{ github.event_name }}"" = "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
               PERS_DIR=yocto-cache/${{ runner.name }}
           else
               PERS_DIR=$(pwd)

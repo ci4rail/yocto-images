@@ -19,3 +19,5 @@ jobs:
       minio_secret_key: ${{ secrets.MINIO_SECRET_KEY }}
       mender_user_email: ${{ secrets.MENDER_USER_EMAIL }}
       mender_password: ${{ secrets.MENDER_PASSWORD }}
+      private_token: ${{ secrets.FW_CI_TOKEN }}
+      tailscale_auth_key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}

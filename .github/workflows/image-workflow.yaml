@@ -26,6 +26,9 @@ on:
         required: false
         type: string
         default: ""
+      test_name:
+        required: true
+        type: string
 
     secrets:
       docker_password:
@@ -40,13 +43,18 @@ on:
         required: true
       mender_password:
         required: true
-      
+      private_token:
+        required: true
+      tailscale_auth_key:
+        required: true
+
 
 env:
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.6.3
   MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
   MENDER_SERVER_URL: https://hosted.mender.io
   TARFILE_ENDING: mender_tezi
+  TESTSTATION_MQTT_URL: lizard-rpi:1883
 
 jobs:
   calculate-version:
@@ -202,3 +210,27 @@ jobs:
       - name: "Dump"
         run: |
           echo "bucket is ${{ needs.build-and-push-image.outputs.bucket }}""
+
+  test-image:
+    if: inputs.test_name != ''
+    needs: [calculate-version, build-and-push-image]
+    name: Test Yocto Image
+    runs-on: ubuntu-latest
+    steps:
+      # TODO
+      - uses: ci4rail/teststation-action@6418abcc1b449247b75fc744a9dd525c37cfed8c
+        with:
+          pipeline-name: "${{ github.run_id }}"
+          # This name is resolved by tailscale magic DNS
+          mqtt-broker-url: ${{ env.TESTSTATION_MQTT_URL }}
+          test-name: ${{ inputs.test_name }}
+          artifact-override: |
+            {
+              \"desired_versions.cpu_firmware.version\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
+              \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
+              \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
+              \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
+              \"desired_versions.cpu_firmware.source.file\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar\"
+            }
+          access-token: ${{ secrets.private_token }}
+          tailscale-key: ${{ secrets.tailscale_auth_key}}

@@ -123,7 +123,7 @@ jobs:
           echo "using sstate: ${{ steps.gen_dirs.outputs.sstate_dir }}"
 
           mkdir -p ${{ steps.gen_dirs.outputs.install_dir }} ${{ steps.gen_dirs.outputs.download_dir }} ${{ steps.gen_dirs.outputs.sstate_dir }}
-          ls -la ${{ steps.gen_dirs.outputs.sstate_dir }}
+          ls -lan ${{ steps.gen_dirs.outputs.sstate_dir }}
           id -u
 
           docker run \
@@ -140,6 +140,7 @@ jobs:
                 -e IMAGE_GIT_VERSION=${{ needs.calculate-version.outputs.version }} \
                 -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
                 -w /work \
+                -u $(id -u)
                 ${BUILDER_IMAGE} \
                 build kasfile.yaml
 

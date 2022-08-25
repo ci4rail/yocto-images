@@ -140,7 +140,7 @@ jobs:
                 -e IMAGE_GIT_VERSION=${{ needs.calculate-version.outputs.version }} \
                 -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
                 -w /work \
-                -u $(id -u)
+                -u $(id -u) \
                 ${BUILDER_IMAGE} \
                 build kasfile.yaml
 

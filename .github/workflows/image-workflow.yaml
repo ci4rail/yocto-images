@@ -118,6 +118,11 @@ jobs:
         env:
           MENDER_ARTIFACT_NAME: ${{ env.MACHINE }}-${{ env.IMAGE_TYPE }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
         run: |
+          echo "using install: ${{ steps.gen_dirs.outputs.install_dir }}"
+          echo "using downloads: ${{ steps.gen_dirs.outputs.download_dir }}"
+          echo "using sstate: ${{ steps.gen_dirs.outputs.sstate_dir }}"
+
+          mkdir -p ${{ steps.gen_dirs.outputs.install_dir }} ${{ steps.gen_dirs.outputs.download_dir }} ${{ steps.gen_dirs.outputs.sstate_dir }}
           docker run \
                 -v ${{ steps.gen_dirs.outputs.install_dir }}:/install \
                 -v ${{ steps.gen_dirs.outputs.sstate_dir }}:/sstate-cache \
@@ -134,6 +139,19 @@ jobs:
                 -w /work \
                 ${BUILDER_IMAGE} \
                 build kasfile.yaml
+
+      # - name: Check Build Artefacts are there
+      #   id: artefacts
+      #   env:
+      #     TAR_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar
+      #     MENDER_IMAGE_PATH: /install/images/${{ env.MACHINE_DIR }}/${{ env.IMAGE_START }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
+      #   run: |
+      #     ls -t ${TAR_IMAGE_PATH}
+      #     mkdir ${GITHUB_WORKSPACE}/minio
+      #     cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+      #     cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+      #     ls -t ${MENDER_IMAGE_PATH}
+
 
 
   dump2:

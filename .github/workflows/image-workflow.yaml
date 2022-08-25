@@ -47,7 +47,6 @@ env:
   MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
   MENDER_SERVER_URL: https://hosted.mender.io
   TARFILE_ENDING: mender_tezi
-  MINIO_ACTION_VERSION: 1f4fafcee58750ebe8f726d33a55d926d2224065
 
 jobs:
   calculate-version:
@@ -171,7 +170,7 @@ jobs:
           cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
 
       - name: Push Images to Minio
-        uses: hkdobrev/minio-deploy-action@${MINIO_ACTION_VERSION}
+        uses: hkdobrev/minio-deploy-action@1f4fafcee58750ebe8f726d33a55d926d2224065
         with:
           endpoint: https://minio.ci4rail.com
           access_key: ${{ secrets.MINIO_ACCESS_KEY }}

@@ -111,7 +111,7 @@ jobs:
           fi
           echo "PERS_DIR is ${PERS_DIR}"
           echo "::set-output name=download_dir::${PERS_DIR}/downloads"
-          echo "::set-output name=state_dir::${PERS_DIR}/sstate"
+          echo "::set-output name=sstate_dir::${PERS_DIR}/sstate"
           echo "::set-output name=install_dir::${PERS_DIR}/install"
 
       - name: Build Yocto

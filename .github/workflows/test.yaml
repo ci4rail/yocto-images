@@ -12,6 +12,7 @@ jobs:
       image_type: "edgefarm-devtools"
       image_start: "Moducop-CPU01_EdgeFarm-Devtools-Image"
       docker_username: "ci4rail"
+      test_name: "cpu01-edgefarm-devtools-image test"
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}
       mender_tenant_token: ${{ secrets.MENDER_TENANT_TOKEN }}

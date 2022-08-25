@@ -7,6 +7,8 @@ jobs:
   workflow-call:
     uses: ./.github/workflows/image-workflow.yaml
     with: 
-      workflow_name: "test1"
+      machine: "cpu01"
+      image_type: "edgefarm-devtools"
+      docker_username: "ci4rail"
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}

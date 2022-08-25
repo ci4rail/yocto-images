@@ -3,9 +3,20 @@ name: "build and test yocto image"
 on:
   workflow_call:
     inputs:
-      workflow_name:
+      machine:
         required: true
         type: string
+      image_type:
+        required: true
+        type: string
+      docker_username:
+        required: true
+        type: string
+      docker_registry:
+        required: false
+        type: string
+        default: ""
+
     secrets:
       docker_password:
         required: true
@@ -34,7 +45,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          echo "The Event name is $EVENT_NAME"
+          echo "Github event is a $EVENT_NAME"
           if [ "$EVENT_NAME" = "pull_request" ]; then
               echo "::set-output name=shortSha::`echo ${{ github.event.pull_request.head.sha }} | cut -c1-8`"
           elif [ "$EVENT_NAME" = "push" ]; then
@@ -63,6 +74,37 @@ jobs:
     steps:
       - name: "Dump"
         run: |
-          echo "workflow-name is ${{inputs.workflow_name}}"
           echo "image name is ${{ needs.calculate-version.outputs.version }}"
+          echo "name suffix is ${{ needs.calculate-version.outputs.name_suffix }}"
 
+  build-and-push-image:
+    needs: calculate-version
+    name: Build and Push Image
+    runs-on: [self-hosted, linux, x64, yocto-runner]
+    outputs:
+      bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Get Cache for Yocto Builds
+        if: github.event_name == 'pull_request'
+        run: |
+          ls -l /yocto-cache /yocto-cache/downloads
+        #rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
+        #rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
+
+      - name: Log into Docker
+        env:
+          DOCKER_PASSWORD: ${{ secrets.docker_password }}
+        run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_registry }} --password-stdin
+
+  dump2:
+    name: "Dump2"
+    runs-on: ubuntu-latest
+    needs: build-and-push-image
+
+    steps:
+      - name: "Dump"
+        run: |
+          echo "bucket is ${{ needs.build-and-push-image.outputs.bucket }}""

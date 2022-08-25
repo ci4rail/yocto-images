@@ -11,16 +11,57 @@ on:
         required: true
 
 jobs:
+  calculate-version:
+    name: Calculate Version
+    runs-on: ubuntu-22.04
+    outputs:
+      #0.1.0-36.cleanup.e3132eb42a917c62b1f9198def62e78a4346c35d
+      version: ${{ steps.gitversion.outputs.majorMinorPatch }}-${{ steps.gitversion.outputs.commitsSinceVersionSource }}.${{ github.event.pull_request.head.ref }}.${{ steps.shortSha.outputs.shortSha }}
+      name_suffix: ${{ steps.eventCheck.outputs.nameSuffix }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.7
+        with:
+          versionSpec: "5.x"
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.9.7
+      - name: Get git sha as on PR gitversion provides incorrect sha
+        id: shortSha
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+              echo "::set-output name=shortSha::`echo ${{ github.event.pull_request.head.sha }} | cut -c1-8`"
+          elif [ "$EVENT_NAME" = "push" ]; then
+              echo "::set-output name=shortSha::${GITHUB_SHA::8}"
+          else
+              echo "::set-output name=shortSha::invalid"
+          fi
+      - name: Generate Image name dependend on github event
+        id: eventCheck
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+              echo "::set-output name=nameSuffix::-pr"
+          elif [ "$EVENT_NAME" = "push" ]; then
+              echo "::set-output name=nameSuffix::"
+          else
+              echo "::set-output name=nameSuffix::-invalid"
+          fi
+
   dump:
     name: "Dump"
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
-
-    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
-    defaults:
-      run:
-        shell: bash
+    needs: calculate-version
 
     steps:
       - name: "Dump"
-        run: echo "workflow-name is ${{inputs.workflow_name}}"
+        run: |
+          echo "workflow-name is ${{inputs.workflow_name}}"
+          echo "image name is ${{ needs.calculate-version.outputs.version }}"
+

@@ -8,4 +8,5 @@ jobs:
     uses: ./.github/workflows/image-workflow.yaml
     with: 
       workflow_name: "test1"
+    secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}

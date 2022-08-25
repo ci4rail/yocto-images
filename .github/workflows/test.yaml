@@ -5,7 +5,7 @@ on:
       - main
 jobs:
   workflow-call:
-    uses: ./.github/workflows/image-workflow.yml
+    uses: ./.github/workflows/image-workflow.yaml
     with: 
       workflow_name: "test1"
       docker_password: ${{ secrets.DOCKER_PASSWORD }}

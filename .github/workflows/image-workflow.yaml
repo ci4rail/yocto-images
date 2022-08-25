@@ -1,0 +1,26 @@
+name: "build and test yocto image"
+
+on:
+  workflow_call:
+    inputs:
+      workflow_name:
+        required: true
+        type: string
+    secrets:
+      docker_password:
+        required: true
+
+jobs:
+  dump:
+    name: "Dump"
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    # Use the Bash shell regardless whether the GitHub Actions runner is ubuntu-latest, macos-latest, or windows-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: "Dump"
+        run: echo "workflow-name is ${{inputs.workflow_name}}"

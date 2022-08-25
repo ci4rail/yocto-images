@@ -1,0 +1,11 @@
+name: Test workflow
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  workflow-call:
+    uses: ./.github/workflows/image-workflow.yml
+    with: 
+      workflow_name: "test1"
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}

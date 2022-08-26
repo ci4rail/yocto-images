@@ -19,9 +19,15 @@ on:
         description: "e.g. Moducop-CPU01_EdgeFarm-Devtools-Image"
         required: true
         type: string
-      docker_username:
-        required: true
+      output_type:
+        description: "Image output type: tar|sdimg"
+        required: false
         type: string
+        default: "tar"
+      docker_username:
+        required: false
+        type: string
+        default: "ci4rail"
       docker_registry:
         required: false
         type: string
@@ -53,180 +59,187 @@ env:
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.6.3
   MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
   MENDER_SERVER_URL: https://hosted.mender.io
-  TARFILE_ENDING: mender_tezi
   TESTSTATION_MQTT_URL: lizard-rpi:1883
 
 jobs:
-  # calculate-version:
-  #   name: Calculate Version
-  #   runs-on: ubuntu-22.04
-  #   outputs:
-  #     version: ${{ steps.gitversion.outputs.majorMinorPatch }}-${{ steps.gitversion.outputs.commitsSinceVersionSource }}.${{ github.event.pull_request.head.ref }}.${{ steps.shortSha.outputs.shortSha }}
-  #     name_suffix: ${{ steps.eventCheck.outputs.nameSuffix }}
-  #   steps:
-  #     - uses: actions/checkout@v2
-  #       with:
-  #         fetch-depth: 0
-  #     - name: Install GitVersion
-  #       uses: gittools/actions/gitversion/setup@v0.9.7
-  #       with:
-  #         versionSpec: "5.x"
-  #     - name: Determine Version
-  #       id: gitversion
-  #       uses: gittools/actions/gitversion/execute@v0.9.7
-  #     - name: Get git sha as on PR gitversion provides incorrect sha
-  #       id: shortSha
-  #       env:
-  #         EVENT_NAME: ${{ github.event_name }}
-  #       run: |
-  #         echo "Github event is a $EVENT_NAME"
-  #         if [ "$EVENT_NAME" = "pull_request" ]; then
-  #             echo "::set-output name=shortSha::`echo ${{ github.event.pull_request.head.sha }} | cut -c1-8`"
-  #         elif [ "$EVENT_NAME" = "push" ]; then
-  #             echo "::set-output name=shortSha::${GITHUB_SHA::8}"
-  #         else
-  #             echo "::set-output name=shortSha::invalid"
-  #         fi
-  #     - name: Generate Image name dependend on github event
-  #       id: eventCheck
-  #       env:
-  #         EVENT_NAME: ${{ github.event_name }}
-  #       run: |
-  #         if [ "$EVENT_NAME" = "pull_request" ]; then
-  #             echo "::set-output name=nameSuffix::-pr"
-  #         elif [ "$EVENT_NAME" = "push" ]; then
-  #             echo "::set-output name=nameSuffix::"
-  #         else
-  #             echo "::set-output name=nameSuffix::-invalid"
-  #         fi
+  calculate-version:
+    name: Calculate Version
+    runs-on: ubuntu-22.04
+    outputs:
+      version: ${{ steps.gitversion.outputs.majorMinorPatch }}-${{ steps.gitversion.outputs.commitsSinceVersionSource }}.${{ github.event.pull_request.head.ref }}.${{ steps.shortSha.outputs.shortSha }}
+      name_suffix: ${{ steps.eventCheck.outputs.nameSuffix }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Install GitVersion
+        uses: gittools/actions/gitversion/setup@v0.9.7
+        with:
+          versionSpec: "5.x"
+      - name: Determine Version
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.9.7
+      - name: Get git sha as on PR gitversion provides incorrect sha
+        id: shortSha
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          echo "Github event is a $EVENT_NAME"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+              echo "::set-output name=shortSha::`echo ${{ github.event.pull_request.head.sha }} | cut -c1-8`"
+          elif [ "$EVENT_NAME" = "push" ]; then
+              echo "::set-output name=shortSha::${GITHUB_SHA::8}"
+          else
+              echo "::set-output name=shortSha::invalid"
+          fi
+      - name: Generate Image name dependend on github event
+        id: eventCheck
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+              echo "::set-output name=nameSuffix::-pr"
+          elif [ "$EVENT_NAME" = "push" ]; then
+              echo "::set-output name=nameSuffix::"
+          else
+              echo "::set-output name=nameSuffix::-invalid"
+          fi
 
-  # dumpversions:
-  #   name: "Dump"
-  #   runs-on: ubuntu-latest
-  #   needs: calculate-version
+  dumpversions:
+    name: "Dump"
+    runs-on: ubuntu-latest
+    needs: calculate-version
 
-  #   steps:
-  #     - name: "Dump"
-  #       run: |
-  #         echo "image name is ${{ needs.calculate-version.outputs.version }}"
-  #         echo "name suffix is ${{ needs.calculate-version.outputs.name_suffix }}"
+    steps:
+      - name: "Dump"
+        run: |
+          echo "image name is ${{ needs.calculate-version.outputs.version }}"
+          echo "name suffix is ${{ needs.calculate-version.outputs.name_suffix }}"
 
-  # build-and-push-image:
-  #   needs: calculate-version
-  #   name: Build and Push Image
-  #   runs-on: [self-hosted, linux, x64, yocto-runner]
-  #   outputs:
-  #     bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
-  #   steps:
-  #     - uses: actions/checkout@v2
+  build-and-push-image:
+    needs: calculate-version
+    name: Build and Push Image
+    #
+    # yocto-runner runs a docker container within the docker:dind image
+    # /yocto-cache is bound to the hosts /yocto-cache directory. 
+    # /downloads /sstate-cache and /install are temporary mounts local for that container. They 
+    # survive steps, but are cleared with each new job
+    # For details see: https://github.com/ci4rail/public-infrastructure/blob/master/deployment-self-hosted-runners/templates/runnerdeployment.yaml
+    #
+    runs-on: [self-hosted, linux, x64, yocto-runner]
+    outputs:
+      bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
+    steps:
+      - uses: actions/checkout@v2
 
-  #     - name: Log into Docker
-  #       env:
-  #         DOCKER_PASSWORD: ${{ secrets.docker_password }}
-  #       run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
+      - name: Log into Docker
+        env:
+          DOCKER_PASSWORD: ${{ secrets.docker_password }}
+        run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
 
-  #     - name: Get Cache for Yocto Builds
-  #       if: github.event_name == 'pull_request'
-  #       #
-  #       # We are in a docker container within the docker:dind image
-  #       # /yocto-cache is bound to the hosts /yocto-cache directory. 
-  #       # /downloads /sstate-cache and /install are temporary mounts local for that container
-  #       run: |
-  #         rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
-  #         rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
+      - name: Get Cache for Yocto Builds
+        if: github.event_name == 'pull_request'
+        run: |
+          rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
+          rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
 
-  #     - name: Build Yocto
-  #       env:
-  #         MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
-  #       run: |
+      - name: Build Yocto
+        env:
+          MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
+        run: |
+          docker run \
+                -v /install:/install \
+                -v /sstate-cache:/sstate-cache \
+                -v /downloads:/downloads \
+                -v ${GITHUB_WORKSPACE}/${{ inputs.machine }}-${{ inputs.image_type }}-image:/work \
+                -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
+                -e USER_ID=$(id -u ${USER}) \
+                -e GROUP_ID=$(id -g ${USER}) \
+                -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
+                -e MENDER_TENANT_TOKEN=${{ secrets.mender_tenant_token }} \
+                -e IMAGE_NAME_SUFFIX=${{ needs.calculate-version.outputs.name_suffix }} \
+                -e IMAGE_GIT_VERSION=${{ needs.calculate-version.outputs.version }} \
+                -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
+                -w /work \
+                ${BUILDER_IMAGE} \
+                build kasfile.yaml
 
-  #         docker run \
-  #               -v /install:/install \
-  #               -v /sstate-cache:/sstate-cache \
-  #               -v /downloads:/downloads \
-  #               -v ${GITHUB_WORKSPACE}/${{ inputs.machine }}-${{ inputs.image_type }}-image:/work \
-  #               -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
-  #               -e USER_ID=$(id -u ${USER}) \
-  #               -e GROUP_ID=$(id -g ${USER}) \
-  #               -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
-  #               -e MENDER_TENANT_TOKEN=${{ secrets.mender_tenant_token }} \
-  #               -e IMAGE_NAME_SUFFIX=${{ needs.calculate-version.outputs.name_suffix }} \
-  #               -e IMAGE_GIT_VERSION=${{ needs.calculate-version.outputs.version }} \
-  #               -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
-  #               -w /work \
-  #               ${BUILDER_IMAGE} \
-  #               build kasfile.yaml
+      - name: Store Cache for Yocto Builds
+        if: github.event_name == 'pull_request'
+        run: |
+          rsync -rht /downloads/* /yocto-cache/downloads/
+          rsync -rht /sstate-cache/* /yocto-cache/sstate-cache/
 
-  #     - name: Store Cache for Yocto Builds
-  #       if: github.event_name == 'pull_request'
-  #       run: |
-  #         rsync -rht /downloads/* /yocto-cache/downloads/
-  #         rsync -rht /sstate-cache/* /yocto-cache/sstate-cache/
+      - name: Copy TAR artifacts for mender and minio deployment
+        if: inputs.output_type == 'tar'
+        env:
+          TAR_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender_tezi.tar
+          MENDER_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
+        run: |
+          mkdir ${GITHUB_WORKSPACE}/minio
+          ls -t ${TAR_IMAGE_PATH}
+          cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+          ls -t ${MENDER_IMAGE_PATH}
+          cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
 
-  #     - name: Check Build Artefacts and copy for minio
-  #       id: artefacts
-  #       env:
-  #         TAR_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar
-  #         MENDER_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
-  #       run: |
-  #         ls -t ${TAR_IMAGE_PATH}
-  #         ls -t ${MENDER_IMAGE_PATH}
-  #         mkdir ${GITHUB_WORKSPACE}/minio
-  #         cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
-  #         cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+      - name: Copy SDIMG artifacts for mender and minio deployment
+        if: inputs.output_type == 'sdimg'
+        env:
+          SDIMG_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
+          MENDER_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
+          VERSION: ${{ needs.calculate-version.outputs.version }}
+          SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
+        run: |
+          mkdir ${GITHUB_WORKSPACE}/minio
+          ls -t ${SDIMG_IMAGE_PATH}
+          cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${IMAGE_START}_${VERSION}${SUFFIX}.sdimg
 
-  #     - name: Push Images to Minio
-  #       uses: hkdobrev/minio-deploy-action@1f4fafcee58750ebe8f726d33a55d926d2224065
-  #       with:
-  #         endpoint: https://minio.ci4rail.com
-  #         access_key: ${{ secrets.MINIO_ACCESS_KEY }}
-  #         secret_key: ${{ secrets.MINIO_SECRET_KEY }}
-  #         bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
-  #         source_dir: minio
-  #         target_dir: "/"
+          ls -t ${MENDER_IMAGE_PATH}
+          mv ${MENDER_IMAGE_PATH} /install/images/${MACHINE_DIR}/${IMAGE_START}_${VERSION}${SUFFIX}.mender
 
-  #     - name: Push Images to Mender
-  #       env:
-  #         MENDER_USER_EMAIL: ${{ secrets.mender_user_email }}
-  #         MENDER_PASSWORD: ${{ secrets.mender_password }}
-  #         IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.version }}
-  #         IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
-  #       run: |
-  #         docker run \
-  #           -v /install:/install \
-  #           --entrypoint=/bin/sh \
-  #           ${MENDER_CLI_IMAGE} -c "
-  #             /mender-cli login --username ${MENDER_USER_EMAIL} --password ${MENDER_PASSWORD}
-  #             /mender-cli artifacts upload /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${IMAGE_GIT_VERSION}${IMAGE_NAME_SUFFIX}.mender
-  #           "
+      - name: Push Images to Minio
+        uses: hkdobrev/minio-deploy-action@1f4fafcee58750ebe8f726d33a55d926d2224065
+        with:
+          endpoint: https://minio.ci4rail.com
+          access_key: ${{ secrets.MINIO_ACCESS_KEY }}
+          secret_key: ${{ secrets.MINIO_SECRET_KEY }}
+          bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
+          source_dir: minio
+          target_dir: "/"
+
+      - name: Push Images to Mender
+        env:
+          MENDER_USER_EMAIL: ${{ secrets.mender_user_email }}
+          MENDER_PASSWORD: ${{ secrets.mender_password }}
+          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.version }}
+          IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
+        run: |
+          docker run \
+            -v /install:/install \
+            --entrypoint=/bin/sh \
+            ${MENDER_CLI_IMAGE} -c "
+              /mender-cli login --username ${MENDER_USER_EMAIL} --password ${MENDER_PASSWORD}
+              /mender-cli artifacts upload /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${IMAGE_GIT_VERSION}${IMAGE_NAME_SUFFIX}.mender
+            "
   test-image:
     if: inputs.test_name != ''
-    #needs: [calculate-version, build-and-push-image]
+    needs: [calculate-version, build-and-push-image]
     name: Test Yocto Image
     runs-on: ubuntu-22.04
-    #runs-on: [self-hosted, linux, x64, yocto-runner]
     steps:
-      # TODO
-      - uses: ci4rail/teststation-action@6418abcc1b449247b75fc744a9dd525c37cfed8c
+      - uses: ci4rail/teststation-action@v3
         with:
           pipeline-name: "${{ github.run_id }}"
-          # This name is resolved by tailscale magic DNS
           mqtt-broker-url: ${{ env.TESTSTATION_MQTT_URL }}
           test-name: ${{ inputs.test_name }}
           artifact-override: |
             {
-              \"desired_versions.cpu_firmware.version\": \"Moducop-CPU01_EdgeFarm-Devtools-Image_0.1.0-74.ci_workflow.18631454-pr\",
+              \"desired_versions.cpu_firmware.version\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
               \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
               \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
-              \"desired_versions.cpu_firmware.source.bucket\": \"cpu01-edgefarm-devtools-pr\",
-              \"desired_versions.cpu_firmware.source.file\": \"Moducop-CPU01_EdgeFarm-Devtools-Image_0.1.0-74.ci_workflow.18631454-pr.mender_tezi.tar\"
+              \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
+              \"desired_versions.cpu_firmware.source.file\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender_tezi.tar\"
             }
           access-token: ${{ secrets.private_token }}
           tailscale-key: ${{ secrets.tailscale_auth_key}}
-          requester-version: v3.0.0-rc1
-              # \"desired_versions.cpu_firmware.version\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
-              # \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
-              # \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
-              # \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
-              # \"desired_versions.cpu_firmware.source.file\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar\"
 

@@ -1,0 +1,38 @@
+name: Raspberry Pi 4 EdgeFarm Image
+on:
+  pull_request:
+    branches:
+      - main
+    paths: &paths
+      - "raspberrypi4-64-edgefarm-image/kasfile.yaml"
+      - "kas-includes/kasfile-raspberrypi.yaml"
+      - "kas-includes/kasfile-docker.yaml"
+      - "kas-includes/kasfile-mender.yaml"
+      - "kas-includes/kasfile-general.yaml"
+      - "kas-includes/kasfile-edgefarm.yaml"
+      - ".github/workflows/raspberrypi4-64-edgefarm-image.yaml"
+  push:
+    branches:
+      - main
+    paths:
+      <<: *paths
+
+jobs:
+  workflow-call:
+    uses: ./.github/workflows/image-workflow.yaml
+    with: 
+      machine: "raspberrypi4-64"
+      machine_dir: "raspberrypi4-64"
+      image_type: "edgefarm"
+      output_type: "sdimg"
+      image_start: "EdgeFarm-Image-raspberrypi4-64-"
+      test_name: ""
+    secrets:
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}
+      mender_tenant_token: ${{ secrets.MENDER_TENANT_TOKEN }}
+      minio_access_key: ${{ secrets.MINIO_ACCESS_KEY }}
+      minio_secret_key: ${{ secrets.MINIO_SECRET_KEY }}
+      mender_user_email: ${{ secrets.MENDER_USER_EMAIL }}
+      mender_password: ${{ secrets.MENDER_PASSWORD }}
+      private_token: ${{ secrets.FW_CI_TOKEN }}
+      tailscale_auth_key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}

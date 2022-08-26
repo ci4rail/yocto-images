@@ -3,7 +3,7 @@ on:
   pull_request:
     branches:
       - main
-    paths:
+    paths: &paths
       - "cpu01-edgefarm-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-docker.yaml"

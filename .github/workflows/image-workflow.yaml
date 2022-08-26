@@ -219,7 +219,7 @@ jobs:
               \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
               \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
               \"desired_versions.cpu_firmware.source.bucket\": \"cpu01-edgefarm-devtools-pr\",
-              \"desired_versions.cpu_firmware.source.file\": \""Moducop-CPU01_EdgeFarm-Devtools-Image_0.1.0-74.ci_workflow.18631454-pr.mender_tezi.tar\"
+              \"desired_versions.cpu_firmware.source.file\": \"Moducop-CPU01_EdgeFarm-Devtools-Image_0.1.0-74.ci_workflow.18631454-pr.mender_tezi.tar\"
             }
           access-token: ${{ secrets.private_token }}
           tailscale-key: ${{ secrets.tailscale_auth_key}}

@@ -21,7 +21,7 @@ on:
       - ".github/workflows/cpu01-base-image.yaml"
       - ".github/workflows/image-workflow.yaml"
 
-jobs:1
+jobs:
   workflow-call:
     uses: ./.github/workflows/image-workflow.yaml
     with: 

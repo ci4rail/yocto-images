@@ -203,7 +203,8 @@ jobs:
     if: inputs.test_name != ''
     #needs: [calculate-version, build-and-push-image]
     name: Test Yocto Image
-    runs-on: ubuntu-22.04
+    #runs-on: ubuntu-22.04
+    runs-on: [self-hosted, linux, x64, yocto-runner]
     steps:
       # TODO
       - uses: ci4rail/teststation-action@6418abcc1b449247b75fc744a9dd525c37cfed8c

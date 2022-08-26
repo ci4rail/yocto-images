@@ -54,7 +54,7 @@ env:
   MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
   MENDER_SERVER_URL: https://hosted.mender.io
   TARFILE_ENDING: mender_tezi
-  TESTSTATION_MQTT_URL: turtle-rpi:1883
+  TESTSTATION_MQTT_URL: lizard-rpi:1883
 
 jobs:
   # calculate-version:
@@ -223,7 +223,7 @@ jobs:
             }
           access-token: ${{ secrets.private_token }}
           tailscale-key: ${{ secrets.tailscale_auth_key}}
-          requester-version: v2.0.1-exp2
+          requester-version: v3.0.0-rc1
               # \"desired_versions.cpu_firmware.version\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
               # \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
               # \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",

@@ -3,7 +3,7 @@ on:
   pull_request:
     branches:
       - main
-    paths: &paths
+    paths:
       - "raspberrypi4-64-edgefarm-image/kasfile.yaml"
       - "kas-includes/kasfile-raspberrypi.yaml"
       - "kas-includes/kasfile-docker.yaml"
@@ -15,7 +15,13 @@ on:
     branches:
       - main
     paths:
-      <<: *paths
+      - "raspberrypi4-64-edgefarm-image/kasfile.yaml"
+      - "kas-includes/kasfile-raspberrypi.yaml"
+      - "kas-includes/kasfile-docker.yaml"
+      - "kas-includes/kasfile-mender.yaml"
+      - "kas-includes/kasfile-general.yaml"
+      - "kas-includes/kasfile-edgefarm.yaml"
+      - ".github/workflows/raspberrypi4-64-edgefarm-image.yaml"
 
 jobs:
   workflow-call:

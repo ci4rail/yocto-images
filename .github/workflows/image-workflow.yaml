@@ -215,13 +215,13 @@ jobs:
           test-name: ${{ inputs.test_name }}
           artifact-override: |
             {
+              \"desired_versions.cpu_firmware.version\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
+              \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
+              \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
+              \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
+              \"desired_versions.cpu_firmware.source.file\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar\"
             }
           access-token: ${{ secrets.private_token }}
           tailscale-key: ${{ secrets.tailscale_auth_key}}
           requester-version: v2.0.1-exp2
 
-              # \"desired_versions.cpu_firmware.version\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
-              # \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
-              # \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
-              # \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
-              # \"desired_versions.cpu_firmware.source.file\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ env.TARFILE_ENDING }}.tar\"

@@ -218,7 +218,7 @@ jobs:
             }
           access-token: ${{ secrets.private_token }}
           tailscale-key: ${{ secrets.tailscale_auth_key}}
-          requester-version: v2.0.1-exp1
+          requester-version: v2.0.1-exp2
 
               # \"desired_versions.cpu_firmware.version\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
               # \"desired_versions.cpu_firmware.method\": \"toradex-installer\",

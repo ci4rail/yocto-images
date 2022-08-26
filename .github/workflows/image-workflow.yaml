@@ -201,7 +201,7 @@ jobs:
   #           "
   test-image:
     if: inputs.test_name != ''
-    needs: [calculate-version, build-and-push-image]
+    #needs: [calculate-version, build-and-push-image]
     name: Test Yocto Image
     runs-on: ubuntu-22.04
     steps:

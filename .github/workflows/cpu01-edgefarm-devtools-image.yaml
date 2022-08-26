@@ -3,7 +3,7 @@ on:
   pull_request:
     branches:
       - main
-    paths: &paths
+    paths:
       - "cpu01-edgefarm-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-docker.yaml"
@@ -17,7 +17,15 @@ on:
     branches:
       - main
     paths:
-      <<: *paths
+      - "cpu01-edgefarm-devtools-image/kasfile.yaml"
+      - "kas-includes/kasfile-tdxbsp.yaml"
+      - "kas-includes/kasfile-docker.yaml"
+      - "kas-includes/kasfile-mender.yaml"
+      - "kas-includes/kasfile-mender-tdxbsp.yaml"
+      - "kas-includes/kasfile-general.yaml"
+      - "kas-includes/kasfile-edgefarm-devtools.yaml"
+      - ".github/workflows/cpu01-edgefarm-devtools-image.yaml"
+      - ".github/workflows/image-workflow.yaml"
 
 jobs:
   workflow-call:

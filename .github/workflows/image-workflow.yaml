@@ -152,12 +152,14 @@ jobs:
 
               trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
 
-              echo "cache lock obtained. get cache"
+              echo "cache lock obtained by $$. get cache"
               rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
               rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
 
               # clean up after yourself, and release your trap
               rm -f "${{ env.CACHE_LOCKFILE }}"
+              echo cache lock cleared 
+              ls /yocto/cache
               trap - INT TERM EXIT
               break
             else

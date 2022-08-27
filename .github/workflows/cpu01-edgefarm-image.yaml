@@ -33,7 +33,7 @@ jobs:
     with: 
       machine: "cpu01"
       machine_dir: "moducop-cpu01"
-      image_type: "edgefarm-devtools"
+      image_type: "edgefarm"
       output_type: "tar"
       image_start: "Moducop-CPU01_EdgeFarm-Image"
       test_name: "cpu01-edgefarm-image test"

@@ -30,6 +30,7 @@ jobs:
       image_type: "base"
       output_type: "tar"
       have_mender: "false"
+      tar_ending: "ci4rail_tezi"
       image_start: "Moducop-CPU01_Base-Image"
       # TODO
       test_name: ""

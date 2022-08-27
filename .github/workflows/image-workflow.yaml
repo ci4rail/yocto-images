@@ -29,6 +29,11 @@ on:
         required: false
         type: string
         default: "true"
+      tar_ending:
+        description: "tar filename ending before .tar: mender_tezi|ci4rail_tezi"
+        required: false
+        type: string
+        default: "mender_tezi"
       docker_username:
         required: false
         type: string
@@ -198,7 +203,7 @@ jobs:
 
               trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
 
-              echo "cache lock obtained. get cache"
+              echo "cache lock obtained. write back cache"
               rsync -rht /downloads/* /yocto-cache/downloads/
               rsync -rht /sstate-cache/* /yocto-cache/sstate-cache/
 
@@ -215,7 +220,7 @@ jobs:
       - name: Copy TAR artifacts for mender and minio deployment
         if: inputs.output_type == 'tar'
         env:
-          TAR_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender_tezi.tar
+          TAR_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}..${{ inputs.tar_ending }}.tar
           MENDER_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
         run: |
           mkdir ${GITHUB_WORKSPACE}/minio
@@ -286,7 +291,7 @@ jobs:
               \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
               \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
               \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
-              \"desired_versions.cpu_firmware.source.file\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender_tezi.tar\"
+              \"desired_versions.cpu_firmware.source.file\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ inputs.tar_ending }}.tar\"
             }
           access-token: ${{ secrets.private_token }}
           tailscale-key: ${{ secrets.tailscale_auth_key}}

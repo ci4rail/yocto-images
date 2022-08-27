@@ -24,6 +24,11 @@ on:
         required: false
         type: string
         default: "tar"
+      have_mender:
+        description: "Whether a mender artefact will be created: true|false"
+        required: false
+        type: string
+        default: "true"
       docker_username:
         required: false
         type: string
@@ -60,6 +65,7 @@ env:
   MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
   MENDER_SERVER_URL: https://hosted.mender.io
   TESTSTATION_MQTT_URL: lizard-rpi:1883
+  CACHE_LOCKFILE: /yocto-cache/lock
 
 jobs:
   calculate-version:
@@ -139,9 +145,26 @@ jobs:
 
       - name: Get Cache for Yocto Builds
         if: github.event_name == 'pull_request'
+        # Use a lock for the cache to prevent reading the cache while another job is writing to it
         run: |
-          rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
-          rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
+          while true; do
+            if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
+
+              trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
+
+              echo "cache lock obtained. get cache"
+              rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
+              rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
+
+              # clean up after yourself, and release your trap
+              rm -f "${{ env.CACHE_LOCKFILE }}"
+              trap - INT TERM EXIT
+              break
+            else
+              echo "Cache is locked. Wait"
+              sleep 60
+            fi
+          done        
 
       - name: Build Yocto
         env:
@@ -166,9 +189,26 @@ jobs:
 
       - name: Store Cache for Yocto Builds
         if: github.event_name == 'pull_request'
+        # Use a lock for the cache
         run: |
-          rsync -rht /downloads/* /yocto-cache/downloads/
-          rsync -rht /sstate-cache/* /yocto-cache/sstate-cache/
+          while true; do
+            if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
+
+              trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
+
+              echo "cache lock obtained. get cache"
+              rsync -rht /downloads/* /yocto-cache/downloads/
+              rsync -rht /sstate-cache/* /yocto-cache/sstate-cache/
+
+              # clean up after yourself, and release your trap
+              rm -f "${{ env.CACHE_LOCKFILE }}"
+              trap - INT TERM EXIT
+              break
+            else
+              echo "Cache is locked. Wait"
+              sleep 60
+            fi
+          done        
 
       - name: Copy TAR artifacts for mender and minio deployment
         if: inputs.output_type == 'tar'
@@ -179,8 +219,11 @@ jobs:
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${TAR_IMAGE_PATH}
           cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
-          ls -t ${MENDER_IMAGE_PATH}
-          cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+
+          if [ "${{ inputs.have_mender}}" = "true" ]; then
+            ls -t ${MENDER_IMAGE_PATH}
+            cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+          fi
 
       - name: Copy SDIMG artifacts for mender and minio deployment
         if: inputs.output_type == 'sdimg'
@@ -193,11 +236,13 @@ jobs:
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${SDIMG_IMAGE_PATH}
           cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${IMAGE_START}_${VERSION}${SUFFIX}.sdimg
-
-          ls -t ${MENDER_IMAGE_PATH}
-          mv ${MENDER_IMAGE_PATH} /install/images/${MACHINE_DIR}/${IMAGE_START}_${VERSION}${SUFFIX}.mender
+          if [ "${{ inputs.have_mender}}" = "true" ]; then
+            ls -t ${MENDER_IMAGE_PATH}
+            mv ${MENDER_IMAGE_PATH} /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${VERSION}${SUFFIX}.mender
+          fi
 
       - name: Push Images to Minio
+        # don't use v1, it's broken
         uses: hkdobrev/minio-deploy-action@1f4fafcee58750ebe8f726d33a55d926d2224065
         with:
           endpoint: https://minio.ci4rail.com
@@ -208,6 +253,7 @@ jobs:
           target_dir: "/"
 
       - name: Push Images to Mender
+        if: inputs.have_mender == 'true'
         env:
           MENDER_USER_EMAIL: ${{ secrets.mender_user_email }}
           MENDER_PASSWORD: ${{ secrets.mender_password }}

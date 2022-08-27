@@ -29,6 +29,7 @@ jobs:
       machine_dir: "moducop-cpu01"
       image_type: "base"
       output_type: "tar"
+      have_mender: "false"
       image_start: "Moducop-CPU01_Base-Image"
       # TODO
       test_name: ""

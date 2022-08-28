@@ -30,10 +30,10 @@ on:
         type: string
         default: "true"
       tar_ending:
-        description: "tar filename ending before .tar: mender_tezi|ci4rail_tezi"
+        description: "tar filename ending before .tar: .mender_tezi|-ci4rail_tezi"
         required: false
         type: string
-        default: "mender_tezi"
+        default: ".mender_tezi"
       docker_username:
         required: false
         type: string
@@ -220,7 +220,7 @@ jobs:
       - name: Copy TAR artifacts for mender and minio deployment
         if: inputs.output_type == 'tar'
         env:
-          TAR_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ inputs.tar_ending }}.tar
+          TAR_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar
           MENDER_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
         run: |
           mkdir ${GITHUB_WORKSPACE}/minio
@@ -291,8 +291,8 @@ jobs:
               \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
               \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
               \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
-              \"desired_versions.cpu_firmware.source.file\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.${{ inputs.tar_ending }}.tar\"
+              \"desired_versions.cpu_firmware.source.file\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar\"
             }
           access-token: ${{ secrets.private_token }}
           tailscale-key: ${{ secrets.tailscale_auth_key}}
-
+          request-timeout: "7200"

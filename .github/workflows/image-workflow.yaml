@@ -296,3 +296,4 @@ jobs:
           access-token: ${{ secrets.private_token }}
           tailscale-key: ${{ secrets.tailscale_auth_key}}
           request-timeout: "7200"
+          requester-version: "v3.0.1-rc1"

@@ -27,7 +27,7 @@ Target Platforms:
 ### edgefarm-image
 
 ![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-image.yaml/badge.svg)
-![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrrypi4-64-edgefarm-image.yml/badge.svg)
+![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrypi4-64-edgefarm-image.yaml/badge.svg)
 
 An image for the Ci4Rail EdgeFarm Services case including the following features:
 
@@ -45,8 +45,8 @@ Target Platforms:
 ### edgefarm-devtools-image
 
 ![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-devtools-image.yaml/badge.svg)
-![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrrypi4-64-edgefarm-devtools-image.yaml/badge.svg)
-
+![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrypi4-64-edgefarm-devtools-image.yaml/badge.svg)
+                
 An image for the Ci4Rail EdgeFarm Services case including the following features:
 
 - Docker

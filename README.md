@@ -12,7 +12,7 @@ The following images are currently built by this repo.
 
 ### base-image
 
-![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-base-image.yml/badge.svg)
+![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-base-image.yaml/badge.svg)
 
 An minimal image for the Ci4Rail Hardware including the follwing features:
 
@@ -26,7 +26,7 @@ Target Platforms:
 
 ### edgefarm-image
 
-![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-image.yml/badge.svg)
+![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-image.yaml/badge.svg)
 ![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrrypi4-64-edgefarm-image.yml/badge.svg)
 
 An image for the Ci4Rail EdgeFarm Services case including the following features:
@@ -44,8 +44,8 @@ Target Platforms:
 
 ### edgefarm-devtools-image
 
-![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-devtools-image.yml/badge.svg)
-![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrrypi4-64-edgefarm-devtools-image.yml/badge.svg)
+![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-devtools-image.yaml/badge.svg)
+![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrrypi4-64-edgefarm-devtools-image.yaml/badge.svg)
 
 An image for the Ci4Rail EdgeFarm Services case including the following features:
 
@@ -64,7 +64,7 @@ Target Platforms:
 
 ### devtools-image
 
-![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-devtools-image.yml/badge.svg)
+![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-devtools-image.yaml/badge.svg)
 
 An image for HW platform tests and bringup including the following features:
 

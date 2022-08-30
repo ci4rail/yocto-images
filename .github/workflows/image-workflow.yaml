@@ -250,7 +250,7 @@ jobs:
 
       - name: Push Images to Minio
         # don't use v1, it's broken
-        uses: hkdobrev/minio-deploy-action@1f4fafcee58750ebe8f726d33a55d926d2224065
+        uses: hkdobrev/minio-deploy-action@v1.1
         with:
           endpoint: https://minio.ci4rail.com
           access_key: ${{ secrets.MINIO_ACCESS_KEY }}
@@ -280,7 +280,7 @@ jobs:
     name: Test Yocto Image
     runs-on: ubuntu-22.04
     steps:
-      - uses: ci4rail/teststation-action@v3
+      - uses: ci4rail/teststation-action@v4
         with:
           pipeline-name: "${{ github.run_id }}"
           mqtt-broker-url: ${{ env.TESTSTATION_MQTT_URL }}

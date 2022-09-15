@@ -105,6 +105,7 @@ alias=all-build:
     - cpu01-devtools-build-image
     - cpu01-edgefarm-build-image
     - cpu01-edgefarm-devtools-build-image
+    - cpu01plus-devtools-build-image
     - raspberrypi4-64-edgefarm-build-image
     - raspberrypi4-64-edgefarm-devtools-build-image
   annotations:
@@ -118,6 +119,7 @@ alias=all-minio-push:
     - cpu01-devtools-minio-push
     - cpu01-edgefarm-minio-push
     - cpu01-edgefarm-devtools-minio-push
+    - cpu01plus-devtools-minio-push
     - raspberrypi4-64-edgefarm-minio-push
     - raspberrypi4-64-edgefarm-devtools-minio-push
   annotations:
@@ -130,6 +132,7 @@ alias=all-mender-upload:
     - cpu01-devtools-mender-upload
     - cpu01-edgefarm-mender-upload
     - cpu01-edgefarm-devtools-mender-upload
+    - cpu01plus-devtools-mender-upload
     - raspberrypi4-64-edgefarm-mender-upload
     - raspberrypi4-64-edgefarm-devtools-mender-upload
   annotations:

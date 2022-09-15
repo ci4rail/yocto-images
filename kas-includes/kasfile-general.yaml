@@ -4,14 +4,14 @@ header:
 repos:
   src/bitbake:
     url: "https://github.com/openembedded/bitbake.git"
-    refspec: da306cd4430a6fcf6b62ed0e6e5310432aa4c4c4
+    refspec: 0784db7dd0fef6f0621ad8d74372f44e87fef950
     layers:
       # bitbake is no layer. Exclude it from bblayers.conf
       bitbake: "no"
 
   src/meta-openembedded:
     url: "https://github.com/openembedded/meta-openembedded.git"
-    refspec: ab9fca485e13f6f2f9761e1d2810f87c2e4f060a
+    refspec: 8ff12bfffcf0840d5518788a53d88d708ad3aae0
     layers:
       meta-oe:
       meta-networking:

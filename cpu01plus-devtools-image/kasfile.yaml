@@ -3,8 +3,8 @@ header:
   includes:
     - ../kas-includes/kasfile-general.yaml
     - ../kas-includes/kasfile-tdxbsp.yaml
-    - ../kas-includes/kasfile-mender.yaml
-    - ../kas-includes/kasfile-mender-tdxbsp.yaml
+#    - ../kas-includes/kasfile-mender.yaml
+#    - ../kas-includes/kasfile-mender-tdxbsp.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01plus

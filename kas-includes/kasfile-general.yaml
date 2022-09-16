@@ -20,6 +20,7 @@ repos:
       meta-filesystems:
       meta-python:
       meta-multimedia:
+      meta-gnome:
 
 bblayers_conf_header:
   src/meta-general: |

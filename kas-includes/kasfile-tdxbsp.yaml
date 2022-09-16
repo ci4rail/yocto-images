@@ -53,7 +53,6 @@ repos:
     refspec: 9360b92f98222cb74a93690f53570cd62633c0cf
     layers:
       meta:
-      meta-gnome:
 
   # # add meta-gnome here
   # # switch to older commit (2021-03-16) as other

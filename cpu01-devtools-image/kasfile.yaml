@@ -5,6 +5,7 @@ header:
     - ../kas-includes/kasfile-tdxbsp.yaml
     - ../kas-includes/kasfile-mender.yaml
     - ../kas-includes/kasfile-mender-tdxbsp.yaml
+    - ../kas-includes/kasfile-docker.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01

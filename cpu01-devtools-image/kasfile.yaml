@@ -19,3 +19,8 @@ repos:
   src/meta-ci4rail-devtools:
     url: https://github.com/ci4rail/meta-ci4rail-devtools.git
     refspec: 8b0b17d57df98aeb061d27816884abe145d93826
+
+local_conf_header:
+  src/meta-custom: |
+    PACKAGECONFIG_append_pn-alsa-utils += "bat"
+

@@ -65,6 +65,7 @@ Target Platforms:
 ### devtools-image
 
 ![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-devtools-image.yaml/badge.svg)
+![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01base-devtools-image.yaml/badge.svg)
 
 An image for HW platform tests and bringup including the following features:
 

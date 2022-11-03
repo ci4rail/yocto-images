@@ -5,7 +5,7 @@ repos:
   # mender
   src/meta-mender:
     url: "https://github.com/mendersoftware/meta-mender"
-    refspec: dunfell-v2022.09
+    refspec: dunfell-v2022.10
     layers:
       meta-mender-core:
 

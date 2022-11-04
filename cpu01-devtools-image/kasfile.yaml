@@ -5,6 +5,7 @@ header:
     - ../kas-includes/kasfile-tdxbsp.yaml
     - ../kas-includes/kasfile-mender.yaml
     - ../kas-includes/kasfile-mender-tdxbsp.yaml
+    - ../kas-includes/kasfile-docker.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01
@@ -17,4 +18,4 @@ repos:
   # ci4rail
   src/meta-ci4rail-devtools:
     url: https://github.com/ci4rail/meta-ci4rail-devtools.git
-    refspec: i2ctools
+    refspec: ea3ad4c6d85c2abc33198eb02494e211bf4c425a

@@ -101,7 +101,6 @@ job=mender-accept-latest-auth:
 
 alias=all-build:
   tasks:
-    - cpu01-base-build-image
     - cpu01-devtools-build-image
     - cpu01-edgefarm-build-image
     - cpu01-edgefarm-devtools-build-image
@@ -115,7 +114,6 @@ alias=all-build:
 
 alias=all-minio-push:
   tasks:
-    - cpu01-base-minio-push
     - cpu01-devtools-minio-push
     - cpu01-edgefarm-minio-push
     - cpu01-edgefarm-devtools-minio-push
@@ -139,16 +137,6 @@ alias=all-mender-upload:
     tags:
       - alias
     description: "\t\t\t\t\t--> [alias] upload all images to mender"
-
-alias=cpu01-base-minio:
-  tasks:
-    - cpu01-base-build-image
-    - cpu01-base-minio-push
-    - cpu01-base-minio-deploy
-  annotations:
-    tags:
-      - alias
-    description: "\t\t\t\t\t--> [alias] build cpu01 base image and install via Minio"
 
 alias=cpu01-devtools-minio:
   tasks:

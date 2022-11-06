@@ -4,6 +4,9 @@ header:
     - ../kas-includes/kasfile-general.yaml
     - ../kas-includes/kasfile-tdxbsp.yaml
     - ../kas-includes/kasfile-docker.yaml
+    - ../kas-includes/kasfile-mender.yaml
+    - ../kas-includes/kasfile-mender-tdxbsp.yaml
+    - ../kas-includes/kasfile-edgefarm-devtools.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01
@@ -14,8 +17,8 @@ target: ci4rail-base-image
 
 local_conf_header:
   src/meta-custom: |
-    INHERIT += "extrausers"
-    EXTRA_USERS_PARAMS = "usermod -P cheesebread root; "
-    # Add custom image type
-    # IMAGE_CLASSES can only be set in local.conf or distro config file
-    IMAGE_CLASSES += "image_type_ci4rail_tezi"
+    # Prefix to the resulting deployable tarball name
+    BASENAME = "EdgeFarm-Devtools-Image"
+
+    # Reduce rootfs size to fit in mender partitions despite the devtools
+    IMAGE_OVERHEAD_FACTOR = "1.2"

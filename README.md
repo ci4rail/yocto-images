@@ -10,20 +10,6 @@ Yocto builds are performed using [kas](https://github.com/siemens/kas).
 
 The following images are currently built by this repo.
 
-### base-image
-
-![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-base-image.yaml/badge.svg)
-
-An minimal image for the Ci4Rail Hardware including the follwing features:
-
-- Docker
-- Read Only Filesystem
-- RW Data Partition
-
-Target Platforms:
-
-- Ci4Rail Moducop CPU01
-
 ### edgefarm-image
 
 ![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-image.yaml/badge.svg)

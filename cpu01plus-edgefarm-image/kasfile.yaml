@@ -3,19 +3,19 @@ header:
   includes:
     - ../kas-includes/kasfile-general.yaml
     - ../kas-includes/kasfile-tdxbsp.yaml
+    - ../kas-includes/kasfile-docker.yaml
     - ../kas-includes/kasfile-mender.yaml
     - ../kas-includes/kasfile-mender-tdxbsp.yaml
-    - ../kas-includes/kasfile-docker.yaml
+    - ../kas-includes/kasfile-edgefarm.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
-machine: moducop-cpu01
+machine: moducop-cpu01plus
 # The distro name as it is written into the `local.conf` of bitbake.
 distro: tdx-xwayland
 # The target that is built by bitbake
-target: ci4rail-devtools-image
+target: ci4rail-base-image
 
-repos:
-  # ci4rail
-  src/meta-ci4rail-devtools:
-    url: https://github.com/ci4rail/meta-ci4rail-devtools.git
-    refspec: ea3ad4c6d85c2abc33198eb02494e211bf4c425a
+local_conf_header:
+  src/meta-custom: |
+    #Prefix to the resulting deployable tarball name
+    BASENAME = "EdgeFarm-Image"

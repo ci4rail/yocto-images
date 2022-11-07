@@ -87,7 +87,7 @@ job=cpu01plus-devtools-build-image:
     - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
     - IMAGE_NAME_SUFFIX={env.NAME_SUFFIX}
     - IMAGE_GIT_VERSION={env.IMAGE_GIT_VERSION}
-    - MENDER_ARTIFACT_NAME=cpu01plus-edgefarm-{env.IMAGE_GIT_VERSION}{env.NAME_SUFFIX}
+    - MENDER_ARTIFACT_NAME=cpu01plus-devtools-{env.IMAGE_GIT_VERSION}{env.NAME_SUFFIX}
   depends:
     - yocto-envs
     - cpu01plus-devtools-print-image-version:capture(IMAGE_GIT_VERSION)

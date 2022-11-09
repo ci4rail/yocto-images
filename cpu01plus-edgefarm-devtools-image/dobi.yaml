@@ -105,7 +105,7 @@ job=cpu01plus-edgefarm-devtools-mender-upload:
     - mender-auth-dir
   user: "{user.uid}:{user.gid}"
   entrypoint: /bin/sh
-  command: -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/moducop-cpu01plus/Moducop-CPU01PlusPlus_EdgeFarm*.mender"
+  command: -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/moducop-cpu01plus/Moducop-CPU01Plus_EdgeFarm*.mender"
   annotations:
     description: "\t\t--> Upload cpu01plus-edgefarm-devtools image to mender"
     tags:

@@ -19,7 +19,7 @@ on:
     paths:
       - "cpu01-edgefarm-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
-      - "kas-includes/kasfile-docker.yaml"
+      - "kas-includes/kasfile-docker.yaml"P
       - "kas-includes/kasfile-mender.yaml"
       - "kas-includes/kasfile-mender-tdxbsp.yaml"
       - "kas-includes/kasfile-general.yaml"

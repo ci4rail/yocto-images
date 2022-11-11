@@ -17,6 +17,7 @@ on:
     branches:
       - main
     paths:
+      # Test
       - "cpu01-edgefarm-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-docker.yaml"P

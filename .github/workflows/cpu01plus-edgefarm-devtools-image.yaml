@@ -35,7 +35,7 @@ jobs:
       machine_dir: "moducop-cpu01plus"
       image_type: "edgefarm-devtools"
       output_type: "tar"
-      image_start: "Moducop-CPU01Plus_Edgefarm-Devtools-Image"
+      image_start: "Moducop-CPU01Plus_EdgeFarm-Devtools-Image"
       test_name: ""
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}

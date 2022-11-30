@@ -24,7 +24,7 @@ repos:
   # edgefarm
   src/meta-edgefarm:
     url: https://github.com/edgefarm/meta-edgefarm.git
-    refspec: fbae56ff0d62d5f0b6364aaf90cf6f94a225d139
+    refspec: 8b7f15e40e8b1a771f82e7420cea608ac5b8ec41
     layers:
       meta-edgefarm-raspberrypi:
 

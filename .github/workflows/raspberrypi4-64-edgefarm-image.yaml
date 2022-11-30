@@ -33,7 +33,7 @@ jobs:
       machine_dir: "raspberrypi4-64"
       image_type: "edgefarm"
       output_type: "sdimg"
-      image_start: "EdgeFarm-Image-raspberrypi4-64-"
+      image_start: "raspberrypi4-64_EdgeFarm-Image_"
       test_name: ""
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}

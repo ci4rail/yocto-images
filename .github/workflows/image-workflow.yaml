@@ -242,7 +242,7 @@ jobs:
         run: |
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${SDIMG_IMAGE_PATH}
-          cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${IMAGE_START}_${VERSION}${SUFFIX}.sdimg
+          cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${{ inputs.image_start }}_${VERSION}${SUFFIX}.sdimg
           if [ "${{ inputs.have_mender}}" = "true" ]; then
             ls -t ${MENDER_IMAGE_PATH}
             mv ${MENDER_IMAGE_PATH} /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${VERSION}${SUFFIX}.mender

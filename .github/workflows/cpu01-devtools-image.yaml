@@ -5,7 +5,6 @@ on:
     branches:
       - main
       - beta
-      - semantic_release
     paths:
       - "cpu01-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"

@@ -245,7 +245,7 @@ jobs:
           cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${{ inputs.image_start }}_${VERSION}${SUFFIX}.sdimg
           if [ "${{ inputs.have_mender}}" = "true" ]; then
             ls -t ${MENDER_IMAGE_PATH}
-s          fi
+          fi
 
       - name: Push Images to Minio
         # don't use v1, it's broken

@@ -1,0 +1,24 @@
+name: Release
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - beta
+      - semantic_release
+
+jobs:
+  on-success:
+    name: Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Release
+        env:
+          # Must be a PAT, not GITHUB_TOKEN. Otherwise other workflows are not triggered!
+          GITHUB_TOKEN: ${{ secrets.FW_CI_TOKEN }}
+        run: |
+          npx semantic-release

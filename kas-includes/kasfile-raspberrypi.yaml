@@ -16,10 +16,17 @@ repos:
 
   src/meta-mender:
     url: "https://github.com/mendersoftware/meta-mender"
-    refspec: 5b518cc7cf4c6fb9d17fbbb463df3ccd70a9936a
+    refspec: dunfell-v2022.10
     layers:
       meta-mender-raspberrypi:
       meta-mender-demo:
+
+  # edgefarm
+  src/meta-edgefarm:
+    url: https://github.com/edgefarm/meta-edgefarm.git
+    refspec: 8b7f15e40e8b1a771f82e7420cea608ac5b8ec41
+    layers:
+      meta-edgefarm-raspberrypi:
 
 bblayers_conf_header:
   src/meta-ci4rail-raspberrypi: |
@@ -36,6 +43,7 @@ local_conf_header:
     MENDER_BOOT_PART_SIZE_MB = "40"
     MENDER_STORAGE_TOTAL_SIZE_MB = "3000"
     IMAGE_FEATURES += "\
+                      read-only-rootfs \
                       ssh-server-openssh \
                       package-management \
                       "
@@ -49,3 +57,8 @@ local_conf_header:
                              less \
                              "
     PACKAGECONFIG_append_pn-systemd = "--disable-resolved"
+    INHERIT += "edgefarm_image_name"
+    INHERIT += "edgefarm_add_rootfs_version"
+    IMAGE_INSTALL_append = " \
+                          packagegroup-edgefarm-raspberrypi \
+                          "

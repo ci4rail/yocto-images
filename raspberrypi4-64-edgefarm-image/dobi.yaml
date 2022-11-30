@@ -105,7 +105,7 @@ job=raspberrypi4-64-edgefarm-mender-upload:
     - mender-auth-dir
   user: "{user.uid}:{user.gid}"
   entrypoint: /bin/sh
-  command: -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/raspberrypi4-64/EdgeFarm-Image-raspberrypi4-64-*.mender"
+  command: -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/raspberrypi4-64/raspberrypi4-64_EdgeFarm-Image*.mender"
   annotations:
     description: "\t\t--> Upload raspberrypi4-64-edgefarm image to mender"
     tags:
@@ -125,7 +125,7 @@ job=raspberrypi4-64-edgefarm-mender-deploy:
     - MENDER_DEVICE_ID={env.RPI_MENDER_DEVICE_ID}
     - MENDER_AUTH_TOKEN=/mender-auth/authtoken
     - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
-  command: /scripts/mender_deploy_artifact_to_device.sh /install/images/raspberrypi4-64/EdgeFarm-Image-raspberrypi4-64-*.mender
+  command: /scripts/mender_deploy_artifact_to_device.sh /install/images/raspberrypi4-64/raspberrypi4-64_EdgeFarm-Image*.mender
   annotations:
     description: "\t\t--> Deploy raspberrypi4-64-edgefarm image to RPI_MENDER_DEVICE_ID"
     tags:
@@ -140,7 +140,7 @@ job=raspberrypi4-64-edgefarm-minio-push:
     - yocto-envs
   command: |
     -c "
-        fileToPush=$(ls -t /work/install/images/raspberrypi4-64/EdgeFarm-Image-raspberrypi4-64-*sdimg)
+        fileToPush=$(ls -t /work/install/images/raspberrypi4-64/raspberrypi4-64_EdgeFarm-Image*sdimg)
         echo Push image ${fileToPush} to minio
         mc cp ${fileToPush} ci4rail_endpoint/${BUCKET}/
        "

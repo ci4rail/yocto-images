@@ -2,33 +2,33 @@
 # mounts
 # ===================================================
 # Yocto images (DEPLOY_DIR)
-mount=install-dir-cpu01-devtools:
-  bind: cpu01-devtools-image/install
+mount=install-dir-cpu01plus-edgefarm-devtools:
+  bind: cpu01plus-edgefarm-devtools-image/install
   path: /install
 
 # Where the yocto-build happens
-mount=build-dir-cpu01-devtools:
-  bind: cpu01-devtools-image
+mount=build-dir-cpu01plus-edgefarm-devtools:
+  bind: cpu01plus-edgefarm-devtools-image
   path: /work
 
 # ===================================================
 # jobs
 # ===================================================
 # Get layer revisions
-job=cpu01-devtools-yocto-layer-revparse:
+job=cpu01plus-edgefarm-devtools-yocto-layer-revparse:
   use: image-kas
   entrypoint: /bin/bash
-  command: /git/scripts/layer-revparse.sh /git/cpu01-devtools-image/src /git/cpu01-devtools-image/layer-revs
+  command: /git/scripts/layer-revparse.sh /git/cpu01plus-edgefarm-devtools-image/src /git/cpu01plus-edgefarm-devtools-image/layer-revs
   mounts:
     - mount-buildingblock-gitversion-source-dir
-  sources: cpu01-devtools-image/src
-  artifact: cpu01-devtools-image/layer-revs
+  sources: cpu01plus-edgefarm-devtools-image/src
+  artifact: cpu01plus-edgefarm-devtools-image/layer-revs
   user: "{user.uid}:{user.gid}"
 
-job=cpu01-devtools-print-image-version:
+job=cpu01plus-edgefarm-devtools-print-image-version:
   use: image-kas
   depends:
-    - cpu01-devtools-yocto-layer-revparse
+    - cpu01plus-edgefarm-devtools-yocto-layer-revparse
   mounts:
     - mount-buildingblock-gitversion-source-dir
   user: "{user.uid}:{user.gid}"
@@ -37,19 +37,19 @@ job=cpu01-devtools-print-image-version:
   entrypoint: /bin/bash
   command: /git/scripts/gen-image-version.sh
     /git
-    /git/cpu01-devtools-image/layer-revs
+    /git/cpu01plus-edgefarm-devtools-image/layer-revs
 
-job=cpu01-devtools-yocto-shell:
+job=cpu01plus-edgefarm-devtools-yocto-shell:
   use: image-kas
   depends:
     - yocto-envs
-    - cpu01-devtools-print-image-version:capture(IMAGE_GIT_VERSION)
+    - cpu01plus-edgefarm-devtools-print-image-version:capture(IMAGE_GIT_VERSION)
   mounts:
-    - build-dir-cpu01-devtools
+    - build-dir-cpu01plus-edgefarm-devtools
     - kas-includes-dir
     - download-dir-yocto
     - sstate-dir-yocto
-    - install-dir-cpu01-devtools
+    - install-dir-cpu01plus-edgefarm-devtools
   working-dir: /work
   interactive: true
   env:
@@ -61,21 +61,21 @@ job=cpu01-devtools-yocto-shell:
     - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
     - IMAGE_NAME_SUFFIX={env.NAME_SUFFIX}
     - IMAGE_GIT_VERSION={env.IMAGE_GIT_VERSION}
-    - MENDER_ARTIFACT_NAME=cpu01-devtools-{env.IMAGE_GIT_VERSION}{env.NAME_SUFFIX}
+    - MENDER_ARTIFACT_NAME=cpu01plus-edgefarm-devtools-{env.IMAGE_GIT_VERSION}{env.NAME_SUFFIX}
   command: shell kasfile.yaml
   annotations:
-    description: "\t\t\t\t--> interactive yocto shell cpu01-devtools config"
+    description: "\t\t\t--> interactive yocto shell cpu01plus-edgefarm-devtools config"
     tags:
-      - devtools
+      - edgefarm-devtools
 
-job=cpu01-devtools-build-image:
+job=cpu01plus-edgefarm-devtools-build-image:
   use: image-kas
   mounts:
-    - build-dir-cpu01-devtools
+    - build-dir-cpu01plus-edgefarm-devtools
     - kas-includes-dir
     - download-dir-yocto
     - sstate-dir-yocto
-    - install-dir-cpu01-devtools
+    - install-dir-cpu01plus-edgefarm-devtools
   working-dir: /work
   interactive: true
   env:
@@ -87,34 +87,34 @@ job=cpu01-devtools-build-image:
     - MENDER_TENANT_TOKEN={env.MENDER_TENANT_TOKEN}
     - IMAGE_NAME_SUFFIX={env.NAME_SUFFIX}
     - IMAGE_GIT_VERSION={env.IMAGE_GIT_VERSION}
-    - MENDER_ARTIFACT_NAME=cpu01-devtools-{env.IMAGE_GIT_VERSION}{env.NAME_SUFFIX}
+    - MENDER_ARTIFACT_NAME=cpu01plus-edgefarm-devtools-{env.IMAGE_GIT_VERSION}{env.NAME_SUFFIX}
   depends:
     - yocto-envs
-    - cpu01-devtools-print-image-version:capture(IMAGE_GIT_VERSION)
+    - cpu01plus-edgefarm-devtools-print-image-version:capture(IMAGE_GIT_VERSION)
   command: build kasfile.yaml
   annotations:
-    description: "\t\t\t\t--> Build cpu01-devtools-image"
+    description: "\t\t\t--> Build cpu01plus-edgefarm-devtools-image"
     tags:
-      - devtools
+      - edgefarm-devtools
 
-job=cpu01-devtools-mender-upload:
+job=cpu01plus-edgefarm-devtools-mender-upload:
   use: image-mender-cli
   interactive: true
   mounts:
-    - install-dir-cpu01-devtools
+    - install-dir-cpu01plus-edgefarm-devtools
     - mender-auth-dir
   user: "{user.uid}:{user.gid}"
   entrypoint: /bin/sh
-  command: -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/moducop-cpu01/Moducop-CPU01_Devtools*.mender"
+  command: -c "/mender-cli --token=/mender-auth/authtoken artifacts upload /install/images/moducop-cpu01plus/Moducop-CPU01Plus_EdgeFarm*.mender"
   annotations:
-    description: "\t\t\t\t--> Upload cpu01-devtools image to mender"
+    description: "\t\t--> Upload cpu01plus-edgefarm-devtools image to mender"
     tags:
-      - devtools
+      - edgefarm-devtools
 
-job=cpu01-devtools-mender-deploy:
+job=cpu01plus-edgefarm-devtools-mender-deploy:
   use: image-curl-jq
   mounts:
-    - install-dir-cpu01-devtools
+    - install-dir-cpu01plus-edgefarm-devtools
     - scripts-dir
     - mender-auth-dir
   user: "{user.uid}:{user.gid}"
@@ -125,37 +125,37 @@ job=cpu01-devtools-mender-deploy:
     - MENDER_DEVICE_ID={env.MENDER_DEVICE_ID}
     - MENDER_AUTH_TOKEN=/mender-auth/authtoken
     - MENDER_SERVER_URL={env.MENDER_SERVER_URL}
-  command: /scripts/mender_deploy_artifact_to_device.sh /install/images/moducop-cpu01/Moducop-CPU01_Devtools*.mender
+  command: /scripts/mender_deploy_artifact_to_device.sh /install/images/moducop-cpu01plus/Moducop-CPU01Plus_EdgeFarm*.mender
   annotations:
-    description: "\t\t\t\t--> Deploy cpu01-devtools image to MENDER_DEVICE_ID"
+    description: "\t\t--> Deploy cpu01plus-edgefarm-devtools image to MENDER_DEVICE_ID"
     tags:
-      - devtools
+      - edgefarm-devtools
 
-job=cpu01-devtools-minio-push:
+job=cpu01plus-edgefarm-devtools-minio-push:
   use: image-minio-client
   mounts:
-    - build-dir-cpu01-devtools
+    - build-dir-cpu01plus-edgefarm-devtools
   entrypoint: /bin/sh
   depends:
     - yocto-envs
   command: |
     -c "
-        fileToPush=$(ls -t /work/install/images/moducop-cpu01/Moducop-CPU01_Devtools*.mender_tezi.tar | head -n 1)
+        fileToPush=$(ls -t /work/install/images/moducop-cpu01plus/Moducop-CPU01Plus_EdgeFarm*.mender_tezi.tar| head -n 1)
         echo Push image ${fileToPush} to minio
         mc cp ${fileToPush} ci4rail_endpoint/${BUCKET}/
        "
   env:
     - MC_HOST_ci4rail_endpoint=https://{env.MINIO_ACCESS_KEY}:{env.MINIO_SECRET_KEY}@{env.MINIO_ENDPOINT}
-    - BUCKET=cpu01-devtools-dev
+    - BUCKET=cpu01plus-edgefarm-devtools-dev
   annotations:
-    description: "\t\t\t\t--> Push cpu01-devtools image to Minio"
+    description: "\t\t\t--> Push cpu01plus-edgefarm-devtools image to Minio"
     tags:
-      - devtools
+      - edgefarm-devtools
 
-job=cpu01-devtools-minio-deploy:
+job=cpu01plus-edgefarm-devtools-minio-deploy:
   use: image-ssh-client
   mounts:
-    - build-dir-cpu01-devtools
+    - build-dir-cpu01plus-edgefarm-devtools
     - ssh-dir
   interactive: true
   net-mode: host
@@ -164,7 +164,7 @@ job=cpu01-devtools-minio-deploy:
     - yocto-envs
   command: |
     -c '
-      fileToInstall=$(ls -t /work/install/images/moducop-cpu01/Moducop-CPU01_Devtools*.mender_tezi.tar | head -n 1 | rev | cut -d"/" -f 1 | rev)
+      fileToInstall=$(ls -t /work/install/images/moducop-cpu01plus/Moducop-CPU01Plus_EdgeFarm*.mender_tezi.tar| head -n 1 | rev | cut -d"/" -f 1 | rev)
       echo Deploy image ${fileToInstall} using Raspberry Pi with IP ${TEST_COMPUTER_IP} to connected Moducop
       ssh yoda@${TEST_COMPUTER_IP} "
           s3cmd --config=/etc/s3cfg_ci4rail_minio get s3://${BUCKET}/${fileToInstall} /tmp/tezi-image.tar --force
@@ -192,10 +192,10 @@ job=cpu01-devtools-minio-deploy:
     - USER_ID={user.uid}
     - GROUP_ID={user.gid}
     - TEST_COMPUTER_IP={env.TEST_COMPUTER_IP}
-    - BUCKET=cpu01-devtools-dev
+    - BUCKET=cpu01plus-edgefarm-devtools-dev
     - CONSOLE_PORT={env.CONSOLE_PORT}
     - TDX_INSTALLER_IMAGE_TAG={env.TDX_INSTALLER_IMAGE_TAG}
   annotations:
-    description: "\t\t\t\t--> Deploy cpu01-devtools image via Raspberry Pi with TEST_COMPUTER_IP to connected Moducop"
+    description: "\t\t\t--> Deploy cpu01plus-edgefarm-devtools image via Raspberry Pi with TEST_COMPUTER_IP to connected Moducop"
     tags:
-      - devtools
+      - edgefarm-devtools

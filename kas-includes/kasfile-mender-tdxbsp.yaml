@@ -4,7 +4,7 @@ header:
 repos:
   src/meta-mender-community:
     url: "https://github.com/mendersoftware/meta-mender-community"
-    refspec: 2120d69c3d63405da5dcba2cefc678944b85a582
+    refspec: 34da211b9371c8df34e57c288ec9745e017cad4e
     layers:
       meta-mender-toradex-nxp:
 
@@ -15,11 +15,38 @@ env:
   MENDER_ARTIFACT_NAME: "DEFAULT_EMPTY_ARTIFACT_NAME"
 
 local_conf_header:
+  # from meta-mender-community/meta-mender-toradex-nxp/templates/local.conf.append
   src/meta-ci4rail-mender-tdxbsp: |
-    IMAGE_CLASSES += "image_type_mender_tezi"
-    IMAGE_FSTYPES += "mender_tezi"
+    INHERIT += "mender-toradex"
+    # meta-mender-community needs the BSP version...
+    TORADEX_BSP_VERSION = "toradex-bsp-5.7.0"
+
+    # Comment/remove below to enable GRUB integration instead of U-Boot
     MENDER_FEATURES_ENABLE_append = " mender-uboot mender-image-sd"
     MENDER_FEATURES_DISABLE_append = " mender-grub mender-image-uefi"
+
+    IMAGE_CLASSES += "image_type_mender_tezi"
+    IMAGE_FSTYPES_append = " mender_tezi"
+    IMAGE_FSTYPES_remove = " teziimg"
+
+    # Default is Image.gz, which is not compatible with GRUB
     KERNEL_IMAGETYPE_aarch64_mender-grub = "Image"
-    IMAGE_BOOT_FILES = ""
+
+    # boot.scr conflicts when using GRUB
     IMAGE_BOOT_FILES_remove_mender-grub = "boot.scr-verdin-imx8mm;boot.scr"
+
+    #
+    # Settings for verdin-imx8mm
+    #
+    MENDER_BOOT_PART_SIZE_MB_verdin-imx8mm = "32"
+    OFFSET_SPL_PAYLOAD_verdin-imx8mm = ""
+
+    #
+    # Settings for verdin-imx8mp
+    #
+    MENDER_BOOT_PART_SIZE_MB_verdin-imx8mp = "32"
+    OFFSET_SPL_PAYLOAD_verdin-imx8mp = ""
+    MENDER_IMAGE_BOOTLOADER_BOOTSECTOR_OFFSET_verdin-imx8mp = "0"
+    MENDER_UBOOT_STORAGE_INTERFACE_verdin-imx8mp = "mmc"
+    MENDER_UBOOT_STORAGE_DEVICE_verdin-imx8mp = "2"
+    MENDER_STORAGE_DEVICE_verdin-imx8mp = "/dev/mmcblk2"

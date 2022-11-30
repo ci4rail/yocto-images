@@ -10,23 +10,10 @@ Yocto builds are performed using [kas](https://github.com/siemens/kas).
 
 The following images are currently built by this repo.
 
-### base-image
-
-![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-base-image.yaml/badge.svg)
-
-An minimal image for the Ci4Rail Hardware including the follwing features:
-
-- Docker
-- Read Only Filesystem
-- RW Data Partition
-
-Target Platforms:
-
-- Ci4Rail Moducop CPU01
-
 ### edgefarm-image
 
 ![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-image.yaml/badge.svg)
+![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01base-edgefarm-image.yaml/badge.svg)
 ![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrypi4-64-edgefarm-image.yaml/badge.svg)
 
 An image for the Ci4Rail EdgeFarm Services case including the following features:
@@ -40,11 +27,13 @@ An image for the Ci4Rail EdgeFarm Services case including the following features
 Target Platforms:
 
 - Ci4Rail Moducop CPU01
+- Ci4Rail Moducop CPU01Plus
 - Raspberry Pi 4
 
 ### edgefarm-devtools-image
 
 ![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-devtools-image.yaml/badge.svg)
+![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01base-edgefarm-devtools-image.yaml/badge.svg)
 ![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrypi4-64-edgefarm-devtools-image.yaml/badge.svg)
                 
 An image for the Ci4Rail EdgeFarm Services case including the following features:
@@ -60,14 +49,17 @@ An image for the Ci4Rail EdgeFarm Services case including the following features
 Target Platforms:
 
 - Ci4Rail Moducop CPU01
+- Ci4Rail Moducop CPU01Plus
 - Raspberry Pi 4
 
 ### devtools-image
 
 ![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-devtools-image.yaml/badge.svg)
+![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01base-devtools-image.yaml/badge.svg)
 
 An image for HW platform tests and bringup including the following features:
 
+- Docker
 - Read Only Filesystem
 - RW Data Partition
 - Mender
@@ -77,6 +69,7 @@ An image for HW platform tests and bringup including the following features:
 Target Platforms:
 
 - Ci4Rail Moducop CPU01
+- Ci4Rail Moducop CPU01Plus
 
 ## Building
 

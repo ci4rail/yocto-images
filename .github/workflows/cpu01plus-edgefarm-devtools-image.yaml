@@ -1,31 +1,21 @@
-name: CPU01Plus Edgefarm Image
+name: CPU01Plus Edgefarm DevTools Image
 on:
   pull_request:
     branches:
       - main
+      - beta
     paths:
-      - "cpu01plus-edgefarm-image/kasfile.yaml"
+      - "cpu01plus-edgefarm-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-docker.yaml"
       - "kas-includes/kasfile-mender.yaml"
       - "kas-includes/kasfile-mender-tdxbsp.yaml"
       - "kas-includes/kasfile-general.yaml"
-      - "kas-includes/kasfile-edgefarm.yaml"
+      - "kas-includes/kasfile-edgefarm-devtools.yaml"
       - ".github/workflows/cpu01plus-edgefarm-image.yaml"
       - ".github/workflows/image-workflow.yaml"
-  push:
-    branches:
-      - main
-    paths:
-      - "cpu01plus-edgefarm-image/kasfile.yaml"
-      - "kas-includes/kasfile-tdxbsp.yaml"
-      - "kas-includes/kasfile-docker.yaml"
-      - "kas-includes/kasfile-mender.yaml"
-      - "kas-includes/kasfile-mender-tdxbsp.yaml"
-      - "kas-includes/kasfile-general.yaml"
-      - "kas-includes/kasfile-edgefarm.yaml"
-      - ".github/workflows/cpu01plus-edgefarm-image.yaml"
-      - ".github/workflows/image-workflow.yaml"
+  release:
+    types: [published]
 
 jobs:
   workflow-call:
@@ -33,9 +23,9 @@ jobs:
     with:
       machine: "cpu01plus"
       machine_dir: "moducop-cpu01plus"
-      image_type: "edgefarm"
+      image_type: "edgefarm-devtools"
       output_type: "tar"
-      image_start: "Moducop-CPU01Plus_EdgeFarm-Image"
+      image_start: "Moducop-CPU01Plus_EdgeFarm-Devtools-Image"
       test_name: ""
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}

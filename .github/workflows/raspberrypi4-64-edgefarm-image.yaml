@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - main
+      - beta
     paths:
       - "raspberrypi4-64-edgefarm-image/kasfile.yaml"
       - "kas-includes/kasfile-raspberrypi.yaml"
@@ -12,18 +13,8 @@ on:
       - "kas-includes/kasfile-edgefarm.yaml"
       - ".github/workflows/raspberrypi4-64-edgefarm-image.yaml"
       - ".github/workflows/image-workflow.yaml"
-  push:
-    branches:
-      - main
-    paths:
-      - "raspberrypi4-64-edgefarm-image/kasfile.yaml"
-      - "kas-includes/kasfile-raspberrypi.yaml"
-      - "kas-includes/kasfile-docker.yaml"
-      - "kas-includes/kasfile-mender.yaml"
-      - "kas-includes/kasfile-general.yaml"
-      - "kas-includes/kasfile-edgefarm.yaml"
-      - ".github/workflows/raspberrypi4-64-edgefarm-image.yaml"
-      - ".github/workflows/image-workflow.yaml"
+  release:
+    types: [published]
 
 jobs:
   workflow-call:

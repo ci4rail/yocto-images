@@ -3,6 +3,7 @@ on:
   pull_request:
     branches:
       - main
+      - beta
     paths:
       - "cpu01-edgefarm-devtools-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
@@ -13,24 +14,13 @@ on:
       - "kas-includes/kasfile-edgefarm-devtools.yaml"
       - ".github/workflows/cpu01-edgefarm-devtools-image.yaml"
       - ".github/workflows/image-workflow.yaml"
-  push:
-    branches:
-      - main
-    paths:
-      - "cpu01-edgefarm-devtools-image/kasfile.yaml"
-      - "kas-includes/kasfile-tdxbsp.yaml"
-      - "kas-includes/kasfile-docker.yaml"
-      - "kas-includes/kasfile-mender.yaml"
-      - "kas-includes/kasfile-mender-tdxbsp.yaml"
-      - "kas-includes/kasfile-general.yaml"
-      - "kas-includes/kasfile-edgefarm-devtools.yaml"
-      - ".github/workflows/cpu01-edgefarm-devtools-image.yaml"
-      - ".github/workflows/image-workflow.yaml"
+  release:
+    types: [published]
 
 jobs:
   workflow-call:
     uses: ./.github/workflows/image-workflow.yaml
-    with: 
+    with:
       machine: "cpu01"
       machine_dir: "moducop-cpu01"
       image_type: "edgefarm-devtools"

@@ -12,7 +12,6 @@
 #
 # To be called with arguments: <git-root> <layer-refs file>
 #
-# This script is expected to be called by dobi
 
 set -e
 

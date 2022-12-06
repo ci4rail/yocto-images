@@ -70,7 +70,7 @@ KAS_ARGS := \
 _mender: _image _mender-upload _mender-deploy
 	echo ""
 
-_image: test-sub-args
+_image: test-sub-args _mkdirs
 	@echo building image in ${IMAGE_DIR} with version ${IMAGE_VERSION}
 	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} build kasfile.yaml
 
@@ -97,11 +97,13 @@ _mender-deploy: test-sub-args
 		bash -c "/scripts/mender_accept_new_auth_set.sh && \
 		/scripts/mender_deploy_artifact_to_device.sh /install/images/*/*[0-9][0-9][0-9][0-9].mender"
 
-_yocto-shell: test-sub-args
+_yocto-shell: test-sub-args  _mkdirs
 	@echo starting yocto shell in ${IMAGE_DIR} with version ${IMAGE_VERSION}
+
 	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} shell kasfile.yaml
 
-
+_mkdirs:
+	mkdir -p ${IMAGE_DIR}/install ${IMAGE_DIR}/src ${IMAGE_DIR}/build ${ABS_DOWNLOAD_DIR} ${ABS_SSTATE_DIR}
 
 test-main-args:
 ifeq (${IMAGE_DIR},)
@@ -116,4 +118,4 @@ ifeq (${IMAGE_VERSION},)
 	${error IMAGE must be set}
 endif
 
-.PHONY: test-main-args test-sub-args
+.PHONY: test-main-args test-sub-args _mkdirs

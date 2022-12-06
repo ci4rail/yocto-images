@@ -8,6 +8,11 @@ on:
         description: "e.g. cpu01"
         required: true
         type: string
+      som_type:
+        description: "verdin-imx8mm or verdin-imx8mp"
+        required: false
+        type: string
+        default: "verdin-imx8mm"
       machine_dir:
         description: "e.g. moducop-cpu01"
         required: true
@@ -46,6 +51,11 @@ on:
       test_name:
         required: true
         type: string
+      test_station:
+        description: "Name:Port of MQTT broken on test station"
+        required: false
+        type: string
+        default: "lizard-rpi:1883"
 
     secrets:
       docker_password:
@@ -70,7 +80,7 @@ env:
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:2.6.3
   MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
   MENDER_SERVER_URL: https://hosted.mender.io
-  TESTSTATION_MQTT_URL: lizard-rpi:1883
+  TESTSTATION_MQTT_URL: ${{ inputs.test_station }}
   CACHE_LOCKFILE: /yocto-cache/lock
 
 jobs:
@@ -289,6 +299,7 @@ jobs:
             {
               \"desired_versions.cpu_firmware.version\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
               \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
+              \"desired_versions.cpu_firmware.cputype\": \"${{ inputs.som_type }}\",
               \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
               \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
               \"desired_versions.cpu_firmware.source.file\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar\"

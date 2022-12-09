@@ -22,11 +22,13 @@ jobs:
     uses: ./.github/workflows/image-workflow.yaml
     with:
       machine: "cpu01plus"
+      som_type: "verdin-imx8mp"
       machine_dir: "moducop-cpu01plus"
       image_type: "edgefarm"
       output_type: "tar"
       image_start: "Moducop-CPU01Plus_EdgeFarm-Image"
-      test_name: ""
+      test_name: "cpu01plus-edgefarm-image test"
+      test_station: "hydra-rpi:1883"
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}
       mender_tenant_token: ${{ secrets.MENDER_TENANT_TOKEN }}

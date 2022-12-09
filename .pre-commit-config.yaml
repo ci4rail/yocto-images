@@ -20,6 +20,6 @@ repos:
 
   # markdown
   - repo: https://github.com/markdownlint/markdownlint.git
-    rev: master
+    rev: v0.12.0
     hooks:
-      - id: markdownlint_docker
+      - id: markdownlint

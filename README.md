@@ -13,7 +13,7 @@ The following images are currently built by this repo.
 ### edgefarm-image
 
 ![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-image.yaml/badge.svg)
-![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01base-edgefarm-image.yaml/badge.svg)
+![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01plus-edgefarm-image.yaml/badge.svg)
 ![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrypi4-64-edgefarm-image.yaml/badge.svg)
 
 An image for the Ci4Rail EdgeFarm Services case including the following features:
@@ -33,7 +33,7 @@ Target Platforms:
 ### edgefarm-devtools-image
 
 ![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-devtools-image.yaml/badge.svg)
-![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01base-edgefarm-devtools-image.yaml/badge.svg)
+![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01plus-edgefarm-devtools-image.yaml/badge.svg)
 ![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrypi4-64-edgefarm-devtools-image.yaml/badge.svg)
 
 An image for the Ci4Rail EdgeFarm Services case including the following features:
@@ -55,7 +55,7 @@ Target Platforms:
 ### devtools-image
 
 ![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-devtools-image.yaml/badge.svg)
-![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01base-devtools-image.yaml/badge.svg)
+![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01plus-devtools-image.yaml/badge.svg)
 
 An image for HW platform tests and bringup including the following features:
 
@@ -88,11 +88,13 @@ The following figure shows which steps are executed for corresponding image type
 
 You can use the default setting, but MENDER_DEVICE_ID must be adapted to the device you want to use to [deploy locally built images via mender](#deploy-images-via-mender)
 
+To build an image, run make with `IMAGE_DIR` set to the image directory, for example:
+
 ```bash
-MENDER_DEVICE_ID=<device id from mender portal>
+make IMAGE_DIR=cpu01-devtools-image image
 ```
 
-See [Makefile](Makefile) for build targets and instructions.
+See [Makefile](Makefile) for further build targets and instructions.
 
 ## Install Images
 
@@ -105,7 +107,7 @@ Login with `mender-cli login`.
 Upload image to mender, e.g.:
 
 ```bash
-make
+make IMAGE_DIR=cpu01-devtools-image mender-upload
 ```
 
 To deploy an image to a specific device set the device ID you want to use for deployment, if you haven't specified it in `config/custom.env`:
@@ -117,27 +119,7 @@ MENDER_DEVICE_ID=<device id from mender portal>
 Start deployment
 
 ```bash
-./dobi.sh cpu01-edgefarm-mender-deploy
-```
-
-### Deploy images via minio
-
-Upload image to minio, e.g.:
-
-```bash
-./dobi.sh cpu01-edgefarm-minio-push
-```
-
-To deploy an image to a specific device set the ip address of test-computer connected to this device, if you haven't specified it in `config/custom.env`:
-
-```bash
-TEST_COMPUTER_IP=<ip address of test-computer connected to the device to flash>
-```
-
-Start deployment
-
-```bash
-./dobi.sh cpu01-edgefarm-minio-deploy
+make IMAGE_DIR=cpu01-devtools-image mender-deploy
 ```
 
 ### Install Raspberry Pi sdimg on SD Card

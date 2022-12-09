@@ -52,7 +52,7 @@ on:
         required: true
         type: string
       test_station:
-        description: "Name:Port of MQTT broken on test station"
+        description: "Name:Port of MQTT broker on test station"
         required: false
         type: string
         default: "lizard-rpi:1883"

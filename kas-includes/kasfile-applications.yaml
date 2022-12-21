@@ -1,0 +1,6 @@
+header:
+  version: 11
+repos:
+  src/meta-ci4rail-applications:
+    url: https://github.com/ci4rail/meta-ci4rail-applications.git
+    refspec: initial

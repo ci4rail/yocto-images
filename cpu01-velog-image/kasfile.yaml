@@ -25,3 +25,4 @@ local_conf_header:
     IMAGE_INSTALL += "\
       velog \
     "
+    DHCPD_ADDITIONAL_INTERFACES = "enp5s0"

@@ -8,7 +8,7 @@
 # If the repo or one of the the layer repos is dirty:
 #   VERSION=dirty_<fullsemver>.<branch><user>.<datetime>
 # Else
-#   VERSION=<fullsemver>.<branch>.<shortsha>
+#   VERSION=<fullsemver>.<branch>.<shortsha>.<datetime>
 #
 # To be called with arguments: <git-root> <layer-refs file>
 #
@@ -47,10 +47,10 @@ fi
 # replace slashes in branch name with -
 branch=`echo ${GitVersion_BranchName} | sed -e "s/\//-/g"`
 
+ts=`date +"%Y%m%d.%H%M"`
 if [ ${is_dirty} -eq 0 ]; then
-    version=${GitVersion_FullSemVer}.${branch}.${GitVersion_ShortSha}
+    version=${GitVersion_FullSemVer}.${branch}.${GitVersion_ShortSha}.${ts}
 else
-    ts=`date +"%Y%m%d.%H%M"`
     version=dirty_${GitVersion_FullSemVer}.${branch}.${USER}.${ts}
 fi
 

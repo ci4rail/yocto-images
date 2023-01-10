@@ -20,7 +20,7 @@ if [[ ${TARGET} == "mender"* ]]; then
     mender-cli login --username ${MENDER_USERNAME} --password ${MENDER_PASSWORD}
 fi
 
-IMAGE=$(whiptail --title "Yocto Make GUI" --menu "Choose image" 15 100 8 \
+IMAGE=$(whiptail --title "Yocto Make GUI" --menu "Choose image" 15 100 9 \
 "cpu01-devtools-image" " - CPU01 Devtools" \
 "cpu01-edgfarm-image" " - CPU01 Edgefarm" \
 "cpu01-edgefarm-devtools-image" " - CPU01 Edgefarm Devtools" \

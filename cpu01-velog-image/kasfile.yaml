@@ -1,0 +1,28 @@
+header:
+  version: 11
+  includes:
+    - ../kas-includes/kasfile-general.yaml
+    - ../kas-includes/kasfile-tdxbsp.yaml
+    - ../kas-includes/kasfile-docker.yaml
+    - ../kas-includes/kasfile-mender.yaml
+    - ../kas-includes/kasfile-mender-tdxbsp.yaml
+    - ../kas-includes/kasfile-applications.yaml
+
+# The machine as it is written into the `local.conf` of bitbake.
+machine: moducop-cpu01
+# The distro name as it is written into the `local.conf` of bitbake.
+distro: tdx-xwayland
+# The target that is built by bitbake
+target: ci4rail-base-image
+
+
+local_conf_header:
+  src/meta-custom: |
+    INHERIT += "extrausers"
+    EXTRA_USERS_PARAMS = "usermod -P cheesebread root; "
+    #Prefix to the resulting deployable tarball name
+    BASENAME = "Velog-Image"
+    IMAGE_INSTALL += "\
+      velog \
+    "
+    DHCPD_ADDITIONAL_INTERFACES = "enp5s0"

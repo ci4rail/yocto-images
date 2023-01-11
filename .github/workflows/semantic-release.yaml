@@ -19,4 +19,8 @@ jobs:
           # Must be a PAT, not GITHUB_TOKEN. Otherwise other workflows are not triggered!
           GITHUB_TOKEN: ${{ secrets.FW_CI_TOKEN }}
         run: |
-          npx semantic-release
+          wget https://raw.githubusercontent.com/nvm-sh/nvm/master/install.sh
+          bash install.sh
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          nvm install 'lts/*' && npx semantic-release

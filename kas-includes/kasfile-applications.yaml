@@ -3,4 +3,4 @@ header:
 repos:
   src/meta-ci4rail-applications:
     url: https://github.com/ci4rail/meta-ci4rail-applications.git
-    refspec: 35f15c17f63cb619f3fd64ac8d166d53d81f48c5
+    refspec: 42b38eca0da8ff288f5ae59c1dffb4e83d4275fb

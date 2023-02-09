@@ -22,11 +22,11 @@ fi
 
 IMAGE=$(whiptail --title "Yocto Make GUI" --menu "Choose image" 15 100 9 \
 "cpu01-devtools-image" " - CPU01 Devtools" \
-"cpu01-edgfarm-image" " - CPU01 Edgefarm" \
+"cpu01-edgefarm-image" " - CPU01 Edgefarm" \
 "cpu01-edgefarm-devtools-image" " - CPU01 Edgefarm Devtools" \
 "cpu01-velog-image" " - CPU01 Velog" \
 "cpu01plus-devtools-image" " - CPU01 (iMX8MPlus) Devtools" \
-"cpu01plus-edgfarm-image" " - CPU01 (iMX8MPlus) Edgefarm" \
+"cpu01plus-edgefarm-image" " - CPU01 (iMX8MPlus) Edgefarm" \
 "cpu01plus-edgefarm-devtools-image" " - CPU01 (iMX8MPlus) Edgefarm Devtools" \
 "raspberrypi4-64-edgfarm-image" " - RaspberryPi 4 (64Bit) Edgefarm" \
 "raspberrypi4-64-edgefarm-devtools-image" " - RaspberryPi 4 (64Bit) Edgefarm Devtools" \
@@ -40,5 +40,7 @@ fi
 echo "Target: ${TARGET}"
 echo "Image: ${IMAGE}"
 
+
+echo "make IMAGE_DIR=${IMAGE} ${TARGET}"
 
 make IMAGE_DIR=${IMAGE} ${TARGET}

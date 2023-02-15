@@ -19,4 +19,3 @@ local_conf_header:
   src/meta-custom: |
     #Prefix to the resulting deployable tarball name
     BASENAME = "EdgeFarm-Image"
-    BBMASK += "/meta-toradex-nxp/recipes-bsp/alsa-state"

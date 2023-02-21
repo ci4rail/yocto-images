@@ -4,7 +4,7 @@ repos:
   # ci4rail
   src/meta-ci4rail-bsp:
     url: https://github.com/ci4rail/meta-ci4rail-bsp.git
-    refspec: a13bdc809c05f8828606def330900cd116cc8d6d
+    refspec: 7b64d67b6f217f9667fb674540c4829d622f463d
 
   # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=5.7.0
   src/meta-freescale-3rdparty.git:
@@ -69,3 +69,5 @@ local_conf_header:
     INHERIT += "toradex-mirrors"
     DISTRO = "tdx-xwayland"
     ACCEPT_FSL_EULA = "1"
+    # Exclude toradex alsa-state bbappend from build
+    BBMASK += "/meta-toradex-nxp/recipes-bsp/alsa-state"

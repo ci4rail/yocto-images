@@ -8,6 +8,6 @@ repos:
 
 local_conf_header:
   src/meta-ci4rail-docker: |
-    DISTRO_FEATURES_append = " virtualization"
+    DISTRO_FEATURES:append = " virtualization"
     BBFILE_PRIORITY_openembedded-layer = "4"
-    IMAGE_INSTALL_append = " docker-ce ca-certificates"
+    IMAGE_INSTALL:append = " docker-ce ca-certificates"

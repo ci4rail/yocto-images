@@ -4,7 +4,7 @@ header:
 repos:
   src/meta-mender-community:
     url: "https://github.com/mendersoftware/meta-mender-community"
-    refspec: 34da211b9371c8df34e57c288ec9745e017cad4e
+    refspec: a8af8f5037435d5a7d776f4c039f31652aa3a741
     layers:
       meta-mender-toradex-nxp:
 
@@ -19,7 +19,7 @@ local_conf_header:
   src/meta-ci4rail-mender-tdxbsp: |
     INHERIT += "mender-toradex"
     # meta-mender-community needs the BSP version...
-    TORADEX_BSP_VERSION = "toradex-bsp-5.7.0"
+    # TORADEX_BSP_VERSION = "toradex-bsp-5.7.0" ???
 
     # Comment/remove below to enable GRUB integration instead of U-Boot
     MENDER_FEATURES_ENABLE_append = " mender-uboot mender-image-sd"
@@ -35,18 +35,25 @@ local_conf_header:
     # boot.scr conflicts when using GRUB
     IMAGE_BOOT_FILES_remove_mender-grub = "boot.scr-verdin-imx8mm;boot.scr"
 
+    # Remove files from boot partition that are loaded by Mender
+    # from the root partitions; this allows the files to be updated OTA
+    IMAGE_BOOT_FILES:remove:mender-uboot = "zImage ${KERNEL_DEVICETREE} overlays.txt overlays/*;overlays/"
+
     #
     # Settings for verdin-imx8mm
     #
     MENDER_BOOT_PART_SIZE_MB_verdin-imx8mm = "32"
     OFFSET_SPL_PAYLOAD_verdin-imx8mm = ""
+    KERNEL_DEVICETREE:verdin-imx8mm = "freescale/imx8mm-verdin-wifi-dahlia.dtb"
 
     #
     # Settings for verdin-imx8mp
     #
-    MENDER_BOOT_PART_SIZE_MB_verdin-imx8mp = "32"
-    OFFSET_SPL_PAYLOAD_verdin-imx8mp = ""
-    MENDER_IMAGE_BOOTLOADER_BOOTSECTOR_OFFSET_verdin-imx8mp = "0"
-    MENDER_UBOOT_STORAGE_INTERFACE_verdin-imx8mp = "mmc"
-    MENDER_UBOOT_STORAGE_DEVICE_verdin-imx8mp = "2"
-    MENDER_STORAGE_DEVICE_verdin-imx8mp = "/dev/mmcblk2"
+    MENDER_BOOT_PART_SIZE_MB:verdin-imx8mp = "32"
+    OFFSET_SPL_PAYLOAD:verdin-imx8mp = ""
+    MENDER_IMAGE_BOOTLOADER_BOOTSECTOR_OFFSET:verdin-imx8mp = "0"
+    MENDER_UBOOT_STORAGE_INTERFACE:verdin-imx8mp = "mmc"
+    MENDER_UBOOT_STORAGE_DEVICE:verdin-imx8mp = "2"
+    MENDER_STORAGE_DEVICE:verdin-imx8mp = "/dev/mmcblk2"
+    #MENDER_STORAGE_TOTAL_SIZE_MB:verdin-imx8mp = "2048"
+    KERNEL_DEVICETREE:verdin-imx8mp = "freescale/imx8mp-verdin-wifi-dahlia.dtb"

@@ -54,16 +54,6 @@ repos:
     layers:
       meta:
 
-  # # add meta-gnome here
-  # # switch to older commit (2021-03-16) as other
-  # # (ab9fca485e13f6f2f9761e1d2810f87c2e4f060a - 2021-12-31)
-  # # leads to parsing error
-  # src/meta-openembedded:
-  #   url: "https://github.com/openembedded/meta-openembedded.git"
-  #   refspec: 8ff12bfffcf0840d5518788a53d88d708ad3aae0
-  #   layers:
-  #     meta-gnome:
-
 local_conf_header:
   src/meta-ci4rail-tdxbsp: |
     INHERIT += "toradex-mirrors"

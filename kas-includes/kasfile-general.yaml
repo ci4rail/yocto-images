@@ -2,18 +2,18 @@ header:
   version: 11
 
 repos:
-  # From https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=5.7.0
+  # From https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=6.1.0
   src/bitbake:
     url: "https://github.com/openembedded/bitbake.git"
-    refspec: 0784db7dd0fef6f0621ad8d74372f44e87fef950
+    refspec: 7e268c107bb0240d583d2c34e24a71e373382509
     layers:
       # bitbake is no layer. Exclude it from bblayers.conf
       bitbake: "no"
 
-  # From https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=5.7.0
+  # From https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=6.1.0
   src/meta-openembedded:
     url: "https://github.com/openembedded/meta-openembedded.git"
-    refspec: 8ff12bfffcf0840d5518788a53d88d708ad3aae0
+    refspec: a8055484f2829e8dfd03d5c8520b2c611aa7ebd2
     layers:
       meta-oe:
       meta-networking:

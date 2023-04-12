@@ -122,9 +122,9 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
         run: |
           if [ "$EVENT_NAME" = "pull_request" ]; then
-              echo "::set-output name=nameSuffix::-pr"
+              echo "nameSuffix=-pr" >> $GITHUB_OUTPUT
           elif [ "$EVENT_NAME" = "release" ]; then
-              echo "::set-output name=nameSuffix::"
+              echo "nameSuffix=" >> $GITHUB_OUTPUT
           fi
 
   dumpversions:

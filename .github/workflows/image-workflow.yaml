@@ -152,7 +152,7 @@ jobs:
     outputs:
       bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Log into Docker
         env:

@@ -91,16 +91,16 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       name_suffix: ${{ steps.eventCheck.outputs.nameSuffix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v0.9.7
+        uses: gittools/actions/gitversion/setup@v0.10.2
         with:
           versionSpec: "5.x"
       - name: Determine Version
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.9.7
+        uses: gittools/actions/gitversion/execute@v0.10.2
       - name: Get git sha as on PR gitversion provides incorrect sha
         id: version
         env:
@@ -109,9 +109,9 @@ jobs:
           echo "Github event is a $EVENT_NAME"
           if [ "$EVENT_NAME" = "pull_request" ]; then
               sha=`echo ${{ github.event.pull_request.head.sha }} | cut -c1-8`
-              echo "::set-output name=version::${{ github.event.pull_request.head.ref }}-${sha}"
+              echo "version=${{ github.event.pull_request.head.ref }}-${sha}" >> $GITHUB_OUTPUT
           elif [ "$EVENT_NAME" = "release" ]; then
-              echo "::set-output name=version::${{ steps.gitversion.outputs.semVer }}"
+              echo "version=${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_OUTPUT
           else
               echo "invalid event type ${EVENT_NAME}"
               exit 1
@@ -122,9 +122,9 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
         run: |
           if [ "$EVENT_NAME" = "pull_request" ]; then
-              echo "::set-output name=nameSuffix::-pr"
+              echo "nameSuffix=-pr" >> $GITHUB_OUTPUT
           elif [ "$EVENT_NAME" = "release" ]; then
-              echo "::set-output name=nameSuffix::"
+              echo "nameSuffix=" >> $GITHUB_OUTPUT
           fi
 
   dumpversions:
@@ -152,7 +152,7 @@ jobs:
     outputs:
       bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Log into Docker
         env:

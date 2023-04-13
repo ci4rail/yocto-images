@@ -4,7 +4,7 @@ repos:
   # ci4rail
   src/meta-ci4rail-bsp:
     url: https://github.com/ci4rail/meta-ci4rail-bsp.git
-    refspec: e7c520b75771ed5d1daac35e4ee1e523ee274a62
+    refspec: 08dcd0fbdb1ca3f56053817981295ceec00728aa
 
   # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=5.7.0
   src/meta-freescale-3rdparty.git:

@@ -4,7 +4,7 @@ header:
 repos:
   src/meta-mender-community:
     url: "https://github.com/mendersoftware/meta-mender-community"
-    refspec: 34da211b9371c8df34e57c288ec9745e017cad4e
+    refspec: 08dcd0fbdb1ca3f56053817981295ceec00728aa
     layers:
       meta-mender-toradex-nxp:
 

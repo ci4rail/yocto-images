@@ -71,3 +71,4 @@ local_conf_header:
     ACCEPT_FSL_EULA = "1"
     # Exclude toradex alsa-state bbappend from build
     BBMASK += "/meta-toradex-nxp/recipes-bsp/alsa-state"
+    PACKAGECONFIG_pn-dnsmasq = "dbus"

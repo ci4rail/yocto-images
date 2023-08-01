@@ -5,7 +5,7 @@ repos:
   # edgefarm
   src/meta-edgefarm:
     url: https://github.com/edgefarm/meta-edgefarm.git
-    refspec: e08b4cadc38fff9348edae567910ee9b1e590c68
+    refspec: hostname2host
     layers:
       meta-edgefarm-core:
       meta-edgefarm-devtools:
@@ -16,4 +16,5 @@ local_conf_header:
     IMAGE_INSTALL_append = " \
                              packagegroup-edgefarm-base \
                              packagegroup-edgefarm-devtools \
+                             persistent-openyurt-dirs \
                              "

@@ -5,7 +5,7 @@ repos:
   # edgefarm
   src/meta-edgefarm:
     url: https://github.com/edgefarm/meta-edgefarm.git
-    refspec: e08b4cadc38fff9348edae567910ee9b1e590c68
+    refspec: integrate_kubeadm
     layers:
       meta-edgefarm-core:
 

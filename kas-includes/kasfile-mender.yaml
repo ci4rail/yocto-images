@@ -21,11 +21,7 @@ local_conf_header:
     # boot + 2xroot partition must fit in MENDER_STORAGE_TOTAL_SIZE_MB
     # Keep it as small as possible, to reduce target programming time
     # Reduce size in devtools image
-<<<<<<< HEAD
-    MENDER_STORAGE_TOTAL_SIZE_MB = "2500"
-=======
     MENDER_STORAGE_TOTAL_SIZE_MB = "3000"
->>>>>>> b41f5e18a655a1388c200c411de3fbe387d41565
     IMAGE_INSTALL_append = " mender-connect"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_RETRY_POLL_INTERVAL_SECONDS = "20"

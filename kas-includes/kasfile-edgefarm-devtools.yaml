@@ -5,7 +5,7 @@ repos:
   # edgefarm
   src/meta-edgefarm:
     url: https://github.com/edgefarm/meta-edgefarm.git
-    refspec: revert_overlays
+    refspec: hostname2host
     layers:
       meta-edgefarm-core:
       meta-edgefarm-devtools:

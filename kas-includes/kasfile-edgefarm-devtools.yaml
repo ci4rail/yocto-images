@@ -5,7 +5,7 @@ repos:
   # edgefarm
   src/meta-edgefarm:
     url: https://github.com/edgefarm/meta-edgefarm.git
-    refspec: a7e0966a111b8ce035c36fc8e6d957e2d9bff31d
+    refspec: revert_overlays
     layers:
       meta-edgefarm-core:
       meta-edgefarm-devtools:
@@ -17,4 +17,5 @@ local_conf_header:
                              packagegroup-edgefarm-base \
                              packagegroup-edgefarm-devtools \
                              reload-systemd \
+                             kubelet-root \
                              "

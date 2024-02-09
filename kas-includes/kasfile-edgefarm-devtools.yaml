@@ -5,7 +5,7 @@ repos:
   # edgefarm
   src/meta-edgefarm:
     url: https://github.com/edgefarm/meta-edgefarm.git
-    refspec: hostname2host
+    refspec: klaus_edgefarm_202401
     layers:
       meta-edgefarm-core:
       meta-edgefarm-devtools:
@@ -17,5 +17,5 @@ local_conf_header:
                              packagegroup-edgefarm-base \
                              packagegroup-edgefarm-devtools \
                              reload-systemd \
-                             kubelet-root \
+                             preset-edgefarm-dirs \
                              "

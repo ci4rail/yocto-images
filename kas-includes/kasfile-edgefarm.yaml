@@ -5,7 +5,7 @@ repos:
   # edgefarm
   src/meta-edgefarm:
     url: https://github.com/edgefarm/meta-edgefarm.git
-    refspec: hostname2host
+    refspec: klaus_edgefarm_202401
     layers:
       meta-edgefarm-core:
 
@@ -15,7 +15,6 @@ local_conf_header:
     EXTRA_USERS_PARAMS = "usermod -P cheesebread root; "
     IMAGE_INSTALL_append = " \
                              packagegroup-edgefarm-base \
-                             persistent-openyurt-dirs \
                              reload-systemd \
-                             kubelet-root \
+                             preset-edgefarm-dirs \
                              "

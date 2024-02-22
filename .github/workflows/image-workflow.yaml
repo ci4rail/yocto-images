@@ -159,9 +159,13 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
         run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
 
-      - name: Install rsync for cache handling
+      - name: Create Folders for Yocto Build
+        run: |
+          mkdir -p ~/install ~/sstate-cache ~/downloads
+          rm -rf ~/install/*
+
+      - name: Install Rsync for Yocto-Cache Handling
         if: github.event_name == 'pull_request'
-        # Use a lock for the cache
         run: sudo apt update -y && sudo apt install -y rsync
 
       - name: Get Cache for Yocto Builds
@@ -174,8 +178,8 @@ jobs:
               trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
 
               echo "cache lock obtained by $$. get cache"
-              rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
-              rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
+              rsync -rht --ignore-missing-args /yocto-cache/downloads/* ~/downloads/
+              rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* ~/sstate-cache/
 
               # clean up after yourself, and release your trap
               rm -f "${{ env.CACHE_LOCKFILE }}"
@@ -222,8 +226,8 @@ jobs:
               trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
 
               echo "cache lock obtained. write back cache"
-              rsync -rht /downloads/* /yocto-cache/downloads/
-              rsync -rht /sstate-cache/* /yocto-cache/sstate-cache/
+              rsync -rht ~/downloads/* /yocto-cache/downloads/
+              rsync -rht ~/sstate-cache/* /yocto-cache/sstate-cache/
 
               # clean up after yourself, and release your trap
               rm -f "${{ env.CACHE_LOCKFILE }}"

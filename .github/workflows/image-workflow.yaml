@@ -246,6 +246,8 @@ jobs:
           cd ~
           echo pwd: ${PWD}
           echo home: ${HOME}
+          echo MENDER_IMAGE_PATH: ${MENDER_IMAGE_PATH} 
+          ls -l ~/install/images
 
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${TAR_IMAGE_PATH}

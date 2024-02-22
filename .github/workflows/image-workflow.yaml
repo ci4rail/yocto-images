@@ -248,6 +248,8 @@ jobs:
           echo home: ${HOME}
           echo MENDER_IMAGE_PATH: ${MENDER_IMAGE_PATH} 
           ls -l ~/install/images
+          ls -l ~/install/images/${{ inputs.machine_dir }}/
+          ls -l ${MENDER_IMAGE_PATH}
 
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${TAR_IMAGE_PATH}

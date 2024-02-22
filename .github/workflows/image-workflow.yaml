@@ -197,8 +197,6 @@ jobs:
         env:
           MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
         run: |
-          mkdir -p ~/install ~/sstate-cache ~/downloads
-          rm -rf ~/install/*
           docker run \
                 -v ~/install:/install \
                 -v ~/sstate-cache:/sstate-cache \
@@ -242,9 +240,13 @@ jobs:
       - name: Copy TAR artifacts for mender and minio deployment
         if: inputs.output_type == 'tar'
         env:
-          TAR_IMAGE_PATH: ~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar
-          MENDER_IMAGE_PATH: ~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
+          TAR_IMAGE_PATH: /home/runner/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar
+          MENDER_IMAGE_PATH: /home/runner/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
         run: |
+          cd ~
+          echo pwd: ${PWD}
+          echo home: ${HOME}
+
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${TAR_IMAGE_PATH}
           cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio

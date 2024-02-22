@@ -91,7 +91,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       name_suffix: ${{ steps.eventCheck.outputs.nameSuffix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Install GitVersion
@@ -160,15 +160,7 @@ jobs:
         run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
 
       - name: Create Folders for Yocto Build
-        env:
-          TEST_NAME: "~"
-          TEST_NAME2: ~
         run: |
-          cd ${TEST_NAME}
-          echo "I'm in $(pwd)"
-          cd ${TEST_NAME2}
-          echo "I'm in $(pwd)"
-
           mkdir -p ~/install ~/sstate-cache ~/downloads
           rm -rf ~/install/*
 
@@ -247,17 +239,9 @@ jobs:
 
       - name: Copy TAR artifacts for mender and minio deployment
         if: inputs.output_type == 'tar'
-        env:
-          TAR_IMAGE_PATH: ~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar
-          MENDER_IMAGE_PATH: ~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
         run: |
-          cd ~
-          echo pwd: ${PWD}
-          echo home: ${HOME}
-          echo MENDER_IMAGE_PATH: ${MENDER_IMAGE_PATH} 
-          ls -l ~/install/images
-          ls -l ~/install/images/${{ inputs.machine_dir }}/
-          ls -l ${MENDER_IMAGE_PATH}
+          TAR_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar
+          MENDER_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
 
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${TAR_IMAGE_PATH}
@@ -270,12 +254,11 @@ jobs:
 
       - name: Copy SDIMG artifacts for mender and minio deployment
         if: inputs.output_type == 'sdimg'
-        env:
-          SDIMG_IMAGE_PATH: ~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
-          MENDER_IMAGE_PATH: ~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
-          VERSION: ${{ needs.calculate-version.outputs.version }}
-          SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
         run: |
+          SDIMG_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
+          MENDER_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
+          VERSION=${{ needs.calculate-version.outputs.version }}
+          SUFFIX=${{ needs.calculate-version.outputs.name_suffix }}
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${SDIMG_IMAGE_PATH}
           cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${{ inputs.image_start }}_${VERSION}${SUFFIX}.sdimg

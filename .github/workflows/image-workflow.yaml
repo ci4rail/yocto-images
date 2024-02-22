@@ -144,7 +144,7 @@ jobs:
     #
     # yocto-runner runs a docker container within the docker:dind image
     # /yocto-cache is bound to the hosts /yocto-cache directory.
-    # /downloads /sstate-cache and /install are temporary mounts local for that container. They
+    # ~/downloads ~/sstate-cache and ~/install are temporary mounts local for that container. They
     # survive steps, but are cleared with each new job
     # For details see: https://github.com/ci4rail/public-infrastructure/blob/master/deployment-self-hosted-runners/templates/runnerdeployment.yaml
     #
@@ -242,8 +242,8 @@ jobs:
       - name: Copy TAR artifacts for mender and minio deployment
         if: inputs.output_type == 'tar'
         env:
-          TAR_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar
-          MENDER_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
+          TAR_IMAGE_PATH: ~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar
+          MENDER_IMAGE_PATH: ~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
         run: |
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${TAR_IMAGE_PATH}
@@ -257,8 +257,8 @@ jobs:
       - name: Copy SDIMG artifacts for mender and minio deployment
         if: inputs.output_type == 'sdimg'
         env:
-          SDIMG_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
-          MENDER_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
+          SDIMG_IMAGE_PATH: ~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
+          MENDER_IMAGE_PATH: ~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
           VERSION: ${{ needs.calculate-version.outputs.version }}
           SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
         run: |
@@ -289,7 +289,7 @@ jobs:
           IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
         run: |
           docker run \
-            -v /install:/install \
+            -v ~/install:/install \
             --entrypoint=/bin/sh \
             ${MENDER_CLI_IMAGE} -c "
               /mender-cli login --username ${MENDER_USER_EMAIL} --password ${MENDER_PASSWORD}

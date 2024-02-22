@@ -188,8 +188,8 @@ jobs:
         env:
           MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
         run: |
-          cd ~
-          mkdir -p /install /sstate-cache /downloads
+          mkdir -p ~/install ~/sstate-cache ~/downloads
+          rm -rf ~/install/*
           docker run \
                 -v ~/install:/install \
                 -v ~/sstate-cache:/sstate-cache \

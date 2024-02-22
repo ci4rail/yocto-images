@@ -159,39 +159,41 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
         run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
 
-      - name: Get Cache for Yocto Builds
-        if: github.event_name == 'pull_request'
-        # Use a lock for the cache to prevent reading the cache while another job is writing to it
-        run: |
-          while true; do
-            if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
+      # - name: Get Cache for Yocto Builds
+      #   if: github.event_name == 'pull_request'
+      #   # Use a lock for the cache to prevent reading the cache while another job is writing to it
+      #   run: |
+      #     while true; do
+      #       if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
 
-              trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
+      #         trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
 
-              echo "cache lock obtained by $$. get cache"
-              rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
-              rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
+      #         echo "cache lock obtained by $$. get cache"
+      #         rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
+      #         rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
 
-              # clean up after yourself, and release your trap
-              rm -f "${{ env.CACHE_LOCKFILE }}"
-              echo cache lock cleared
-              ls /yocto/cache
-              trap - INT TERM EXIT
-              break
-            else
-              echo "Cache is locked. Wait"
-              sleep 60
-            fi
-          done
+      #         # clean up after yourself, and release your trap
+      #         rm -f "${{ env.CACHE_LOCKFILE }}"
+      #         echo cache lock cleared
+      #         ls /yocto/cache
+      #         trap - INT TERM EXIT
+      #         break
+      #       else
+      #         echo "Cache is locked. Wait"
+      #         sleep 60
+      #       fi
+      #     done
 
       - name: Build Yocto
         env:
           MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
         run: |
+          cd ~
+          mkdir -p /install /sstate-cache /downloads
           docker run \
-                -v /install:/install \
-                -v /sstate-cache:/sstate-cache \
-                -v /downloads:/downloads \
+                -v ~/install:/install \
+                -v ~/sstate-cache:/sstate-cache \
+                -v ~/downloads:/downloads \
                 -v ${GITHUB_WORKSPACE}/${{ inputs.machine }}-${{ inputs.image_type }}-image:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -e USER_ID=$(id -u ${USER}) \

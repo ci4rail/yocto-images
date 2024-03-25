@@ -91,7 +91,7 @@ jobs:
       version: ${{ steps.version.outputs.version }}
       name_suffix: ${{ steps.eventCheck.outputs.nameSuffix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Install GitVersion
@@ -144,7 +144,7 @@ jobs:
     #
     # yocto-runner runs a docker container within the docker:dind image
     # /yocto-cache is bound to the hosts /yocto-cache directory.
-    # /downloads /sstate-cache and /install are temporary mounts local for that container. They
+    # ~/downloads ~/sstate-cache and ~/install are temporary mounts local for that container. They
     # survive steps, but are cleared with each new job
     # For details see: https://github.com/ci4rail/public-infrastructure/blob/master/deployment-self-hosted-runners/templates/runnerdeployment.yaml
     #
@@ -159,6 +159,15 @@ jobs:
           DOCKER_PASSWORD: ${{ secrets.docker_password }}
         run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
 
+      - name: Create Folders for Yocto Build
+        run: |
+          mkdir -p ~/install ~/sstate-cache ~/downloads
+          rm -rf ~/install/*
+
+      - name: Install Rsync for Yocto-Cache Handling
+        if: github.event_name == 'pull_request'
+        run: sudo apt update -y && sudo apt install -y rsync
+
       - name: Get Cache for Yocto Builds
         if: github.event_name == 'pull_request'
         # Use a lock for the cache to prevent reading the cache while another job is writing to it
@@ -169,8 +178,8 @@ jobs:
               trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
 
               echo "cache lock obtained by $$. get cache"
-              rsync -rht --ignore-missing-args /yocto-cache/downloads/* /downloads/
-              rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* /sstate-cache/
+              rsync -rht --ignore-missing-args /yocto-cache/downloads/* ~/downloads/
+              rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* ~/sstate-cache/
 
               # clean up after yourself, and release your trap
               rm -f "${{ env.CACHE_LOCKFILE }}"
@@ -189,9 +198,9 @@ jobs:
           MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
         run: |
           docker run \
-                -v /install:/install \
-                -v /sstate-cache:/sstate-cache \
-                -v /downloads:/downloads \
+                -v ~/install:/install \
+                -v ~/sstate-cache:/sstate-cache \
+                -v ~/downloads:/downloads \
                 -v ${GITHUB_WORKSPACE}/${{ inputs.machine }}-${{ inputs.image_type }}-image:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -e USER_ID=$(id -u ${USER}) \
@@ -215,8 +224,8 @@ jobs:
               trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
 
               echo "cache lock obtained. write back cache"
-              rsync -rht /downloads/* /yocto-cache/downloads/
-              rsync -rht /sstate-cache/* /yocto-cache/sstate-cache/
+              rsync -rht ~/downloads/* /yocto-cache/downloads/
+              rsync -rht ~/sstate-cache/* /yocto-cache/sstate-cache/
 
               # clean up after yourself, and release your trap
               rm -f "${{ env.CACHE_LOCKFILE }}"
@@ -230,10 +239,10 @@ jobs:
 
       - name: Copy TAR artifacts for mender and minio deployment
         if: inputs.output_type == 'tar'
-        env:
-          TAR_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar
-          MENDER_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
         run: |
+          TAR_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar
+          MENDER_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
+
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${TAR_IMAGE_PATH}
           cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
@@ -245,12 +254,11 @@ jobs:
 
       - name: Copy SDIMG artifacts for mender and minio deployment
         if: inputs.output_type == 'sdimg'
-        env:
-          SDIMG_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
-          MENDER_IMAGE_PATH: /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
-          VERSION: ${{ needs.calculate-version.outputs.version }}
-          SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
         run: |
+          SDIMG_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
+          MENDER_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
+          VERSION=${{ needs.calculate-version.outputs.version }}
+          SUFFIX=${{ needs.calculate-version.outputs.name_suffix }}
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${SDIMG_IMAGE_PATH}
           cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${{ inputs.image_start }}_${VERSION}${SUFFIX}.sdimg
@@ -278,7 +286,7 @@ jobs:
           IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
         run: |
           docker run \
-            -v /install:/install \
+            -v ~/install:/install \
             --entrypoint=/bin/sh \
             ${MENDER_CLI_IMAGE} -c "
               /mender-cli login --username ${MENDER_USER_EMAIL} --password ${MENDER_PASSWORD}

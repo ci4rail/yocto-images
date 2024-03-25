@@ -18,7 +18,7 @@ repos:
   # ci4rail
   src/meta-ci4rail-devtools:
     url: https://github.com/ci4rail/meta-ci4rail-devtools.git
-    refspec: ea3ad4c6d85c2abc33198eb02494e211bf4c425a
+    refspec: 013d53345738924443d3b6b4efab8efda2c62e5d
 
 local_conf_header:
   src/meta-custom: |

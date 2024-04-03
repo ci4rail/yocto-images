@@ -95,12 +95,12 @@ jobs:
         with:
           fetch-depth: 0
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v0.10.2
+        uses: gittools/actions/gitversion/setup@v1.1.1
         with:
           versionSpec: "5.x"
       - name: Determine Version
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v0.10.2
+        uses: gittools/actions/gitversion/execute@v1.1.1
       - name: Get git sha as on PR gitversion provides incorrect sha
         id: version
         env:
@@ -184,7 +184,6 @@ jobs:
               # clean up after yourself, and release your trap
               rm -f "${{ env.CACHE_LOCKFILE }}"
               echo cache lock cleared
-              ls /yocto/cache
               trap - INT TERM EXIT
               break
             else

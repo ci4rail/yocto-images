@@ -4,12 +4,12 @@ repos:
   # ci4rail
   src/meta-ci4rail-bsp:
     url: https://github.com/ci4rail/meta-ci4rail-bsp.git
-    refspec: 08c2d686a9532b1ae2ddbffc05675f7a74101a73
+    refspec: a8e5f721dc199828972401bd88c1c7c95bc5c2ec
 
-  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=5.7.0
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=5.7.2
   src/meta-freescale-3rdparty.git:
     url: "https://github.com/Freescale/meta-freescale-3rdparty.git"
-    refspec: c52f64973cd4043a5e8be1c7e29bb9690eb4c3e5
+    refspec: f37f72a85ba273b27347169b727c889f42b91d6c
 
   src/meta-freescale-distro:
     url: "https://github.com/Freescale/meta-freescale-distro.git"
@@ -17,40 +17,40 @@ repos:
 
   src/meta-freescale:
     url: "https://github.com/Freescale/meta-freescale.git"
-    refspec: 3cb29cff92568ea835ef070490f185349d712837
+    refspec: 325c08c0773a2f1c54d28ea8aeda7c3d110d88a3
 
-  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-tdx.xml?h=5.7.0
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-tdx.xml?h=5.7.2
   src/meta-toradex-bsp-common:
     url: "https://git.toradex.com/meta-toradex-bsp-common.git"
-    refspec: 029a663150449a5e71b84dd4000476754d525c8c
+    refspec: f88e4c50e64ca144a7a15bd50c92a13d325f6780
 
   src/meta-toradex-nxp:
     url: "https://git.toradex.com/meta-toradex-nxp.git"
-    refspec: ee63c90fde9fde0229bff9ac1c5cffe356fc4f41
+    refspec: b288744310a77181db0fde2bee5d86e7d890f28b
 
-  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/tdxref/default.xml?h=5.7.0
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/tdxref/default.xml?h=5.7.2
   src/meta-qt5:
     url: "https://github.com/meta-qt5/meta-qt5.git"
     refspec: 5ef3a0ffd3324937252790266e2b2e64d33ef34f
 
   src/meta-toradex-demos:
     url: "https://git.toradex.com/meta-toradex-demos.git"
-    refspec: ce3c1925df34b4d299b2dd1003ced41b9485ce41
+    refspec: a5ab14682a0b863f36987ee6f8f3f2ec8b637250
 
   src/meta-toradex-distro:
     url: "https://git.toradex.com/meta-toradex-distro.git"
-    refspec: cbde0286cb85bc445e70210b8df38f29b4784c08
+    refspec: e9a1072abf323fe3e91c7aead182130417c2226d
 
-  # from tdx https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=5.7.0
+  # from tdx https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=5.7.2
   src/meta-yocto:
     url: "https://git.yoctoproject.org/git/meta-yocto.git"
-    refspec: 7e0063a8546250c4c5b9454cfa89fff451a280ee
+    refspec: e422c92724c8456d57c7914dd29615b13861fefd
     layers:
       meta-poky:
 
   src/openembedded-core:
     url: "https://github.com/openembedded/openembedded-core.git"
-    refspec: add860e1a69f848097bbc511137a62d5746e5019
+    refspec: daaee6fcb0d201f041678af433d8e1cd6f924d09
     layers:
       meta:
 

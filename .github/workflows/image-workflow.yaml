@@ -100,7 +100,7 @@ jobs:
           versionSpec: "5.x"
       - name: Determine Version
         id: gitversion
-        uses: gittools/actions/gitversion/execute@v
+        uses: gittools/actions/gitversion/execute@v1.1.1
       - name: Get git sha as on PR gitversion provides incorrect sha
         id: version
         env:

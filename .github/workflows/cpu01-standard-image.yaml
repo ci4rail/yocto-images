@@ -1,0 +1,36 @@
+#
+name: CPU01 Standard Image
+on:
+  pull_request:
+    branches:
+      - main
+      - beta
+    paths:
+      - "cpu01-devtools-image/kasfile.yaml"
+      - "kas-includes/kasfile-tdxbsp.yaml"
+      - "kas-includes/kasfile-mender.yaml"
+      - "kas-includes/kasfile-mender-tdxbsp.yaml"
+      - "kas-includes/kasfile-general.yaml"
+      - ".github/workflows/image-workflow.yaml"
+  release:
+    types: [published]
+
+jobs:
+  workflow-call:
+    uses: ./.github/workflows/image-workflow.yaml
+    with:
+      machine: "cpu01"
+      machine_dir: "moducop-cpu01"
+      image_type: "standard"
+      output_type: "tar"
+      image_start: "Moducop-CPU01_Standard-Image"
+      test_name: "cpu01-standard-image test"
+    secrets:
+      docker_password: ${{ secrets.DOCKER_PASSWORD }}
+      mender_tenant_token: ${{ secrets.MENDER_TENANT_TOKEN }}
+      minio_access_key: ${{ secrets.MINIO_ACCESS_KEY }}
+      minio_secret_key: ${{ secrets.MINIO_SECRET_KEY }}
+      mender_user_email: ${{ secrets.MENDER_USER_EMAIL }}
+      mender_password: ${{ secrets.MENDER_PASSWORD }}
+      private_token: ${{ secrets.FW_CI_TOKEN }}
+      tailscale_auth_key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}

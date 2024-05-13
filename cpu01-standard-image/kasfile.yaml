@@ -2,18 +2,21 @@ header:
   version: 11
   includes:
     - ../kas-includes/kasfile-general.yaml
-    - ../kas-includes/kasfile-raspberrypi.yaml
+    - ../kas-includes/kasfile-tdxbsp.yaml
     - ../kas-includes/kasfile-docker.yaml
     - ../kas-includes/kasfile-mender.yaml
-    - ../kas-includes/kasfile-edgefarm.yaml
+    - ../kas-includes/kasfile-mender-tdxbsp.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
-machine: raspberrypi4-64
+machine: moducop-cpu01
 # The distro name as it is written into the `local.conf` of bitbake.
-distro: poky
+distro: tdx-xwayland
 # The target that is built by bitbake
-target: core-image-base
+target: ci4rail-base-image
 
 local_conf_header:
   src/meta-custom: |
-    export IMAGE_BASENAME = "EdgeFarm-Image"
+    INHERIT += "extrausers"
+    EXTRA_USERS_PARAMS = "usermod -P cheesebread root; "
+    #Prefix to the resulting deployable tarball name
+    BASENAME = "Standard-Image"

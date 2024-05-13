@@ -23,14 +23,10 @@ fi
 
 IMAGE=$(whiptail --title "Yocto Make GUI" --menu "Choose image" 15 100 9 \
 "cpu01-devtools-image" " - CPU01 Devtools" \
-"cpu01-edgefarm-image" " - CPU01 Edgefarm" \
-"cpu01-edgefarm-devtools-image" " - CPU01 Edgefarm Devtools" \
+"cpu01-standard-image" " - CPU01 Standard" \
 "cpu01-velog-image" " - CPU01 Velog" \
 "cpu01plus-devtools-image" " - CPU01 (iMX8MPlus) Devtools" \
-"cpu01plus-edgefarm-image" " - CPU01 (iMX8MPlus) Edgefarm" \
-"cpu01plus-edgefarm-devtools-image" " - CPU01 (iMX8MPlus) Edgefarm Devtools" \
-"raspberrypi4-64-edgfarm-image" " - RaspberryPi 4 (64Bit) Edgefarm" \
-"raspberrypi4-64-edgefarm-devtools-image" " - RaspberryPi 4 (64Bit) Edgefarm Devtools" \
+"cpu01plus-standard-image" " - CPU01 (iMX8MPlus) Standard" \
 3>&1 1>&2 2>&3)
 
 if [[ $? != 0 ]]; then
@@ -40,12 +36,10 @@ fi
 
 if [[ ${TARGET} == "upload_tezi" ]]; then
     if [[ ${IMAGE} == "cpu01-devtools-image" ]]; then TEZI="cpu01-devtools-image/install/images/moducop-cpu01/Devtools-Image-moducop-cpu01.mender_tezi.tar";
-    elif [[ ${IMAGE} == "cpu01-edgefarm-image" ]]; then TEZI="cpu01-edgefarm-image/install/images/moducop-cpu01/EdgeFarm-Image-moducop-cpu01.mender_tezi.tar";
-    elif [[ ${IMAGE} == "cpu01-edgefarm-devtools-image" ]]; then TEZI="cpu01-edgefarm-devtools-image/install/images/moducop-cpu01/EdgeFarm-Devtools-Image-moducop-cpu01.mender_tezi.tar";
+    elif [[ ${IMAGE} == "cpu01-standard-image" ]]; then TEZI="cpu01-standard-image/install/images/moducop-cpu01/Standard-Image-moducop-cpu01.mender_tezi.tar";
     elif [[ ${IMAGE} == "cpu01-velog-image" ]]; then TEZI="cpu01-velog-image/install/images/moducop-cpu01/Velog-Image-moducop-cpu01.mender_tezi.tar";
     elif [[ ${IMAGE} == "cpu01plus-devtools-image" ]]; then TEZI="cpu01plus-devtools-image/install/images/moducop-cpu01plus/Devtools-Image-moducop-cpu01plus.mender_tezi.tar";
-    elif [[ ${IMAGE} == "cpu01plus-edgefarm-image" ]]; then TEZI="cpu01plus-edgefarm-image/install/images/moducop-cpu01plus/Edgefarm-Image-moducop-cpu01plus.mender_tezi.tar";
-    elif [[ ${IMAGE} == "cpu01plus-edgefarm-devtools-image" ]]; then TEZI="cpu01plus-edgefarm-devtools-image/install/images/moducop-cpu01plus/EdgeFarm-Devtools-Image-moducop-cpu01plus.mender_tezi.tar";
+    elif [[ ${IMAGE} == "cpu01plus-standard-image" ]]; then TEZI="cpu01plus-standard-image/install/images/moducop-cpu01plus/Standard-Image-moducop-cpu01plus.mender_tezi.tar";
     else echo "ERROR: Invalid image for upload selected!"; exit;
     fi
 

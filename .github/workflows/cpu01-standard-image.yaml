@@ -6,7 +6,7 @@ on:
       - main
       - beta
     paths:
-      - "cpu01-devtools-image/kasfile.yaml"
+      - "cpu01-standard-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-mender.yaml"
       - "kas-includes/kasfile-mender-tdxbsp.yaml"

@@ -1,6 +1,6 @@
 # yocto-images
 
-Build definitions and scripts for Ci4Rail and EdgeFarm Images.
+Build definitions and scripts for Ci4Rail Images.
 
 This repo can host several projects (with different Yocto versions, machines etc.).
 
@@ -10,47 +10,22 @@ Yocto builds are performed using [kas](https://github.com/siemens/kas).
 
 The following images are currently built by this repo.
 
-### edgefarm-image
+### standard-image
 
-![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-image.yaml/badge.svg)
-![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01plus-edgefarm-image.yaml/badge.svg)
-![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrypi4-64-edgefarm-image.yaml/badge.svg)
+![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-standard-image.yaml/badge.svg)
+![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01plus-standard-image.yaml/badge.svg)
 
-An image for the Ci4Rail EdgeFarm Services case including the following features:
-
-- Docker
-- Read Only Filesystem
-- RW Data Partition
-- Mender
-- kubeedge
-
-Target Platforms:
-
-- Ci4Rail Moducop CPU01
-- Ci4Rail Moducop CPU01Plus
-- Raspberry Pi 4
-
-### edgefarm-devtools-image
-
-![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-edgefarm-devtools-image.yaml/badge.svg)
-![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01plus-edgefarm-devtools-image.yaml/badge.svg)
-![Raspberry Pi](https://github.com/ci4rail/yocto-images/actions/workflows/raspberrypi4-64-edgefarm-devtools-image.yaml/badge.svg)
-
-An image for the Ci4Rail EdgeFarm Services case including the following features:
+An image for HW platform tests and bringup including the following features:
 
 - Docker
 - Read Only Filesystem
 - RW Data Partition
 - Mender
-- kubeedge
-- development tools for edgefarm
-- no login password
 
 Target Platforms:
 
 - Ci4Rail Moducop CPU01
-- Ci4Rail Moducop CPU01Plus
-- Raspberry Pi 4
+
 
 ### devtools-image
 
@@ -152,23 +127,3 @@ Start deployment
 make IMAGE_DIR=cpu01-devtools-image mender-deploy
 ```
 
-### Install Raspberry Pi sdimg on SD Card
-
-Find build images:
-
-```bash
-ls raspberrypi4-64-edgefarm*-image/install/images/raspberrypi4-64/EdgeFarm*-Image-raspberrypi4-64-*.sdimg
-```
-
-Install on SD Card (Linux):
-
-```bash
-sudo dd if=<PATH-TO-IMAGE>.sdimg of=<DEVICE> bs=1M && sudo sync
-```
-
-Or use [Raspberry Pi Imager](https://www.raspberrypi.org/downloads/):
-
-- Click on `Select OS` and select `Own Image`
-- Browse to build images directory and select the *.sdimg file
-- Select SD Card to install on
-- Press `write`

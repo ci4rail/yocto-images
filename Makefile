@@ -25,7 +25,7 @@ ABS_MENDER_AUTH_DIR = ${shell cd ${MENDER_AUTH_DIR} && pwd}
 
 # Docker images
 KAS_IMAGE := "ghcr.io/siemens/kas/kas:2.6.3"
-GITVERSION_IMAGE := "elbb/bb-gitversion:0.7.0"
+GITVERSION_IMAGE := "gittools/gitversion:6.0.3"
 MENDER_CLI_IMAGE := "ci4rail/mender-cli:master"
 MINIO_CLI_IMAGE := "minio/mc:latest"
 CURL_JQ_IMAGE := "dwdraju/alpine-curl-jq:latest"
@@ -33,16 +33,8 @@ CURL_JQ_IMAGE := "dwdraju/alpine-curl-jq:latest"
 # Main-target to build image
 # Required variables from command line:
 # - IMAGE_DIR
-image yocto-shell mender mender-upload mender-deploy: test-main-args
-	@echo "Generate image version"
-	@docker run --rm \
-		-v$(shell pwd):/git \
-		-v$(shell pwd)/gen/gitversion:/gen \
-		-e USERID="$(shell id -u)" \
-		${GITVERSION_IMAGE}
-	@scripts/layer-revparse.sh ${IMAGE_DIR}/src ${IMAGE_DIR}/layer-revs
+image yocto-shell mender mender-upload mender-deploy: test-main-args version
 	${MAKE} _$@ IMAGE_VERSION=${shell scripts/gen-image-version.sh . ${IMAGE_DIR}/layer-revs} IMAGE_DIR=${IMAGE_DIR}
-
 
 #----------------------------------
 # Sub-targets
@@ -104,6 +96,16 @@ _yocto-shell: test-sub-args  _mkdirs
 
 _mkdirs:
 	mkdir -p ${IMAGE_DIR}/install ${IMAGE_DIR}/src ${IMAGE_DIR}/build ${ABS_DOWNLOAD_DIR} ${ABS_SSTATE_DIR}
+
+version:
+	@echo "Generate image version"
+	@rm -rf $(shell pwd)/gen/gitversion
+	@mkdir -p $(shell pwd)/gen/gitversion/json
+	@docker run --rm \
+		-v "$(shell pwd):/repo" \
+		${GITVERSION_IMAGE} /repo \
+		> $(shell pwd)/gen/gitversion/json/gitversion.json
+	@scripts/layer-revparse.sh ${IMAGE_DIR}/src ${IMAGE_DIR}/layer-revs
 
 test-main-args:
 ifeq (${IMAGE_DIR},)

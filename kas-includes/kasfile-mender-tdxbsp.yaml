@@ -57,3 +57,11 @@ local_conf_header:
     MENDER_STORAGE_DEVICE:verdin-imx8mp = "/dev/mmcblk2"
     #MENDER_STORAGE_TOTAL_SIZE_MB:verdin-imx8mp = "2048"
     KERNEL_DEVICETREE:verdin-imx8mp = "freescale/imx8mp-verdin-wifi-dahlia.dtb"
+
+    # Append the Mender provided bootargs to tdxargs
+    # the Toradex boot.scr will overwrite bootargs so we stash the context in tdxargs
+    MENDER_UBOOT_POST_SETUP_COMMANDS:append = " ; setenv tdxargs \${tdxargs} \${bootargs}; "
+
+    # Make sure the Toradex boot script finds the overlays and overlays.txt file in
+    # the /boot directory of the rootfs partition
+    MENDER_UBOOT_POST_SETUP_COMMANDS:append = " ; setenv overlays_file /boot/overlays.txt ; setenv overlays_prefix boot/overlays/ "

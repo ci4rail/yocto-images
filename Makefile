@@ -24,7 +24,8 @@ ABS_SSTATE_DIR := ${shell cd ${YOCTO_SSTATE_CACHE_DIR} && pwd}
 ABS_MENDER_AUTH_DIR = ${shell cd ${MENDER_AUTH_DIR} && pwd}
 
 # Docker images
-KAS_IMAGE := "ghcr.io/siemens/kas/kas:2.6.3"
+#KAS_IMAGE := "ghcr.io/siemens/kas/kas:2.6.3"
+KAS_IMAGE := "ghcr.io/siemens/kas/kas:3.2.2"
 GITVERSION_IMAGE := "elbb/bb-gitversion:0.7.0"
 MENDER_CLI_IMAGE := "ci4rail/mender-cli:master"
 MINIO_CLI_IMAGE := "minio/mc:latest"
@@ -62,10 +63,10 @@ KAS_ARGS := \
 		-e MENDER_TENANT_TOKEN=${MENDER_TENANT_TOKEN} \
 		-e IMAGE_GIT_VERSION=${IMAGE_VERSION} \
 		-e MENDER_ARTIFACT_NAME=${IMAGE_DIR}-${IMAGE_VERSION}${NAME_SUFFIX} \
-		-e USER_ID="$(shell id -u)" \
-		-e GROUP_ID="$(shell id -g)" \
 		-e SHELL=/bin/bash \
-		-e TERM=xterm-256color
+		-e TERM=xterm-256color \
+		-u "$(shell id -u)":"$(shell id -g)"
+
 
 _mender: _image _mender-upload _mender-deploy
 	echo ""

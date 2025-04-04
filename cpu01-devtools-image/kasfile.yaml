@@ -22,4 +22,4 @@ repos:
 
 local_conf_header:
   src/meta-custom: |
-    PACKAGECONFIG:append:pn-alsa-utils = "bat"
+    PACKAGECONFIG:append:pn-alsa-utils = " bat"

@@ -3,8 +3,8 @@ header:
 
 repos:
   src/meta-mender-community:
-    url: "https://github.com/mendersoftware/meta-mender-community"
-    refspec: a8af8f5037435d5a7d776f4c039f31652aa3a741
+    url: "https://github.com/ci4rail/meta-mender-community"
+    refspec: scarthgap-ci4
     layers:
       meta-mender-toradex-nxp:
 
@@ -44,7 +44,7 @@ local_conf_header:
     #
     MENDER_BOOT_PART_SIZE_MB:verdin-imx8mm = "32"
     OFFSET_SPL_PAYLOAD:verdin-imx8mm = ""
-    KERNEL_DEVICETREE:verdin-imx8mm = "freescale/imx8mm-verdin-wifi-dahlia.dtb"
+    KERNEL_DEVICETREE:verdin-imx8mm = "freescale/imx8mm-verdin-wifi-moducop-cpu01.dtb"
 
     #
     # Settings for verdin-imx8mp
@@ -56,7 +56,7 @@ local_conf_header:
     MENDER_UBOOT_STORAGE_DEVICE:verdin-imx8mp = "2"
     MENDER_STORAGE_DEVICE:verdin-imx8mp = "/dev/mmcblk2"
     #MENDER_STORAGE_TOTAL_SIZE_MB:verdin-imx8mp = "2048"
-    KERNEL_DEVICETREE:verdin-imx8mp = "freescale/imx8mp-verdin-wifi-dahlia.dtb"
+    KERNEL_DEVICETREE:verdin-imx8mp = "freescale/imx8mp-verdin-wifi-moducop-cpu01.dtb"
 
     # Append the Mender provided bootargs to tdxargs
     # the Toradex boot.scr will overwrite bootargs so we stash the context in tdxargs

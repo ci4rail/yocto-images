@@ -5,7 +5,7 @@ repos:
   # mender
   src/meta-mender:
     url: "https://github.com/mendersoftware/meta-mender"
-    refspec: kirkstone-v2023.02
+    refspec: scarthgap-v2025.04
     layers:
       meta-mender-core:
 

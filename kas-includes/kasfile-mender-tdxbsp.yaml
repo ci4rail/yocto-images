@@ -19,7 +19,6 @@ local_conf_header:
   src/meta-ci4rail-mender-tdxbsp: |
     INHERIT += "mender-toradex"
     # meta-mender-community needs the BSP version...
-    # TORADEX_BSP_VERSION = "toradex-bsp-5.7.0" ???
 
     # Comment/remove below to enable GRUB integration instead of U-Boot
     MENDER_FEATURES_ENABLE:append = " mender-uboot mender-image-sd"

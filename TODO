@@ -1,0 +1,56 @@
+kernel patches
+
+ #ETH0 LEDs
+ LAN7431 fixed PHY
+ LAN743x backport ???
+ Moducop ign shutdown
+ HWMON
+#Kernel configs for modem
+#Kernel configs for docker
+sdcard automount
+#ETH2 support
+IOU06 sound support
+Wifi support
+fsck on data partition
+kea (dhcp server) config
+io4edge support
+socketcan-io4edge
+ttynvt
+tailscale
+gpsd
+docker compose
+systemd waitnetworkonline
+
+
+# integrate dunfell improvements
+mender-connect.conf
+add ignition watcher
+fix lan743x
+wifi AP
+LTE fix?
+don't allow modem manager to access GPS device
+docker config ("data-root": "/data/docker/var/lib/docker",)
+add standard image
+add mender-docker compose
+
+
+## build system
+version string not up-to-date?
+
+fix git URLs
+fix kas:  Using deprecated refspec for repository "src/bitbake". You should migrate to commit/tag/branch. etc.
+
+update ci to dunfell branch
+
+
+NOTES:
+
+ PCIe clock strength
+  Braucht es nicht:
+            cpu01-devtools-image/local_repos/linux/drivers/phy/freescale/phy-fsl-imx8m-pcie.c
+            writel(ANA_AUX_RX_TERM | ANA_AUX_TX_LVL,  == 0x9f
+		        imx8_phy->base + IMX8MM_PCIE_PHY_CMN_REG065);
+
+Neue device namen:
+eth0 -> end0
+wwan0 -> wwu1u1i5

@@ -19,8 +19,7 @@ repos:
   # ci4rail
   src/meta-ci4rail-devtools:
     url: https://github.com/ci4rail/meta-ci4rail-devtools.git
-    refspec: scarthgap
-
+    commit: scarthgap
 # local_conf_header:
 #   src/meta-custom: |
 #     PACKAGECONFIG:append:pn-alsa-utils = " bat"

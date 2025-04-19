@@ -61,12 +61,13 @@ Neue device namen:
 eth0 -> end0
 wwan0 -> wwu1u1i5
 
+New feature overlayfs-etc
+ Replaces /usr/sbin/init with a script that overlays /etc, then start the original init
+ machine-id now persistent
 
 ISSUES:
 
-version string not up-to-date?
-fstab still stock fstab
-
+/home/root overlay not working
 gpsd doesn't work
 ieee80211 phy0: mwifiex_cfg80211_sched_scan_start : Invalid Sched_scan parameters
-RF_KILL service doesn't work
+RF_KILL service doesn't work weg???

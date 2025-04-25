@@ -4,6 +4,9 @@
         "name": "main"
       },
       {
+        "name": "scarthgap"
+      },
+      {
         "name": "beta",
         "prerelease": true
       }

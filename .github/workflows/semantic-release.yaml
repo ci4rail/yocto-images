@@ -2,8 +2,9 @@ name: "Semantic Release"
 on:
   push:
     branches:
-      - main
+      - scarthgap
       - beta
+
 
 jobs:
   semantic-release:

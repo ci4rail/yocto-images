@@ -202,7 +202,7 @@ jobs:
                 -v ~/downloads:/downloads \
                 -v ${GITHUB_WORKSPACE}/${{ inputs.machine }}-${{ inputs.image_type }}-image:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
-                -u "$(shell id -u)":"$(shell id -g)" \
+                -u $(id -u):$(id -g) \
                 -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
                 -e MENDER_TENANT_TOKEN=${{ secrets.mender_tenant_token }} \
                 -e IMAGE_NAME_SUFFIX=${{ needs.calculate-version.outputs.name_suffix }} \

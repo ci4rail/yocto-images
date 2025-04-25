@@ -1,44 +1,47 @@
 [.] implemented, untested
 [x] implemented, tested
 [!] problem
-
+[-] don't need
 
 # TODOs
 [x] ETH0 LEDs
+[x] Kernel configs for modem
+[x] Kernel configs for docker
+[x] Wifi support
+[!] fsck on data partition  -> fsck not in boot.cmd.in
+[x] io4edge support
+[.] socketcan-io4edge
+[x] ttynvt
+[x] tailscale
+[.] chrony
+[x] gpsd
+[.] don't allow modem manager to access GPS device
+[!] docker (podman)
+[x] docker compose (podman-compose)
+[x] systemd waitnetworkonline
+
+[ ] MEC Inventory in EEPROM
+[x] sysfs entry for CPU01 EEPROM
+
+[x] mender-connect.conf
+[ ] add standard image
+
+
+## Features not immediately required
+[ ] mender-docker compose
+[x] ETH2 support
 [ ] LAN7431 fixed PHY
 [ ] LAN743x backport ???
 [ ] Moducop ign shutdown
-[x] Kernel configs for modem
-[.] Kernel configs for docker
-[ ] sdcard automount
-[x] ETH2 support
-IOU06 sound support
-[x] Wifi support
-[.] fsck on data partition
-kea (dhcp server) config ?
-[ ] io4edge support
-[ ] socketcan-io4edge
-[ ] ttynvt
-[ ] tailscale
-[.] chrony
-[.] gpsd
-[.] don't allow modem manager to access GPS device
-[x] docker (podman)
-[ ] docker compose
-[ ] mender-docker compose
-[.] systemd waitnetworkonline
-
-[ ] MEC Inventory in EEPROM
-
-[x] mender-connect.conf
+[x] sdcard automount
+[ ] IOU06 sound support
+[-] kea (dhcp server) config ?
 [ ] wifi AP
-[ ] add standard image
 
 [ ] remove verdin CAN
 [ ] bring back stressapptest
 
 ## build system
-
 
 [ ] fix git URLs
 [x] fix kas:  Using deprecated refspec for repository "src/bitbake".
@@ -69,10 +72,12 @@ New feature overlayfs-etc
 
 docker no longer supported -> move to podman
 
+rootfs image size changed to 2500MB
+
+CPU01 EEPROM now available via sysfs /sys/bus/i2c/devices/3-0050/eeprom
 
 # ISSUES:
 
-rootfs overlay doesn't work
 Cpu01plus:
  ETH2 not always recognized
 ieee80211 phy0: mwifiex_cfg80211_sched_scan_start : Invalid Sched_scan parameters  -->  just a warning

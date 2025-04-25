@@ -1,18 +1,16 @@
-name: CPU01 EdgeFarm Image
+#
+name: CPU01 Standard Image
 on:
   pull_request:
     branches:
       - main
       - beta
     paths:
-      - "cpu01-edgefarm-image/kasfile.yaml"
+      - "cpu01-standard-image/kasfile.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
-      - "kas-includes/kasfile-docker.yaml"
       - "kas-includes/kasfile-mender.yaml"
       - "kas-includes/kasfile-mender-tdxbsp.yaml"
       - "kas-includes/kasfile-general.yaml"
-      - "kas-includes/kasfile-edgefarm.yaml"
-      - ".github/workflows/cpu01-edgefarm-image.yaml"
       - ".github/workflows/image-workflow.yaml"
   release:
     types: [published]
@@ -23,10 +21,10 @@ jobs:
     with:
       machine: "cpu01"
       machine_dir: "moducop-cpu01"
-      image_type: "edgefarm"
+      image_type: "standard"
       output_type: "tar"
-      image_start: "Moducop-CPU01_EdgeFarm-Image"
-      test_name: "cpu01-edgefarm-image test"
+      image_start: "Moducop-CPU01_Standard-Image"
+      test_name: "cpu01-standard-image test"
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}
       mender_tenant_token: ${{ secrets.MENDER_TENANT_TOKEN }}

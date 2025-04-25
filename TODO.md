@@ -8,7 +8,6 @@
 [x] Kernel configs for modem
 [x] Kernel configs for docker
 [x] Wifi support
-[!] fsck on data partition  -> fsck not in boot.cmd.in
 [x] io4edge support
 [.] socketcan-io4edge
 [x] ttynvt

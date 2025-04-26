@@ -234,8 +234,8 @@ jobs:
           echo "Simulating build for testing purposes"
           image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
           mkdir -p ${image_folder}
-          touch ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
-          touch ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+          echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
+          echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
 
       - name: Store Cache for Yocto Builds
         if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'

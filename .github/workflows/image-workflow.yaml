@@ -309,7 +309,7 @@ jobs:
             --entrypoint=/bin/sh \
             ${MENDER_CLI_IMAGE} -c "
               /mender-cli login --username ${{ secrets.mender_user_email }} --password ${{ secrets.mender_password }}
-              /mender-cli artifacts upload ${{ needs.calculate-version.outputs.image_folder }}/{{ needs.calculate-version.outputs.mender_file_name }}
+              /mender-cli artifacts upload ${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_file_name }}
             "
 
       - name: Upload build artifacts

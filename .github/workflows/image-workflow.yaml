@@ -263,6 +263,7 @@ jobs:
       - name: Copy TAR artifacts for mender and minio deployment
         if: inputs.output_type == 'tar'
         run: |
+          image_folder=${{ needs.calculate-version.outputs.image_folder }}
           TAR_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
           MENDER_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
 

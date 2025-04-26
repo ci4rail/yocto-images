@@ -3,9 +3,7 @@ on:
   push:
     branches:
       - scarthgap
-      - scarthgap-ci
       - beta
-
 
 jobs:
   semantic-release:

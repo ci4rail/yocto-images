@@ -28,6 +28,7 @@ jobs:
       image_start: "Moducop-CPU01Plus_Devtools-Image"
       #test_name: "cpu01plus-devtools-image test"
       test_name: ""
+      simulate_build: "true"
       test_station: "hydra-rpi:1883"
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}

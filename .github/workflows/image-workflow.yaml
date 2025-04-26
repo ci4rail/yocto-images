@@ -56,6 +56,11 @@ on:
         required: false
         type: string
         default: "lizard-rpi:1883"
+      simulate_build:
+        description: "Simulate build for testing purposes"
+        required: false
+        type: string
+        default: "false"
 
     secrets:
       docker_password:
@@ -89,7 +94,10 @@ jobs:
     runs-on: ubuntu-22.04
     outputs:
       version: ${{ steps.version.outputs.version }}
-      name_suffix: ${{ steps.eventCheck.outputs.nameSuffix }}
+      name_suffix: ${{ steps.eventCheck.outputs.name_suffix }}
+      mender_tezi_file_name: ${{ steps.eventCheck.outputs.mender_tezi_file_name }}
+      mender_file_name: ${{ steps.eventCheck.outputs.mender_file_name }}
+      image_folder: ${{ steps.eventCheck.outputs.image_folder }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -121,11 +129,15 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
         run: |
+          name_suffix=""
           if [ "$EVENT_NAME" = "pull_request" ]; then
-              echo "nameSuffix=-pr" >> $GITHUB_OUTPUT
-          elif [ "$EVENT_NAME" = "release" ]; then
-              echo "nameSuffix=" >> $GITHUB_OUTPUT
+            # PR event
+            name_suffix="-pr"
           fi
+          echo "name_suffix=$name_suffix" >> $GITHUB_OUTPUT
+          echo "mender_tezi_file_name=${{ inputs.image_start }}_${{ steps.version.outputs.version }}${name_suffix}${{ inputs.tar_ending }}.tar" >> $GITHUB_OUTPUT
+          echo "mender_file_name=${{ inputs.image_start }}_${{ steps.version.outputs.version }}${name_suffix}.mender" >> $GITHUB_OUTPUT
+          echo "image_folder=~/install/images/${{ inputs.machine_dir }}" >> $GITHUB_OUTPUT
 
   dumpversions:
     name: "Dump"
@@ -135,8 +147,11 @@ jobs:
     steps:
       - name: "Dump"
         run: |
-          echo "image name is ${{ needs.calculate-version.outputs.version }}"
+          echo "image version is ${{ needs.calculate-version.outputs.version }}"
           echo "name suffix is ${{ needs.calculate-version.outputs.name_suffix }}"
+          echo "mender tezi file name is ${{ needs.calculate-version.outputs.mender_tezi_file_name }}"
+          echo "mender file name is ${{ needs.calculate-version.outputs.mender_file_name }}"
+          echo "image folder is ${{ needs.calculate-version.outputs.image_folder }}"
 
   build-and-push-image:
     needs: calculate-version
@@ -152,7 +167,7 @@ jobs:
     outputs:
       bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Log into Docker
         env:
@@ -166,10 +181,10 @@ jobs:
 
       - name: Install Rsync for Yocto-Cache Handling
         if: github.event_name == 'pull_request'
-        run: sudo apt update -y && sudo apt install -y rsync
+        run: sudo apt-get update -y && sudo apt-get install -y rsync
 
       - name: Get Cache for Yocto Builds
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
         # Use a lock for the cache to prevent reading the cache while another job is writing to it
         run: |
           while true; do
@@ -193,6 +208,7 @@ jobs:
           done
 
       - name: Build Yocto
+        if: inputs.simulate_build == 'false'
         env:
           MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
         run: |
@@ -212,8 +228,17 @@ jobs:
                 ${BUILDER_IMAGE} \
                 build kasfile.yaml
 
+      - name: Simulate Build
+        if: inputs.simulate_build == 'true'
+        run: |
+          echo "Simulating build for testing purposes"
+          image_folder = ${{ needs.calculate-version.outputs.image_folder }}
+          mkdir -p ${image_folder}
+          touch ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
+          touch ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+
       - name: Store Cache for Yocto Builds
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
         # Use a lock for the cache
         run: |
           while true; do
@@ -238,8 +263,8 @@ jobs:
       - name: Copy TAR artifacts for mender and minio deployment
         if: inputs.output_type == 'tar'
         run: |
-          TAR_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar
-          MENDER_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
+          TAR_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+          MENDER_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
 
           mkdir ${GITHUB_WORKSPACE}/minio
           ls -t ${TAR_IMAGE_PATH}
@@ -250,19 +275,20 @@ jobs:
             cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
           fi
 
-      - name: Copy SDIMG artifacts for mender and minio deployment
-        if: inputs.output_type == 'sdimg'
-        run: |
-          SDIMG_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
-          MENDER_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
-          VERSION=${{ needs.calculate-version.outputs.version }}
-          SUFFIX=${{ needs.calculate-version.outputs.name_suffix }}
-          mkdir ${GITHUB_WORKSPACE}/minio
-          ls -t ${SDIMG_IMAGE_PATH}
-          cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${{ inputs.image_start }}_${VERSION}${SUFFIX}.sdimg
-          if [ "${{ inputs.have_mender}}" = "true" ]; then
-            ls -t ${MENDER_IMAGE_PATH}
-          fi
+      # Currently not used
+      # - name: Copy SDIMG artifacts for mender and minio deployment
+      #   if: inputs.output_type == 'sdimg'
+      #   run: |
+      #     SDIMG_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
+      #     MENDER_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
+      #     VERSION=${{ needs.calculate-version.outputs.version }}
+      #     SUFFIX=${{ needs.calculate-version.outputs.name_suffix }}
+      #     mkdir ${GITHUB_WORKSPACE}/minio
+      #     ls -t ${SDIMG_IMAGE_PATH}
+      #     cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${{ inputs.image_start }}_${VERSION}${SUFFIX}.sdimg
+      #     if [ "${{ inputs.have_mender}}" = "true" ]; then
+      #       ls -t ${MENDER_IMAGE_PATH}
+      #     fi
 
       - name: Push Images to Minio
         uses: hkdobrev/minio-deploy-action@v1.1
@@ -287,8 +313,17 @@ jobs:
             --entrypoint=/bin/sh \
             ${MENDER_CLI_IMAGE} -c "
               /mender-cli login --username ${MENDER_USER_EMAIL} --password ${MENDER_PASSWORD}
-              /mender-cli artifacts upload /install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}_${IMAGE_GIT_VERSION}${IMAGE_NAME_SUFFIX}.mender
+              /mender-cli artifacts upload /install/images/${{ needs.calculate-version.outputs.mender_file_name }}
             "
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts
+          path: |
+            ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
+            ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+
   test-image:
     if: inputs.test_name != ''
     needs: [calculate-version, build-and-push-image]
@@ -320,6 +355,11 @@ jobs:
     name: Release Image
     runs-on: ubuntu-22.04
     steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts
+          path: ./artifact
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v2
@@ -327,8 +367,6 @@ jobs:
           # tag_name: ${{ github.event.release.tag_name }}
           # release_name: ${{ github.event.release.name }}
           # body: ${{ github.event.release.body }}
-          files: |
-            minio/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}${{ inputs.tar_ending }}.tar
-            minio/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}.mender
-        # env:
-        #   GITHUB_TOKEN: ${{ secrets.FW_CI_TOKEN }}
+          files: ./artifact/*  # attach all files found in ./artifact
+        env:
+          GITHUB_TOKEN: ${{ secrets.private_token }}

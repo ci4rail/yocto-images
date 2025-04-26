@@ -6,6 +6,7 @@ repos:
   src/meta-mender:
     url: "https://github.com/mendersoftware/meta-mender"
     tag: scarthgap-v2025.04
+    commit: 411b91dbf2f1de0c2cd12a6470bed97cb39079dc
     layers:
       meta-mender-core:
 

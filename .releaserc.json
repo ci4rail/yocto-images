@@ -9,6 +9,10 @@
       {
         "name": "beta",
         "prerelease": true
+      },
+      {
+        "name": "scarthgap-ci",
+        "prerelease": true
       }
     ],
     "plugins": [

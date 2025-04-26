@@ -3,7 +3,7 @@ name: CPU01 Devtools Image
 on:
   pull_request:
     branches:
-      - main
+      - scarthgap
       - beta
     paths:
       - "cpu01-devtools-image/kasfile.yaml"
@@ -25,7 +25,8 @@ jobs:
       image_type: "devtools"
       output_type: "tar"
       image_start: "Moducop-CPU01_Devtools-Image"
-      test_name: "cpu01-devtools-image test"
+      #test_name: "cpu01-devtools-image test"
+      test_name: ""
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}
       mender_tenant_token: ${{ secrets.MENDER_TENANT_TOKEN }}

@@ -137,7 +137,7 @@ jobs:
           echo "name_suffix=$name_suffix" >> $GITHUB_OUTPUT
           echo "mender_tezi_file_name=${{ inputs.image_start }}_${{ steps.version.outputs.version }}${name_suffix}${{ inputs.tar_ending }}.tar" >> $GITHUB_OUTPUT
           echo "mender_file_name=${{ inputs.image_start }}_${{ steps.version.outputs.version }}${name_suffix}.mender" >> $GITHUB_OUTPUT
-          echo "image_folder=~/install/images/${{ inputs.machine_dir }}" >> $GITHUB_OUTPUT
+          echo "image_folder=install/images/${{ inputs.machine_dir }}" >> $GITHUB_OUTPUT
 
   dumpversions:
     name: "Dump"
@@ -232,7 +232,7 @@ jobs:
         if: inputs.simulate_build == 'true'
         run: |
           echo "Simulating build for testing purposes"
-          image_folder=${{ needs.calculate-version.outputs.image_folder }}
+          image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
           mkdir -p ${image_folder}
           touch ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
           touch ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
@@ -263,7 +263,7 @@ jobs:
       - name: Copy TAR artifacts for mender and minio deployment
         if: inputs.output_type == 'tar'
         run: |
-          image_folder=${{ needs.calculate-version.outputs.image_folder }}
+          image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
           TAR_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
           MENDER_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
 
@@ -303,18 +303,13 @@ jobs:
 
       - name: Push Images to Mender
         if: inputs.have_mender == 'true'
-        env:
-          MENDER_USER_EMAIL: ${{ secrets.mender_user_email }}
-          MENDER_PASSWORD: ${{ secrets.mender_password }}
-          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.version }}
-          IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
         run: |
           docker run \
             -v ~/install:/install \
             --entrypoint=/bin/sh \
             ${MENDER_CLI_IMAGE} -c "
-              /mender-cli login --username ${MENDER_USER_EMAIL} --password ${MENDER_PASSWORD}
-              /mender-cli artifacts upload /install/images/${{ needs.calculate-version.outputs.mender_file_name }}
+              /mender-cli login --username ${{ secrets.mender_user_email }} --password ${{ secrets.mender_password }}
+              /mender-cli artifacts upload ${{ needs.calculate-version.outputs.image_folder }}/{{ needs.calculate-version.outputs.mender_file_name }}
             "
 
       - name: Upload build artifacts
@@ -322,6 +317,7 @@ jobs:
         with:
           name: build-artifacts
           path: |
+            image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
             ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
             ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
 

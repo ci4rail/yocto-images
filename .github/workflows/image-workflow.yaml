@@ -261,7 +261,7 @@ jobs:
           done
 
       - name: Copy TAR artifacts for mender and minio deployment
-        if: inputs.output_type == 'tar'
+        if: inputs.output_type == 'tar' && inputs.simulate_build == 'false'
         run: |
           image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
           TAR_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
@@ -292,6 +292,7 @@ jobs:
       #     fi
 
       - name: Push Images to Minio
+        if: inputs.simulate_build == 'false'
         uses: hkdobrev/minio-deploy-action@v1.1
         with:
           endpoint: https://minio.ci4rail.com
@@ -302,7 +303,7 @@ jobs:
           target_dir: "/"
 
       - name: Push Images to Mender
-        if: inputs.have_mender == 'true'
+        if: inputs.have_mender == 'true' && inputs.simulate_build == 'false'
         run: |
           docker run \
             -v ~/install:/install \

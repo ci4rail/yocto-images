@@ -232,7 +232,7 @@ jobs:
         if: inputs.simulate_build == 'true'
         run: |
           echo "Simulating build for testing purposes"
-          image_folder = ${{ needs.calculate-version.outputs.image_folder }}
+          image_folder=${{ needs.calculate-version.outputs.image_folder }}
           mkdir -p ${image_folder}
           touch ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
           touch ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}

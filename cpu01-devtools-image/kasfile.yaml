@@ -5,7 +5,7 @@ header:
     - ../kas-includes/kasfile-tdxbsp.yaml
     - ../kas-includes/kasfile-mender.yaml
     - ../kas-includes/kasfile-mender-tdxbsp.yaml
-    # - ../kas-includes/kasfile-docker.yaml
+    - ../kas-includes/kasfile-docker.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
 machine: moducop-cpu01
@@ -13,13 +13,11 @@ machine: moducop-cpu01
 distro: tdx-xwayland
 # The target that is built by bitbake
 target: ci4rail-devtools-image
-#target: ci4rail-base-image
+
 
 repos:
   # ci4rail
   src/meta-ci4rail-devtools:
     url: https://github.com/ci4rail/meta-ci4rail-devtools.git
-    commit: scarthgap
-# local_conf_header:
-#   src/meta-custom: |
-#     PACKAGECONFIG:append:pn-alsa-utils = " bat"
+    branch: scarthgap
+    commit: 77ae8610981aa89936b2256794eb06177710063a

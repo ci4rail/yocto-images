@@ -17,9 +17,11 @@ The following images are currently built by this repo.
 
 An image for HW platform tests and bringup including the following features:
 
-- Docker
+- Podman
+- Podman Compose
 - Read Only Filesystem
 - RW Data Partition
+- Tailscale
 - Mender
 
 Target Platforms:

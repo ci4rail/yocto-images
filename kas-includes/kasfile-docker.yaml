@@ -10,4 +10,11 @@ local_conf_header:
   src/meta-ci4rail-docker: |
     DISTRO_FEATURES:append = " virtualization"
     BBFILE_PRIORITY_openembedded-layer = "4"
-    IMAGE_INSTALL:append = " podman podman-compose conmon ca-certificates"
+
+    IMAGE_INSTALL:append = " podman \
+                  podman-compose \
+                  conmon \
+                  ca-certificates \
+                  aardvark-dns \
+                  netavark \
+                  "

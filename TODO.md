@@ -12,14 +12,14 @@
 [.] socketcan-io4edge
 [x] ttynvt
 [x] tailscale
-[.] chrony
+[x] chrony
 [x] gpsd
-[.] don't allow modem manager to access GPS device
-[!] docker (podman)
+[x] don't allow modem manager to access GPS device
+[x] docker (podman)
 [x] docker compose (podman-compose)
 [x] systemd waitnetworkonline
 
-[ ] MEC Inventory in EEPROM
+[x] MEC Inventory in EEPROM
 [x] sysfs entry for CPU01 EEPROM
 
 [x] mender-connect.conf
@@ -27,13 +27,14 @@
 
 
 ## Features not immediately required
-[ ] mender-docker compose
+[x] mender-docker compose
 [x] ETH2 support
-[ ] LAN7431 fixed PHY
-[ ] LAN743x backport ???
-[ ] Moducop ign shutdown
+[.] LAN7431 fixed PHY  -- ist schon im kernel
+[ ] LAN743x backport ??? -> no
+[.] Moducop ign shutdown
+[.] scheduled reboot
 [x] sdcard automount
-[ ] IOU06 sound support
+[.] IOU06 sound support
 [-] kea (dhcp server) config ?
 [ ] wifi AP
 
@@ -44,7 +45,7 @@
 
 [ ] fix git URLs
 [x] fix kas:  Using deprecated refspec for repository "src/bitbake".
-[ ] update ci to dunfell branch
+[x] update ci to dunfell branch
 
 
 # NOTES
@@ -70,10 +71,15 @@ New feature overlayfs-etc
 /home/root is now /root
 
 docker no longer supported -> move to podman
+    Mainly compatible with docker. Major difference is that podman requires always registry in container url
 
-rootfs image size changed to 2500MB
+rootfs image size changed to 2500M -> upgrade from previous image impossible
 
 CPU01 EEPROM now available via sysfs /sys/bus/i2c/devices/3-0050/eeprom
+
+New hostname (MEC01-<moducop-system-serialnumber>)
+
+ee-inv tool to read out the inventory from the EEPROM
 
 # ISSUES:
 

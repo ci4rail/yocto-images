@@ -27,11 +27,19 @@ jobs:
       version: "2.3.0"
       name_suffix: ""
       mender_tezi_file_name: Moducop-CPU01_Standard-Image_2.3.0.mender_tezi.tar
+    steps:
+      - name: fake
+        run: |
+          echo "calculating version"
 
   build-and-push-image:
     runs-on: ubuntu-22.04
     outputs:
       bucket: cpu01-standard
+    steps:
+      - name: fake
+        run: |
+          echo "building and pushing image"
 
   test-image:
     if: inputs.test_name != ''

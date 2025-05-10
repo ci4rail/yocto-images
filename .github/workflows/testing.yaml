@@ -14,7 +14,7 @@ jobs:
     outputs:
       version: "2.3.0"
       name_suffix: ""
-      mender_tezi_file_name: Moducop-CPU01_Standard-Image_2.3.0.mender_tezi.tar
+      mender_tezi_file_name: "Moducop-CPU01_Standard-Image_2.3.0.mender_tezi.tar"
     steps:
       - name: fake
         run: |
@@ -46,8 +46,8 @@ jobs:
               \"desired_versions.cpu_firmware.cputype\": \"verdin-imx8mm\",
               \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
               \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
-              \"desired_versions.cpu_firmware.source.file\": \"${{ needs.calculate-version.mender_tezi_file_name }}\"
-              \"desired_versions.cpu_firmware.force_update\": \"true\",
+              \"desired_versions.cpu_firmware.source.file\": \"${{ needs.calculate-version.outputs.mender_tezi_file_name }}\",
+              \"desired_versions.cpu_firmware.force_update\": \"true\"
             }
           access-token: ${{ secrets.FW_CI_TOKEN }}
           tailscale-key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}

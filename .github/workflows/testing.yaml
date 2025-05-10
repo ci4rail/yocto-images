@@ -47,7 +47,7 @@ jobs:
               \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
               \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
               \"desired_versions.cpu_firmware.source.file\": \"${{ needs.calculate-version.outputs.mender_tezi_file_name }}\",
-              \"desired_versions.cpu_firmware.force_update\": \"true\"
+              \"desired_versions.cpu_firmware.force_update\": \"false\"
             }
           access-token: ${{ secrets.FW_CI_TOKEN }}
           tailscale-key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}

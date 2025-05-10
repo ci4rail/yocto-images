@@ -49,6 +49,6 @@ jobs:
               \"desired_versions.cpu_firmware.source.file\": \"${{ needs.calculate-version.mender_tezi_file_name }}\"
               \"desired_versions.cpu_firmware.force_update\": \"true\",
             }
-          access-token: ${{ secrets.private_token }}
-          tailscale-key: ${{ secrets.tailscale_auth_key}}
+          access-token: ${{ secrets.FW_CI_TOKEN }}
+          tailscale-key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}
           request-timeout: "7200"

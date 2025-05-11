@@ -28,7 +28,7 @@ jobs:
       - name: fake
         run: |
           echo "building and pushing image"
-  #
+
   test-image:
     needs: [calculate-version, build-and-push-image]
     name: Test Yocto Image

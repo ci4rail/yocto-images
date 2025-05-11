@@ -52,3 +52,5 @@ jobs:
           access-token: ${{ secrets.FW_CI_TOKEN }}
           tailscale-key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}
           request-timeout: "7200"
+          minio_access_key: ${{ secrets.MINIO_ACCESS_KEY }}
+          minio_secret_key: ${{ secrets.MINIO_SECRET_KEY }}

@@ -350,7 +350,7 @@ jobs:
 
   release-image:
     if: github.event_name == 'release'
-    needs: [build-and-push-image] # TODO: change to test-image?
+    needs: [test-image]
     name: Release Image
     runs-on: ubuntu-22.04
     steps:
@@ -363,9 +363,6 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          # tag_name: ${{ github.event.release.tag_name }}
-          # release_name: ${{ github.event.release.name }}
-          # body: ${{ github.event.release.body }}
-          files: ./artifact/*  # attach all files found in ./artifact
+          files: ./artifact/*
         env:
           GITHUB_TOKEN: ${{ secrets.private_token }}

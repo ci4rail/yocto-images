@@ -25,8 +25,7 @@ jobs:
       image_type: "standard"
       output_type: "tar"
       image_start: "Moducop-CPU01Plus_Standard-Image"
-      #test_name: "cpu01plus-standard-image test"
-      test_name: ""
+      test_name: "cpu01plus-standard-image test"
       test_station: "hydra-rpi:1883"
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}

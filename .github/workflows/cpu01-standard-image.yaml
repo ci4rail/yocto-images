@@ -10,6 +10,7 @@ on:
       - "kas-includes/kasfile-mender.yaml"
       - "kas-includes/kasfile-mender-tdxbsp.yaml"
       - "kas-includes/kasfile-general.yaml"
+      - ".github/workflows/cpu01-standard-image.yaml"
       - ".github/workflows/image-workflow.yaml"
   release:
     types: [published]

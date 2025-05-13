@@ -33,13 +33,15 @@ Target Platforms:
 ### devtools-image
 
 ![CPU01](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01-devtools-image.yaml/badge.svg)
-![CPU01Plus](https://github.com/ci4rail/yocto-images/actions/workflows/cpu01plus-devtools-image.yaml/badge.svg)
+
 
 An image for HW platform tests and bringup including the following features:
 
-- Docker
+- Podman
+- Podman Compose
 - Read Only Filesystem
 - RW Data Partition
+- Tailscale
 - Mender
 - Tools for HW testing
 - no login password
@@ -47,7 +49,6 @@ An image for HW platform tests and bringup including the following features:
 Target Platforms:
 
 - Ci4Rail Moducop CPU01 (CPU01 with Verdin IMX8M Mini)
-- Ci4Rail Moducop CPU01Plus (CPU01 with Verdin IMX8M Plus)
 
 ## Building
 

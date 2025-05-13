@@ -296,8 +296,8 @@ jobs:
         uses: hkdobrev/minio-deploy-action@v1.1
         with:
           endpoint: https://minio.ci4rail.com
-          access_key: ${{ secrets.MINIO_ACCESS_KEY }}
-          secret_key: ${{ secrets.MINIO_SECRET_KEY }}
+          access_key: ${{ secrets.minio_access_key }}
+          secret_key: ${{ secrets.minio_secret_key }}
           bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
           source_dir: minio
           target_dir: "/"
@@ -327,28 +327,30 @@ jobs:
     name: Test Yocto Image
     runs-on: ubuntu-22.04
     steps:
-      - uses: ci4rail/teststation-action@v4
+      - uses: ci4rail/teststation-action@v5
         with:
           pipeline-name: "${{ github.run_id }}"
           mqtt-broker-url: ${{ env.TESTSTATION_MQTT_URL }}
           test-name: ${{ inputs.test_name }}
           artifact-override: |
             {
-              \"desired_versions.cpu_firmware.version\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
+              \"desired_versions.cpu_firmware.version.version_string\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
               \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
               \"desired_versions.cpu_firmware.cputype\": \"${{ inputs.som_type }}\",
               \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
               \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
-              \"desired_versions.cpu_firmware.source.file\": \"${{ needs.calculate-version.mender_tezi_file_name }}\"
+              \"desired_versions.cpu_firmware.source.file\": \"${{ needs.calculate-version.outputs.mender_tezi_file_name }}\",
+              \"desired_versions.cpu_firmware.force_update\": \"true\"
             }
           access-token: ${{ secrets.private_token }}
           tailscale-key: ${{ secrets.tailscale_auth_key}}
           request-timeout: "7200"
-          requester-version: "v3.0.1"
+          minio_access_key: ${{ secrets.minio_access_key }}
+          minio_secret_key: ${{ secrets.minio_secret_key }}
 
   release-image:
     if: github.event_name == 'release'
-    needs: [build-and-push-image] # TODO: change to test-image?
+    needs: [test-image]
     name: Release Image
     runs-on: ubuntu-22.04
     steps:
@@ -361,9 +363,6 @@ jobs:
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          # tag_name: ${{ github.event.release.tag_name }}
-          # release_name: ${{ github.event.release.name }}
-          # body: ${{ github.event.release.body }}
-          files: ./artifact/*  # attach all files found in ./artifact
+          files: ./artifact/*
         env:
           GITHUB_TOKEN: ${{ secrets.private_token }}

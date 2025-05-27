@@ -28,8 +28,9 @@ is_dirty=0
 # check if the top repo is dirty
 cd ${git_root}
 
-# source the generated git versions
-. gen/gitversion/env/gitversion.env
+GitVersion_BranchName=$(jq '.BranchName' gen/gitversion/json/gitversion.json)
+GitVersion_FullSemVer=$(jq '.FullSemVer' gen/gitversion/json/gitversion.json)
+GitVersion_ShortSha=$(jq '.ShortSha' gen/gitversion/json/gitversion.json)
 
 stat=`git status -s`
 if [ ! -z "${stat}" ]; then

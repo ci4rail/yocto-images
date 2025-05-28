@@ -94,7 +94,7 @@ jobs:
     name: Calculate Version
     runs-on: ubuntu-22.04
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      version: ${{ steps.getversion.outputs.version }}
       name_suffix: ${{ steps.eventCheck.outputs.name_suffix }}
       mender_tezi_file_name: ${{ steps.eventCheck.outputs.mender_tezi_file_name }}
       mender_file_name: ${{ steps.eventCheck.outputs.mender_file_name }}

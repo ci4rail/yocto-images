@@ -87,6 +87,7 @@ env:
   MENDER_SERVER_URL: https://hosted.mender.io
   TESTSTATION_MQTT_URL: ${{ inputs.test_station }}
   CACHE_LOCKFILE: /yocto-cache/lock
+  IMAGE_DIR: ${{ inputs.machine }}-${{ inputs.image_type }}-image
 
 jobs:
   calculate-version:
@@ -102,28 +103,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v1.1.1
-        with:
-          versionSpec: "5.x"
       - name: Determine Version
-        id: gitversion
-        uses: gittools/actions/gitversion/execute@v1.1.1
-      - name: Get git sha as on PR gitversion provides incorrect sha
-        id: version
-        env:
-          EVENT_NAME: ${{ github.event_name }}
+        id: getversion
         run: |
-          echo "Github event is a $EVENT_NAME"
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-              sha=`echo ${{ github.event.pull_request.head.sha }} | cut -c1-8`
-              echo "version=${{ github.event.pull_request.head.ref }}-${sha}" >> $GITHUB_OUTPUT
-          elif [ "$EVENT_NAME" = "release" ]; then
-              echo "version=${{ steps.gitversion.outputs.semVer }}" >> $GITHUB_OUTPUT
-          else
-              echo "invalid event type ${EVENT_NAME}"
-              exit 1
-          fi
+          scripts/layer-revparse.sh ${IMAGE_DIR}/src ${IMAGE_DIR}/layer-revs
+          image_version=$(scripts/gen-image-version.sh . ${IMAGE_DIR}/layer-revs)
+          echo "version=${image_version}" >> $GITHUB_OUTPUT
       - name: Generate Image name dependend on github event
         id: eventCheck
         env:
@@ -135,8 +120,8 @@ jobs:
             name_suffix="-pr"
           fi
           echo "name_suffix=$name_suffix" >> $GITHUB_OUTPUT
-          echo "mender_tezi_file_name=${{ inputs.image_start }}_${{ steps.version.outputs.version }}${name_suffix}${{ inputs.tar_ending }}.tar" >> $GITHUB_OUTPUT
-          echo "mender_file_name=${{ inputs.image_start }}_${{ steps.version.outputs.version }}${name_suffix}.mender" >> $GITHUB_OUTPUT
+          echo "mender_tezi_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}${{ inputs.tar_ending }}.tar" >> $GITHUB_OUTPUT
+          echo "mender_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}.mender" >> $GITHUB_OUTPUT
           echo "image_folder=install/images/${{ inputs.machine_dir }}" >> $GITHUB_OUTPUT
 
   dumpversions:
@@ -216,7 +201,7 @@ jobs:
                 -v ~/install:/install \
                 -v ~/sstate-cache:/sstate-cache \
                 -v ~/downloads:/downloads \
-                -v ${GITHUB_WORKSPACE}/${{ inputs.machine }}-${{ inputs.image_type }}-image:/work \
+                -v ${GITHUB_WORKSPACE}/${IMAGE_DIR}:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -u $(id -u):$(id -g) \
                 -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \

@@ -1,7 +1,6 @@
 #!/bin/bash
 #
-# Generate a yaml file as an include file for kas
-# that contains the mender artifact name and image version
+# Generate image version
 #
 # The following naming rules apply:
 #

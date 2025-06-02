@@ -64,5 +64,5 @@ local_conf_header:
     INHERIT += "toradex-mirrors"
     DISTRO = "tdx-xwayland"
     ACCEPT_FSL_EULA = "1"
-    # Exclude toradex alsa-state bbappend from build
+    # Exclude freescale alsa-state bbappend from build
     BBMASK += "/meta-freescale/recipes-bsp/alsa-state"

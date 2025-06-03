@@ -25,7 +25,6 @@ ABS_MENDER_AUTH_DIR = ${shell cd ${MENDER_AUTH_DIR} && pwd}
 
 # Docker images
 KAS_IMAGE := "ghcr.io/siemens/kas/kas:4.7"
-GITVERSION_IMAGE := "gittools/gitversion:6.0.3"
 MENDER_CLI_IMAGE := "ci4rail/mender-cli:master"
 MINIO_CLI_IMAGE := "minio/mc:latest"
 CURL_JQ_IMAGE := "dwdraju/alpine-curl-jq:latest"
@@ -33,7 +32,7 @@ CURL_JQ_IMAGE := "dwdraju/alpine-curl-jq:latest"
 # Main-target to build image
 # Required variables from command line:
 # - IMAGE_DIR
-image yocto-shell mender mender-upload mender-deploy: test-main-args version
+image yocto-shell mender mender-upload mender-deploy: test-main-args layer-revisions
 	${MAKE} _$@ IMAGE_VERSION=${shell scripts/gen-image-version.sh . ${IMAGE_DIR}/layer-revs} IMAGE_DIR=${IMAGE_DIR}
 
 #----------------------------------
@@ -97,14 +96,8 @@ _yocto-shell: test-sub-args  _mkdirs
 _mkdirs:
 	mkdir -p ${IMAGE_DIR}/install ${IMAGE_DIR}/src ${IMAGE_DIR}/build ${ABS_DOWNLOAD_DIR} ${ABS_SSTATE_DIR}
 
-version:
+layer-revisions:
 	@echo "Generate image version"
-	@rm -rf $(shell pwd)/gen/gitversion
-	@mkdir -p $(shell pwd)/gen/gitversion/json
-	@docker run --rm \
-		-v "$(shell pwd):/repo" \
-		${GITVERSION_IMAGE} /repo \
-		> $(shell pwd)/gen/gitversion/json/gitversion.json
 	@scripts/layer-revparse.sh ${IMAGE_DIR}/src ${IMAGE_DIR}/layer-revs
 
 test-main-args:

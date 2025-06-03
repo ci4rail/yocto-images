@@ -1,7 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 #
-# Generate a yaml file as an include file for kas
-# that contains the mender artifact name and image version
+# Generate image version
 #
 # The following naming rules apply:
 #
@@ -28,10 +27,6 @@ is_dirty=0
 # check if the top repo is dirty
 cd ${git_root}
 
-GitVersion_BranchName=$(jq '.BranchName' gen/gitversion/json/gitversion.json)
-GitVersion_FullSemVer=$(jq '.FullSemVer' gen/gitversion/json/gitversion.json)
-GitVersion_ShortSha=$(jq '.ShortSha' gen/gitversion/json/gitversion.json)
-
 stat=`git status -s`
 if [ ! -z "${stat}" ]; then
     is_dirty=1
@@ -44,15 +39,26 @@ if [ -f "${layer_refs}" ]; then
     fi
 fi
 
+LastTagName=$(git describe --tags --abbrev=0)
+CommitsAheadTag=$(git rev-list --count ${LastTagName}..HEAD)
+BranchName=$(git branch --show-current)
+CommitHash=$(git rev-parse --short HEAD)
 
-# replace slashes in branch name with -
-branch=`echo ${GitVersion_BranchName} | sed -e "s/\//-/g"`
+if [[ "${CommitsAheadTag}" == "0" ]]; then
+    FullVerName=${LastTagName}
+else
+    FullVerName=${LastTagName}+${CommitsAheadTag}
+fi
+
+if [[ "${BranchName}" != "" ]]; then
+    FullVerName=${FullVerName}.${BranchName}
+fi
 
 ts=`date +"%Y%m%d.%H%M"`
 if [ ${is_dirty} -eq 0 ]; then
-    version=${GitVersion_FullSemVer}.${branch}.${GitVersion_ShortSha}.${ts}
+    version=${FullVerName}.${CommitHash}.${ts}
 else
-    version=dirty_${GitVersion_FullSemVer}.${branch}.${USER}.${ts}
+    version=dirty_${FullVerName}.${CommitHash}.${USER}.${ts}
 fi
 
 echo ${version}

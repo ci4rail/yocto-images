@@ -6,6 +6,8 @@ This repo can host several projects (with different Yocto versions, machines etc
 
 Yocto builds are performed using [kas](https://github.com/siemens/kas).
 
+**📖 Users, please refer to our [Yocto BSP Manual](https://docs.ci4rail.com/edge-solutions/moducop/yocto-bsp-manual/)**
+
 ## Images
 
 The following images are currently built by this repo.

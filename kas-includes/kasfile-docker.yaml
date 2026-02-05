@@ -4,15 +4,15 @@ repos:
   # docker
   src/meta-virtualization:
     url: git://git.yoctoproject.org/meta-virtualization
-    commit: 9287a355b338361e42027ce371444111a791d64f
+    commit: f92518e20530edfebca45e4170e11460949a5303
 
 local_conf_header:
   src/meta-ci4rail-docker: |
     DISTRO_FEATURES:append = " virtualization"
     BBFILE_PRIORITY_openembedded-layer = "4"
 
-    IMAGE_INSTALL:append = " podman \
-                  podman-compose \
+    IMAGE_INSTALL:append = " docker-moby \
+                  docker-compose \
                   conmon \
                   ca-certificates \
                   aardvark-dns \

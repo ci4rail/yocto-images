@@ -34,9 +34,9 @@ repos:
     url: "https://github.com/meta-qt5/meta-qt5.git"
     commit: eb828418264a49b8d00035cb3d7b12fcea3be801
 
-  # src/meta-security:
-  #   url: "https://git.yoctoproject.org/meta-security.git"
-  #   commit: bc865c5276c2ab4031229916e8d7c20148dfbac3
+  src/meta-security:
+    url: "https://git.yoctoproject.org/meta-security.git"
+    commit: bc865c5276c2ab4031229916e8d7c20148dfbac3
 
   src/meta-toradex-demos:
     url: "https://git.toradex.com/meta-toradex-demos.git"

@@ -312,7 +312,7 @@ jobs:
     name: Test Yocto Image
     runs-on: ubuntu-22.04
     steps:
-      - uses: ci4rail/teststation-action@v5
+      - uses: ci4rail/teststation-action@v6
         with:
           pipeline-name: "${{ github.run_id }}"
           mqtt-broker-url: ${{ env.TESTSTATION_MQTT_URL }}

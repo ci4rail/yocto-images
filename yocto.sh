@@ -33,7 +33,7 @@ if [[ $? != 0 ]]; then
     echo "Yocto Make GUI Cancelled!"
     exit
 fi
-upload_mender
+
 if [[ ${TARGET} == "upload_tezi" ]]; then
     if [[ ${IMAGE} == "cpu01-devtools-image" ]]; then TEZI="cpu01-devtools-image/install/images/moducop-cpu01/Devtools-Image-moducop-cpu01.mender_tezi.tar";
     elif [[ ${IMAGE} == "cpu01-standard-image" ]]; then TEZI="cpu01-standard-image/install/images/moducop-cpu01/Standard-Image-moducop-cpu01.mender_tezi.tar";

@@ -4,8 +4,8 @@ repos:
   # ci4rail
   src/meta-ci4rail-bsp:
     url: https://github.com/ci4rail/meta-ci4rail-bsp.git
-    branch: feat-access-point
-    commit: bf99bcea996e98013c0295bda228b8e1f363bd80
+    branch: scarthgap
+    commit: c3b5da7a5b9ad22e753733604b45ee2792d7b757
 
   # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=7.1.0
   src/meta-freescale-3rdparty.git:

@@ -3,7 +3,7 @@ header:
 repos:
   # docker
   src/meta-virtualization:
-    url: git://git.yoctoproject.org/meta-virtualization
+    url: https://git.yoctoproject.org/meta-virtualization
     commit: f92518e20530edfebca45e4170e11460949a5303
 
 local_conf_header:

@@ -46,6 +46,9 @@ local_conf_header:
         HALT,${SSTATE_DIR},100M,1K \
         HALT,/tmp,10M,1K"
     INHERIT += "rm_work"
+    INHERIT += "cve-check"
+    include conf/distro/include/cve-extra-exclusions.inc
+    SPDX_INCLUDE_COMPILED_SOURCES:pn-linux-toradex = "1"
     DISTRO_FEATURES:append = " systemd"
     VIRTUAL-RUNTIME_init_manager = "systemd"
     INIT_MANAGER = "systemd"

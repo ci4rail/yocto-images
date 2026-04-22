@@ -4,7 +4,7 @@ header:
 repos:
   src/meta-mender-community:
     url: "https://github.com/ci4rail/meta-mender-community"
-    branch: scarthgap-ci4-tdx-bsp-7.6.0
+    branch: scarthgap-ci-tdx-bsp-7.6.0
     #commit: 075c0d27b06fc1e2e10598aa4e368e00f9f6aafc
     layers:
       meta-mender-toradex-nxp:

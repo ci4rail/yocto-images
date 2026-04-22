@@ -7,7 +7,7 @@ What this script does
 ---------------------
 Yocto's ``cve-check`` output for the Linux kernel can be very noisy:
 
-- it reports many CVEs that are only local or physical attack paths
+- it reports many low-impact CVEs that are only local or physical attack paths
 - it reports issues for kernel subsystems that are not enabled in the built
   kernel configuration
 - it may include incorrect or overly broad kernel matches
@@ -47,9 +47,10 @@ How the rules work
 ------------------
 The rules are applied in order:
 
-1. Drop all ``LOCAL`` and ``PHYSICAL`` CVEs.
-2. Drop obviously incorrect matches, for example known non-kernel entries.
-3. Drop CVEs for subsystems that are disabled in the kernel config.
+1. Drop obviously incorrect matches, for example known non-kernel entries.
+2. Drop CVEs for subsystems that are disabled in the kernel config.
+3. Drop low/medium ``LOCAL`` and ``PHYSICAL`` CVEs, but keep high-severity
+   local/physical findings for manual review.
 
 Examples:
 
@@ -80,7 +81,7 @@ The excluded TSV contains the same columns plus:
 The generated BitBake include intentionally contains only
 ``not-applicable-config`` entries. It does not emit recipe metadata for:
 
-- ``LOCAL`` / ``PHYSICAL`` vector filtering
+- low/medium ``LOCAL`` / ``PHYSICAL`` vector filtering
 - known bad CPE matches
 
 That keeps the recipe metadata focused on stable, config-derived exclusions.
@@ -96,6 +97,7 @@ from typing import Callable
 
 Issue = dict[str, str]
 ConfigMap = dict[str, str]
+DEFAULT_LOCAL_PHYSICAL_MIN_SCORE = 7.0
 
 
 def parse_args() -> argparse.Namespace:
@@ -135,6 +137,15 @@ def parse_args() -> argparse.Namespace:
         help=(
             "BitBake include file for generated "
             'CVE_STATUS[...]="not-applicable-config: ..." entries'
+        ),
+    )
+    parser.add_argument(
+        "--local-physical-min-score",
+        type=float,
+        default=DEFAULT_LOCAL_PHYSICAL_MIN_SCORE,
+        help=(
+            "Keep LOCAL/PHYSICAL CVEs at or above this CVSSv3 score for "
+            "manual review. Lower-scoring LOCAL/PHYSICAL CVEs are filtered."
         ),
     )
     return parser.parse_args()
@@ -201,6 +212,14 @@ def has_upstream_fix_phrase(issue: Issue) -> bool:
     )
 
 
+def scorev3(issue: Issue) -> float:
+    """Return the CVSSv3 score, or 0.0 when it is missing/unparseable."""
+    try:
+        return float(issue.get("scorev3", "") or 0.0)
+    except ValueError:
+        return 0.0
+
+
 def rule_bad_cpe_match(issue: Issue, _config: ConfigMap) -> str | None:
     """Exclude entries known to be incorrect matches for the kernel package."""
     if issue.get("id") == "CVE-2023-3079":
@@ -234,7 +253,17 @@ def rule_disabled_subsystem_any(
     return None
 
 
-def apply_rules(issue: Issue, config: ConfigMap) -> str | None:
+def rule_low_criticality_local_physical(
+    issue: Issue, _config: ConfigMap, min_score: float
+) -> str | None:
+    """Filter LOCAL/PHYSICAL issues only when they are below review threshold."""
+    vector = issue.get("vector", "")
+    if vector in {"LOCAL", "PHYSICAL"} and scorev3(issue) < min_score:
+        return f"filtered-vector-low-criticality: {vector} scorev3<{min_score:g}"
+    return None
+
+
+def apply_rules(issue: Issue, config: ConfigMap, local_physical_min_score: float) -> str | None:
     """
     Apply filter rules to one CVE issue.
 
@@ -242,10 +271,6 @@ def apply_rules(issue: Issue, config: ConfigMap) -> str | None:
     - a textual filter reason when the issue should be excluded
     - None when the issue should remain in the review set
     """
-    vector = issue.get("vector", "")
-    if vector in {"LOCAL", "PHYSICAL"}:
-        return f"filtered-vector: {vector}"
-
     rule_functions: list[Callable[[Issue, ConfigMap], str | None]] = [
         rule_bad_cpe_match,
         lambda i, c: rule_disabled_subsystem(
@@ -360,6 +385,11 @@ def apply_rules(issue: Issue, config: ConfigMap) -> str | None:
             "CONFIG_NF_CONNCOUNT",
             "netfilter conncount path disabled",
         ),
+        lambda i, c: rule_low_criticality_local_physical(
+            i,
+            c,
+            local_physical_min_score,
+        ),
     ]
 
     for rule in rule_functions:
@@ -428,7 +458,7 @@ if __name__ == "__main__":
     for issue in issues:
         if issue.get("status") != "Unpatched":
             continue
-        reason = apply_rules(issue, kernel_config)
+        reason = apply_rules(issue, kernel_config, args.local_physical_min_score)
         if reason:
             excluded.append(tsv_line(issue, reason))
             if reason.startswith("not-applicable-config: "):

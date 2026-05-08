@@ -101,7 +101,7 @@ jobs:
       sbom_file_name: ${{ steps.eventCheck.outputs.sbom_file_name }}
       image_folder: ${{ steps.eventCheck.outputs.image_folder }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Determine Version
@@ -155,7 +155,7 @@ jobs:
     outputs:
       bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Log into Docker
         env:

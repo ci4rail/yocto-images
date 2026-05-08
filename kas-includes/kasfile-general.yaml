@@ -51,6 +51,8 @@ local_conf_header:
     INIT_MANAGER = "systemd"
     DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
     VIRTUAL-RUNTIME_initscripts = ""
+    SPDX_INCLUDE_SOURCES = "1"
+    SPDX_PRETTY = "1"
 
 env:
   IMAGE_NAME_SUFFIX: ""

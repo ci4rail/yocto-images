@@ -1,11 +1,11 @@
 header:
   version: 11
 repos:
-  # ci4rail
-  src/meta-ci4rail-bsp:
-    url: https://github.com/ci4rail/meta-ci4rail-bsp.git
-    branch: scarthgap
-    commit: e10ba136b43d0b00b374f4e1a67281f5eed8473c
+  # # ci4rail
+  # src/meta-ci4rail-bsp:
+  #   url: https://github.com/ci4rail/meta-ci4rail-bsp.git
+  #   branch: scarthgap
+  #   commit: e10ba136b43d0b00b374f4e1a67281f5eed8473c
 
   # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=7.1.0
   src/meta-freescale-3rdparty.git:
@@ -18,7 +18,8 @@ repos:
 
   src/meta-freescale:
     url: "https://github.com/Freescale/meta-freescale.git"
-    commit: 1805a964583d1773310ddbe185a52b0ab3468e6d
+    #commit: 1805a964583d1773310ddbe185a52b0ab3468e6d
+    commit: 0c27c21cab57876474bb572e5d378b6707e41224 
 
   # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-tdx.xml?h=7.1.0
   src/meta-toradex-bsp-common:
@@ -36,7 +37,11 @@ repos:
 
   src/meta-security:
     url: "https://git.yoctoproject.org/meta-security.git"
-    commit: bc865c5276c2ab4031229916e8d7c20148dfbac3
+    #commit: bc865c5276c2ab4031229916e8d7c20148dfbac3
+    commit: b13f1705d723650de61277670c8a76aadea4cfdd
+    layers:
+      .:
+      meta-tpm:
 
   src/meta-toradex-demos:
     url: "https://git.toradex.com/meta-toradex-demos.git"
@@ -45,6 +50,11 @@ repos:
   src/meta-toradex-distro:
     url: "https://git.toradex.com/meta-toradex-distro.git"
     commit: 0d1bb8968f8748d3d28a7ab5ee19fa74f9a67b72
+
+  # Toradex security 
+  src/meta-toradex-security:
+    url: "https://github.com/toradex/meta-toradex-security.git"
+    commit: ecb94fd199ffe2f3bbc17740d9d0ad90ef463006
 
   # from tdx https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=7.1.0
   src/meta-yocto:
@@ -55,13 +65,16 @@ repos:
 
   src/openembedded-core:
     url: "https://github.com/openembedded/openembedded-core.git"
-    commit: 01423828248b75e1f5afe2e5959ccd971df875cd
+    #commit: 01423828248b75e1f5afe2e5959ccd971df875cd
+    commit: ece80784b493c8b7493478fa2ba0dc1d6d80aa79
     layers:
       meta:
 
 local_conf_header:
   src/meta-ci4rail-tdxbsp: |
     INHERIT += "toradex-mirrors"
+    INHERIT += "tdxref-signed"
+    INHERIT += "tdx-optee"
     DISTRO = "tdx-xwayland"
     ACCEPT_FSL_EULA = "1"
     # Exclude freescale alsa-state bbappend from build

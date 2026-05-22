@@ -4,13 +4,13 @@ repos:
   # # ci4rail
   # src/meta-ci4rail-bsp:
   #   url: https://github.com/ci4rail/meta-ci4rail-bsp.git
-  #   branch: scarthgap
-  #   commit: e10ba136b43d0b00b374f4e1a67281f5eed8473c
+  #   branch: cve-check
+  #   #commit: 800fbd5058e1923c3579daa18a9cf8843f17d7d4
 
-  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=7.1.0
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=7.6.0
   src/meta-freescale-3rdparty.git:
     url: "https://github.com/Freescale/meta-freescale-3rdparty.git"
-    commit: 1dfc65dd2006b51d156be5bcda0e3c72c936ad0a
+    commit: 70c83e96c7f75e73245cb77f1b0cada9ed4bbc6d
 
   src/meta-freescale-distro:
     url: "https://github.com/Freescale/meta-freescale-distro.git"
@@ -18,22 +18,21 @@ repos:
 
   src/meta-freescale:
     url: "https://github.com/Freescale/meta-freescale.git"
-    #commit: 1805a964583d1773310ddbe185a52b0ab3468e6d
-    commit: 0c27c21cab57876474bb572e5d378b6707e41224 
+    commit: 902dde8c5bd29bb507ac8d37772565a6c9ab77cd
 
-  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-tdx.xml?h=7.1.0
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-tdx.xml?h=7.6.0
   src/meta-toradex-bsp-common:
     url: "https://git.toradex.com/meta-toradex-bsp-common.git"
-    commit: 9ddc957972a0375d283e3871769bce48156d0d29
+    commit: 159b1b42c4c527a39ac0b41faad408d74299e2d6
 
   src/meta-toradex-nxp:
     url: "https://git.toradex.com/meta-toradex-nxp.git"
-    commit: 5d1dcccf5fa4ae3785e8093f50207aae8ab49315
+    commit: 1c108e5846f71a543e97327274afb53d136c16ae
 
-  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/tdxref/default.xml?h=7.1.0
+  # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/tdxref/default.xml?h=7.6.0
   src/meta-qt5:
     url: "https://github.com/meta-qt5/meta-qt5.git"
-    commit: eb828418264a49b8d00035cb3d7b12fcea3be801
+    commit: 227cf5e7b64c93dfc1a45f235c466db8c3fd8707
 
   src/meta-security:
     url: "https://git.yoctoproject.org/meta-security.git"
@@ -45,28 +44,27 @@ repos:
 
   src/meta-toradex-demos:
     url: "https://git.toradex.com/meta-toradex-demos.git"
-    commit: e1627e0b1f75a102900a6e4726bb0dc284a9d751
+    commit: 28b67de839fd5cb32da42b65a8a700781fb72144
 
   src/meta-toradex-distro:
     url: "https://git.toradex.com/meta-toradex-distro.git"
-    commit: 0d1bb8968f8748d3d28a7ab5ee19fa74f9a67b72
+    commit: c55b5b491427ac1f129dcd905bb9956feecd31a4
 
   # Toradex security 
   src/meta-toradex-security:
     url: "https://github.com/toradex/meta-toradex-security.git"
     commit: ecb94fd199ffe2f3bbc17740d9d0ad90ef463006
 
-  # from tdx https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=7.1.0
+  # from tdx https://git.toradex.com/cgit/toradex-manifest.git/tree/base/pinned.xml?h=7.6.0
   src/meta-yocto:
     url: "https://git.yoctoproject.org/git/meta-yocto.git"
-    commit: bd166d1fb8dc1bed7e71bd06b970a3da9149203e
+    commit: f87e76ef6bd6745038616876af07c6a74b49f8c9
     layers:
       meta-poky:
 
   src/openembedded-core:
     url: "https://github.com/openembedded/openembedded-core.git"
-    #commit: 01423828248b75e1f5afe2e5959ccd971df875cd
-    commit: ece80784b493c8b7493478fa2ba0dc1d6d80aa79
+    commit: 41597b5260fb5ca811d0fb4ae7e65246d61734eb
     layers:
       meta:
 
@@ -74,7 +72,8 @@ local_conf_header:
   src/meta-ci4rail-tdxbsp: |
     INHERIT += "toradex-mirrors"
     INHERIT += "tdxref-signed"
-    INHERIT += "tdx-optee"
+    TDX_IMX_HAB_CST_KEY_SIZE = "3072"
+    # INHERIT += "tdx-optee"
     DISTRO = "tdx-xwayland"
     ACCEPT_FSL_EULA = "1"
     # Exclude freescale alsa-state bbappend from build

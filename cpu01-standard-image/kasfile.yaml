@@ -18,9 +18,9 @@ target: tdx-reference-minimal-image
 
 local_conf_header:
   src/meta-custom: |
-    # INHERIT += "extrausers"
-    # # encrypted "cheesebread"
-    # ROOT_PASSWD = "\$5\$.x/PBHo0ZCIQUgJU\$oArWPZxXmMSwJzQHZax8zh5INbh33dvfW2zWdx1dK83"
-    # EXTRA_USERS_PARAMS = "usermod -p '${ROOT_PASSWD}' root; "
+    INHERIT += "extrausers"
+    # encrypted "cheesebread"
+    ROOT_PASSWD = "\$5\$.x/PBHo0ZCIQUgJU\$oArWPZxXmMSwJzQHZax8zh5INbh33dvfW2zWdx1dK83"
+    EXTRA_USERS_PARAMS = "usermod -p '${ROOT_PASSWD}' root; "
     # #Prefix to the resulting deployable tarball name
     # BASENAME = "Standard-Image"

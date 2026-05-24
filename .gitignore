@@ -12,3 +12,4 @@ secret.env
 */layer-revs
 */.kas_shell_history
 *.tgz
+tmp/

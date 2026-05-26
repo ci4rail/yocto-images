@@ -3,18 +3,16 @@ header:
   includes:
     - ../kas-includes/kasfile-general.yaml
     - ../kas-includes/kasfile-tdxbsp.yaml
-    # - ../kas-includes/kasfile-mender.yaml
-    # - ../kas-includes/kasfile-mender-tdxbsp.yaml
+    - ../kas-includes/kasfile-mender.yaml
+    - ../kas-includes/kasfile-mender-tdxbsp.yaml
     # - ../kas-includes/kasfile-docker.yaml
 
 # The machine as it is written into the `local.conf` of bitbake.
-#machine: moducop-cpu01
-machine: "verdin-imx8mm"
+machine: moducop-cpu01
 # The distro name as it is written into the `local.conf` of bitbake.
 distro: tdx-xwayland
 # The target that is built by bitbake
-#target: ci4rail-base-image
-target: tdx-reference-minimal-image
+target: ci4rail-base-image
 
 local_conf_header:
   src/meta-custom: |
@@ -22,5 +20,5 @@ local_conf_header:
     # encrypted "cheesebread"
     ROOT_PASSWD = "\$5\$.x/PBHo0ZCIQUgJU\$oArWPZxXmMSwJzQHZax8zh5INbh33dvfW2zWdx1dK83"
     EXTRA_USERS_PARAMS = "usermod -p '${ROOT_PASSWD}' root; "
-    # #Prefix to the resulting deployable tarball name
-    # BASENAME = "Standard-Image"
+    # Prefix to the resulting deployable tarball name
+    BASENAME = "Standard-Image"

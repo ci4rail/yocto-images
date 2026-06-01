@@ -29,11 +29,12 @@ local_conf_header:
     MENDER_FEATURES_ENABLE:append = " mender-uboot"
     MENDER_FEATURES_DISABLE:append = " mender-grub mender-image-uefi"
 
-    # The Mender Toradex integration boots a FIT via "bootm <addr>" rather
-    # than the explicit FIT configuration required by Toradex hardening.
-    # Keep FIT signing, HAB and dm-verity enabled, but avoid generating an
-    # unbootable hardened U-Boot for the Mender A/B boot flow.
-    TDX_UBOOT_HARDENING_ENABLE = "0"
+    # Preserve Toradex U-Boot hardening with the custom Mender A/B boot flow.
+    # The fixed prefix is signed into the FIT; the selected rootfs PARTUUID is
+    # appended by U-Boot and validated as the allowed dynamic root argument.
+    TDX_UBOOT_HARDENING_ENABLE = "1"
+    TDX_SECBOOT_REQUIRED_BOOTARGS = "ro rootwait"
+    MENDER_UBOOT_POST_SETUP_COMMANDS:append = " setenv mender_secboot_overlay ${TDX_SECBOOT_KARGS_OVERLAY}.dtbo;"
 
     IMAGE_CLASSES:append:pn-ci4rail-base-image = " image_type_mender_tezi"
     IMAGE_FSTYPES:append:pn-ci4rail-base-image = " mender_tezi mender-bootfit-rootfs"

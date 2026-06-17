@@ -3,9 +3,11 @@
 #
 # Usage:
 # $ make IMAGE_DIR=<image-specific-directory> <target>
+# $ make IMAGE_DIR=<image-specific-directory> KASFILE=<kasfile.yaml> <target>
 #
 # For example, to build the image
 # $ make IMAGE_DIR=cpu01-devtools-image image
+# $ make IMAGE_DIR=cpu01-standard-image KASFILE=kasfile-sb-staging.yaml image
 #
 # All targets (for all, specify the correct IMAGE_DIR):
 # - image - build image
@@ -23,6 +25,10 @@ ABS_DOWNLOAD_DIR := ${shell cd ${YOCTO_DOWNLOAD_DIR} && pwd}
 ABS_SSTATE_DIR := ${shell cd ${YOCTO_SSTATE_CACHE_DIR} && pwd}
 ABS_MENDER_AUTH_DIR = ${shell cd ${MENDER_AUTH_DIR} && pwd}
 
+KASFILE ?=
+IMAGE_KASFILE := $(if $(KASFILE),$(KASFILE),kasfile-nonsecure.yaml)
+YOCTO_SHELL_KASFILE := $(if $(KASFILE),$(KASFILE),kasfile.yaml)
+
 # Docker images
 KAS_IMAGE := "ghcr.io/siemens/kas/kas:4.7"
 MENDER_CLI_IMAGE := "ci4rail/mender-cli:master"
@@ -32,8 +38,10 @@ CURL_JQ_IMAGE := "dwdraju/alpine-curl-jq:latest"
 # Main-target to build image
 # Required variables from command line:
 # - IMAGE_DIR
-image image_sb_staging image_sb_production yocto-shell mender mender-upload mender-deploy: test-main-args layer-revisions
-	${MAKE} _$@ IMAGE_VERSION=${shell scripts/gen-image-version.sh . ${IMAGE_DIR}/layer-revs} IMAGE_DIR=${IMAGE_DIR}
+# Optional variables from command line:
+# - KASFILE
+image yocto-shell mender mender-upload mender-deploy: test-main-args layer-revisions
+	${MAKE} _$@ IMAGE_VERSION=${shell scripts/gen-image-version.sh . ${IMAGE_DIR}/layer-revs} IMAGE_DIR=${IMAGE_DIR} KASFILE=${KASFILE}
 
 #----------------------------------
 # Sub-targets
@@ -50,8 +58,14 @@ KAS_ARGS := \
 		-v${ABS_SSTATE_DIR}:/sstate-cache \
 		-v${ABS_IMAGE_DIR}/install:/install \
 		-e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
-		-e MENDER_TENANT_TOKEN=${MENDER_TENANT_TOKEN} \
-		-e IMAGE_GIT_VERSION=${IMAGE_VERSION} \
+			-e MENDER_TENANT_TOKEN=${MENDER_TENANT_TOKEN} \
+			-e AZURE_APP_ID=${AZURE_APP_ID} \
+			-e AZURE_CLIENT_ID=${AZURE_CLIENT_ID} \
+			-e AZURE_TENANT_ID=${AZURE_TENANT_ID} \
+			-e AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID} \
+			-e AZURE_FEDERATED_TOKEN_FILE=${AZURE_FEDERATED_TOKEN_FILE} \
+			-e AZURE_AUTHORITY_HOST=${AZURE_AUTHORITY_HOST} \
+			-e IMAGE_GIT_VERSION=${IMAGE_VERSION} \
 		-e MENDER_ARTIFACT_NAME=${IMAGE_DIR}-${IMAGE_VERSION}${NAME_SUFFIX} \
 		-e SHELL=/bin/bash \
 		-e TERM=xterm-256color \
@@ -62,17 +76,8 @@ _mender: _image _mender-upload _mender-deploy
 	echo ""
 
 _image: test-sub-args _mkdirs
-	@echo building image in ${IMAGE_DIR} with version ${IMAGE_VERSION}
-	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} build kasfile-nonsecure.yaml
-
-_image_sb_staging: test-sub-args _mkdirs
-	@echo building image in ${IMAGE_DIR} with version ${IMAGE_VERSION}
-	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} build kasfile-sb-staging.yaml
-
-
-_image_sb_production: test-sub-args _mkdirs
-	@echo building image in ${IMAGE_DIR} with version ${IMAGE_VERSION}
-	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} build kasfile-sb-production.yaml
+	@echo building image in ${IMAGE_DIR} with version ${IMAGE_VERSION} using ${IMAGE_KASFILE}
+	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} build ${IMAGE_KASFILE}
 
 _mender-upload: test-sub-args
 	docker run --rm -t \
@@ -98,9 +103,9 @@ _mender-deploy: test-sub-args
 		/scripts/mender_deploy_artifact_to_device.sh /install/images/*/*[0-9][0-9][0-9][0-9].mender"
 
 _yocto-shell: test-sub-args  _mkdirs
-	@echo starting yocto shell in ${IMAGE_DIR} with version ${IMAGE_VERSION}
+	@echo starting yocto shell in ${IMAGE_DIR} with version ${IMAGE_VERSION} using ${YOCTO_SHELL_KASFILE}
 
-	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} shell kasfile.yaml
+	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} shell ${YOCTO_SHELL_KASFILE}
 
 _mkdirs:
 	mkdir -p ${IMAGE_DIR}/install ${IMAGE_DIR}/src ${IMAGE_DIR}/build ${ABS_DOWNLOAD_DIR} ${ABS_SSTATE_DIR}

@@ -364,6 +364,50 @@ jobs:
           printf '%s' "$token" > "${RUNNER_TEMP}/azure-federated-token"
           chmod 0600 "${RUNNER_TEMP}/azure-federated-token"
 
+      - name: Validate Azure Key Vault Access
+        if: inputs.simulate_build == 'false'
+        env:
+          AZURE_APP_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AKV_CERTIFICATE_URL: https://vault-firmware-signing.vault.azure.net/certificates/moducop-cpu01-fit?api-version=7.4
+        run: |
+          assertion="$(cat "${RUNNER_TEMP}/azure-federated-token")"
+          token_response="${RUNNER_TEMP}/azure-token-response.json"
+          token_code="$(
+            curl -sS \
+              -o "${token_response}" \
+              -w '%{http_code}' \
+              -X POST "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
+              -H "Content-Type: application/x-www-form-urlencoded" \
+              --data-urlencode "client_id=${AZURE_CLIENT_ID}" \
+              --data-urlencode "scope=https://vault.azure.net/.default" \
+              --data-urlencode "grant_type=client_credentials" \
+              --data-urlencode "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
+              --data-urlencode "client_assertion=${assertion}"
+          )"
+          if [ "${token_code}" != "200" ]; then
+            echo "Azure token exchange failed with HTTP ${token_code}"
+            cat "${token_response}"
+            exit 1
+          fi
+
+          access_token="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["access_token"])' "${token_response}")"
+          cert_response="${RUNNER_TEMP}/akv-certificate-response.json"
+          cert_code="$(
+            curl -sS \
+              -o "${cert_response}" \
+              -w '%{http_code}' \
+              -H "Authorization: Bearer ${access_token}" \
+              "${AKV_CERTIFICATE_URL}"
+          )"
+          if [ "${cert_code}" != "200" ]; then
+            echo "Azure Key Vault certificate read failed with HTTP ${cert_code}"
+            cat "${cert_response}"
+            exit 1
+          fi
+          echo "Azure Key Vault certificate read preflight succeeded."
+
       - name: Build Secure Production Yocto
         if: inputs.simulate_build == 'false'
         env:

@@ -2,10 +2,10 @@ name: CPU01 Standard Image
 on:
   pull_request:
     branches:
-      - scarthgap
-      - beta
+      - scarthgap-secure-boot
     paths:
-      - "cpu01-standard-image/kasfile.yaml"
+      - "cpu01-standard-image/kasfile-common.yaml"
+      - "cpu01-standard-image/kasfile-sb-production.yaml"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-mender.yaml"
       - "kas-includes/kasfile-mender-tdxbsp.yaml"

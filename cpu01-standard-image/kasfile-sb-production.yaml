@@ -37,4 +37,4 @@ env:
   AZURE_TENANT_ID: ""
   AZURE_SUBSCRIPTION_ID: ""
   AZURE_FEDERATED_TOKEN_FILE: ""
-  AZURE_AUTHORITY_HOST: ""
+  AZURE_AUTHORITY_HOST: "https://login.microsoftonline.com"

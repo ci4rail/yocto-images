@@ -454,21 +454,21 @@ jobs:
   #         minio_access_key: ${{ secrets.minio_access_key }}
   #         minio_secret_key: ${{ secrets.minio_secret_key }}
 
-  release-image:
-    if: github.event_name == 'release'
-    needs: [test-image]
-    name: Release Image
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: ./artifact
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ./artifact/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.private_token }}
+  # release-image:
+  #   if: github.event_name == 'release'
+  #   needs: [test-image]
+  #   name: Release Image
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - name: Download build artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: build-artifacts
+  #         path: ./artifact
+  #     - name: Create Release
+  #       id: create_release
+  #       uses: softprops/action-gh-release@v2
+  #       with:
+  #         files: ./artifact/*
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.private_token }}

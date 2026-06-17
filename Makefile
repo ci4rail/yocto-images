@@ -32,7 +32,7 @@ CURL_JQ_IMAGE := "dwdraju/alpine-curl-jq:latest"
 # Main-target to build image
 # Required variables from command line:
 # - IMAGE_DIR
-image yocto-shell mender mender-upload mender-deploy: test-main-args layer-revisions
+image image_sb_staging yocto-shell mender mender-upload mender-deploy: test-main-args layer-revisions
 	${MAKE} _$@ IMAGE_VERSION=${shell scripts/gen-image-version.sh . ${IMAGE_DIR}/layer-revs} IMAGE_DIR=${IMAGE_DIR}
 
 #----------------------------------
@@ -63,7 +63,11 @@ _mender: _image _mender-upload _mender-deploy
 
 _image: test-sub-args _mkdirs
 	@echo building image in ${IMAGE_DIR} with version ${IMAGE_VERSION}
-	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} build kasfile.yaml
+	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} build kasfile-nonsecure.yaml
+
+_image_sb_staging: test-sub-args _mkdirs
+	@echo building image in ${IMAGE_DIR} with version ${IMAGE_VERSION}
+	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} build kasfile-sb-staging.yaml
 
 _mender-upload: test-sub-args
 	docker run --rm -t \

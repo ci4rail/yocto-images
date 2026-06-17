@@ -71,11 +71,6 @@ repos:
 local_conf_header:
   src/meta-ci4rail-tdxbsp: |
     INHERIT += "toradex-mirrors"
-    INHERIT += "tdxref-signed"
-    TDX_IMX_HAB_CST_BUILD_FROM_SOURCE = "1"
-    DM_VERITY_IMAGE = "ci4rail-base-image"
-    TDX_IMX_HAB_CST_KEY_SIZE = "3072"
-    # INHERIT += "tdx-optee"
     DISTRO = "tdx-xwayland"
     ACCEPT_FSL_EULA = "1"
     # Exclude freescale alsa-state bbappend from build

@@ -1,4 +1,4 @@
-[ ] test mender-update bootfit/rootfs
+[x] test mender-update bootfit/rootfs
 [x] merge with latest meta-ci4rail-bsp
 [ ] bring back meta-virtualization
 [ ] test with closed device

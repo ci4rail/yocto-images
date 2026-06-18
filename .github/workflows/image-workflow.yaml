@@ -416,7 +416,7 @@ jobs:
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-          AZURE_FEDERATED_TOKEN_FILE: /azure-federated-token
+          AZURE_FEDERATED_TOKEN_FILE: /runner-temp/azure-federated-token
           AZURE_AUTHORITY_HOST: https://login.microsoftonline.com
         run: |
           test -n "${AZURE_CLIENT_ID}" || { echo "Missing production environment variable AZURE_CLIENT_ID"; exit 1; }
@@ -427,7 +427,7 @@ jobs:
                 -v ~/install:/install \
                 -v ~/sstate-cache:/sstate-cache \
                 -v ~/downloads:/downloads \
-                -v ${RUNNER_TEMP}/azure-federated-token:/azure-federated-token:ro \
+                -v ${RUNNER_TEMP}:/runner-temp \
                 -v ${GITHUB_WORKSPACE}/${IMAGE_DIR}:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -u $(id -u):$(id -g) \
@@ -442,6 +442,8 @@ jobs:
                 -e AZURE_SUBSCRIPTION_ID \
                 -e AZURE_FEDERATED_TOKEN_FILE \
                 -e AZURE_AUTHORITY_HOST \
+                -e ACTIONS_ID_TOKEN_REQUEST_URL \
+                -e ACTIONS_ID_TOKEN_REQUEST_TOKEN \
                 -w /work \
                 ${BUILDER_IMAGE} \
                 build kasfile-sb-production.yaml

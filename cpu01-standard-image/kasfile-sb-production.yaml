@@ -13,6 +13,7 @@ local_conf_header:
   src/meta-custom: |
     # Prefix to the resulting deployable tarball name
     BASENAME = "Standard-Image-Production"
+    CI4RAIL_DM_VERITY_IMAGE_BASENAME = "Standard-Image-Production"
     INHERIT += "tdxref-signed"
     TDX_IMX_HAB_CST_BUILD_FROM_SOURCE = "1"
     DM_VERITY_IMAGE = "ci4rail-base-image"

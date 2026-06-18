@@ -1,11 +1,11 @@
 header:
   version: 11
 repos:
-  # # ci4rail
-  # src/meta-ci4rail-bsp:
-  #   url: https://github.com/ci4rail/meta-ci4rail-bsp.git
-  #   branch: cve-check
-  #   #commit: 800fbd5058e1923c3579daa18a9cf8843f17d7d4
+  # ci4rail
+  src/meta-ci4rail-bsp:
+    url: https://github.com/ci4rail/meta-ci4rail-bsp.git
+    #commit: e10ba136b43d0b00b374f4e1a67281f5eed8473c
+    branch: scarthgap-secure-boot
 
   # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=7.6.0
   src/meta-freescale-3rdparty.git:
@@ -71,9 +71,6 @@ repos:
 local_conf_header:
   src/meta-ci4rail-tdxbsp: |
     INHERIT += "toradex-mirrors"
-    INHERIT += "tdxref-signed"
-    TDX_IMX_HAB_CST_KEY_SIZE = "3072"
-    # INHERIT += "tdx-optee"
     DISTRO = "tdx-xwayland"
     ACCEPT_FSL_EULA = "1"
     # Exclude freescale alsa-state bbappend from build

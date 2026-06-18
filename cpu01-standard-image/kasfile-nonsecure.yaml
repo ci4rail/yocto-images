@@ -1,0 +1,4 @@
+header:
+  version: 11
+  includes:
+    - ./kasfile-common.yaml

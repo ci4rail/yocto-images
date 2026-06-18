@@ -80,6 +80,9 @@ on:
       tailscale_auth_key:
         required: true
 
+permissions:
+  contents: read
+  id-token: write
 
 env:
   BUILDER_IMAGE: ghcr.io/siemens/kas/kas:4.7
@@ -138,19 +141,168 @@ jobs:
           echo "mender file name is ${{ needs.calculate-version.outputs.mender_file_name }}"
           echo "image folder is ${{ needs.calculate-version.outputs.image_folder }}"
 
-  build-and-push-image:
+  # build-and-push-image:
+  #   needs: calculate-version
+  #   name: Build and Push Image
+  #   #
+  #   # yocto-runner runs a docker container within the docker:dind image
+  #   # /yocto-cache is bound to the hosts /yocto-cache directory.
+  #   # ~/downloads ~/sstate-cache and ~/install are temporary mounts local for that container. They
+  #   # survive steps, but are cleared with each new job
+  #   # For details see: https://github.com/ci4rail/public-infrastructure/blob/master/deployment-self-hosted-runners/templates/runnerdeployment.yaml
+  #   #
+  #   runs-on: [self-hosted, linux, x64, yocto-runner]
+  #   outputs:
+  #     bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+
+  #     - name: Log into Docker
+  #       env:
+  #         DOCKER_PASSWORD: ${{ secrets.docker_password }}
+  #       run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
+
+  #     - name: Create Folders for Yocto Build
+  #       run: |
+  #         mkdir -p ~/install ~/sstate-cache ~/downloads
+  #         rm -rf ~/install/*
+
+  #     - name: Install Rsync for Yocto-Cache Handling
+  #       if: github.event_name == 'pull_request'
+  #       run: sudo apt-get update -y && sudo apt-get install -y rsync
+
+  #     - name: Get Cache for Yocto Builds
+  #       if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
+  #       # Use a lock for the cache to prevent reading the cache while another job is writing to it
+  #       run: |
+  #         while true; do
+  #           if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
+
+  #             trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
+
+  #             echo "cache lock obtained by $$. get cache"
+  #             rsync -rht --ignore-missing-args /yocto-cache/downloads/* ~/downloads/
+  #             rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* ~/sstate-cache/
+
+  #             # clean up after yourself, and release your trap
+  #             rm -f "${{ env.CACHE_LOCKFILE }}"
+  #             echo cache lock cleared
+  #             trap - INT TERM EXIT
+  #             break
+  #           else
+  #             echo "Cache is locked. Wait"
+  #             sleep 60
+  #           fi
+  #         done
+
+  #     - name: Build Yocto
+  #       if: inputs.simulate_build == 'false'
+  #       env:
+  #         MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
+  #       run: |
+  #         docker run \
+  #               -v ~/install:/install \
+  #               -v ~/sstate-cache:/sstate-cache \
+  #               -v ~/downloads:/downloads \
+  #               -v ${GITHUB_WORKSPACE}/${IMAGE_DIR}:/work \
+  #               -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
+  #               -u $(id -u):$(id -g) \
+  #               -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
+  #               -e MENDER_TENANT_TOKEN=${{ secrets.mender_tenant_token }} \
+  #               -e IMAGE_NAME_SUFFIX=${{ needs.calculate-version.outputs.name_suffix }} \
+  #               -e IMAGE_GIT_VERSION=${{ needs.calculate-version.outputs.version }} \
+  #               -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
+  #               -w /work \
+  #               ${BUILDER_IMAGE} \
+  #               build kasfile-nonsecure.yaml
+
+  #     - name: Simulate Build
+  #       if: inputs.simulate_build == 'true'
+  #       run: |
+  #         echo "Simulating build for testing purposes"
+  #         image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
+  #         mkdir -p ${image_folder}
+  #         echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
+  #         echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+
+  #     - name: Store Cache for Yocto Builds
+  #       if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
+  #       # Use a lock for the cache
+  #       run: |
+  #         while true; do
+  #           if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
+
+  #             trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
+
+  #             echo "cache lock obtained. write back cache"
+  #             rsync -rht ~/downloads/* /yocto-cache/downloads/
+  #             rsync -rht ~/sstate-cache/* /yocto-cache/sstate-cache/
+
+  #             # clean up after yourself, and release your trap
+  #             rm -f "${{ env.CACHE_LOCKFILE }}"
+  #             trap - INT TERM EXIT
+  #             break
+  #           else
+  #             echo "Cache is locked. Wait"
+  #             sleep 60
+  #           fi
+  #         done
+
+  #     - name: Copy TAR artifacts for mender and minio deployment
+  #       if: inputs.output_type == 'tar' && inputs.simulate_build == 'false'
+  #       run: |
+  #         image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
+  #         TAR_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+  #         MENDER_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
+
+  #         mkdir ${GITHUB_WORKSPACE}/minio
+  #         ls -t ${TAR_IMAGE_PATH}
+  #         cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+
+  #         if [ "${{ inputs.have_mender}}" = "true" ]; then
+  #           ls -t ${MENDER_IMAGE_PATH}
+  #           cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+  #         fi
+
+  #     # Currently not used
+  #     # - name: Copy SDIMG artifacts for mender and minio deployment
+  #     #   if: inputs.output_type == 'sdimg'
+  #     #   run: |
+  #     #     SDIMG_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
+  #     #     MENDER_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
+  #     #     VERSION=${{ needs.calculate-version.outputs.version }}
+  #     #     SUFFIX=${{ needs.calculate-version.outputs.name_suffix }}
+  #     #     mkdir ${GITHUB_WORKSPACE}/minio
+  #     #     ls -t ${SDIMG_IMAGE_PATH}
+  #     #     cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${{ inputs.image_start }}_${VERSION}${SUFFIX}.sdimg
+  #     #     if [ "${{ inputs.have_mender}}" = "true" ]; then
+  #     #       ls -t ${MENDER_IMAGE_PATH}
+  #     #     fi
+
+  #     - name: Push Images to Minio
+  #       if: inputs.simulate_build == 'false'
+  #       uses: hkdobrev/minio-deploy-action@v1.1
+  #       with:
+  #         endpoint: https://minio.ci4rail.com
+  #         access_key: ${{ secrets.minio_access_key }}
+  #         secret_key: ${{ secrets.minio_secret_key }}
+  #         bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
+  #         source_dir: minio
+  #         target_dir: "/"
+
+  #     - name: Upload build artifacts
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: build-artifacts
+  #         path: |
+  #           ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_file_name }}
+  #           ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+
+  build-secure-production-image:
     needs: calculate-version
-    name: Build and Push Image
-    #
-    # yocto-runner runs a docker container within the docker:dind image
-    # /yocto-cache is bound to the hosts /yocto-cache directory.
-    # ~/downloads ~/sstate-cache and ~/install are temporary mounts local for that container. They
-    # survive steps, but are cleared with each new job
-    # For details see: https://github.com/ci4rail/public-infrastructure/blob/master/deployment-self-hosted-runners/templates/runnerdeployment.yaml
-    #
+    name: Build Secure Production Image
     runs-on: [self-hosted, linux, x64, yocto-runner]
-    outputs:
-      bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
+    environment: production
     steps:
       - uses: actions/checkout@v4
 
@@ -170,7 +322,6 @@ jobs:
 
       - name: Get Cache for Yocto Builds
         if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
-        # Use a lock for the cache to prevent reading the cache while another job is writing to it
         run: |
           while true; do
             if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
@@ -181,7 +332,6 @@ jobs:
               rsync -rht --ignore-missing-args /yocto-cache/downloads/* ~/downloads/
               rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* ~/sstate-cache/
 
-              # clean up after yourself, and release your trap
               rm -f "${{ env.CACHE_LOCKFILE }}"
               echo cache lock cleared
               trap - INT TERM EXIT
@@ -192,15 +342,92 @@ jobs:
             fi
           done
 
-      - name: Build Yocto
+      - name: Create Azure Federated Token
         if: inputs.simulate_build == 'false'
         env:
-          MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
+          AZURE_APP_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         run: |
+          test -n "${AZURE_CLIENT_ID}" || { echo "Missing production environment variable AZURE_CLIENT_ID"; exit 1; }
+          test -n "${AZURE_TENANT_ID}" || { echo "Missing production environment variable AZURE_TENANT_ID"; exit 1; }
+          test -n "${AZURE_SUBSCRIPTION_ID}" || { echo "Missing production environment variable AZURE_SUBSCRIPTION_ID"; exit 1; }
+          echo "Production Azure environment variables are present."
+
+          token="$(
+            curl -fsSL \
+              -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+              "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=api://AzureADTokenExchange" \
+            | python3 -c 'import json, sys; print(json.load(sys.stdin)["value"])'
+          )"
+          printf '%s' "$token" > "${RUNNER_TEMP}/azure-federated-token"
+          chmod 0600 "${RUNNER_TEMP}/azure-federated-token"
+
+      - name: Validate Azure Key Vault Access
+        if: inputs.simulate_build == 'false'
+        env:
+          AZURE_APP_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AKV_CERTIFICATE_URL: https://vault-firmware-signing.vault.azure.net/certificates/moducop-cpu01-fit?api-version=7.4
+        run: |
+          assertion="$(cat "${RUNNER_TEMP}/azure-federated-token")"
+          token_response="${RUNNER_TEMP}/azure-token-response.json"
+          token_code="$(
+            curl -sS \
+              -o "${token_response}" \
+              -w '%{http_code}' \
+              -X POST "https://login.microsoftonline.com/${AZURE_TENANT_ID}/oauth2/v2.0/token" \
+              -H "Content-Type: application/x-www-form-urlencoded" \
+              --data-urlencode "client_id=${AZURE_CLIENT_ID}" \
+              --data-urlencode "scope=https://vault.azure.net/.default" \
+              --data-urlencode "grant_type=client_credentials" \
+              --data-urlencode "client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer" \
+              --data-urlencode "client_assertion=${assertion}"
+          )"
+          if [ "${token_code}" != "200" ]; then
+            echo "Azure token exchange failed with HTTP ${token_code}"
+            cat "${token_response}"
+            exit 1
+          fi
+
+          access_token="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["access_token"])' "${token_response}")"
+          cert_response="${RUNNER_TEMP}/akv-certificate-response.json"
+          cert_code="$(
+            curl -sS \
+              -o "${cert_response}" \
+              -w '%{http_code}' \
+              -H "Authorization: Bearer ${access_token}" \
+              "${AKV_CERTIFICATE_URL}"
+          )"
+          if [ "${cert_code}" != "200" ]; then
+            echo "Azure Key Vault certificate read failed with HTTP ${cert_code}"
+            cat "${cert_response}"
+            exit 1
+          fi
+          echo "Azure Key Vault certificate read preflight succeeded."
+
+      - name: Build Secure Production Yocto
+        if: inputs.simulate_build == 'false'
+        env:
+          MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-production
+          AZURE_APP_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          AZURE_FEDERATED_TOKEN_FILE: /runner-temp/azure-federated-token
+          AZURE_AUTHORITY_HOST: https://login.microsoftonline.com
+        run: |
+          test -n "${AZURE_CLIENT_ID}" || { echo "Missing production environment variable AZURE_CLIENT_ID"; exit 1; }
+          test -n "${AZURE_TENANT_ID}" || { echo "Missing production environment variable AZURE_TENANT_ID"; exit 1; }
+          test -n "${AZURE_SUBSCRIPTION_ID}" || { echo "Missing production environment variable AZURE_SUBSCRIPTION_ID"; exit 1; }
+
           docker run \
                 -v ~/install:/install \
                 -v ~/sstate-cache:/sstate-cache \
                 -v ~/downloads:/downloads \
+                -v ${RUNNER_TEMP}:/runner-temp \
                 -v ${GITHUB_WORKSPACE}/${IMAGE_DIR}:/work \
                 -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
                 -u $(id -u):$(id -g) \
@@ -209,22 +436,29 @@ jobs:
                 -e IMAGE_NAME_SUFFIX=${{ needs.calculate-version.outputs.name_suffix }} \
                 -e IMAGE_GIT_VERSION=${{ needs.calculate-version.outputs.version }} \
                 -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
+                -e AZURE_APP_ID \
+                -e AZURE_CLIENT_ID \
+                -e AZURE_TENANT_ID \
+                -e AZURE_SUBSCRIPTION_ID \
+                -e AZURE_FEDERATED_TOKEN_FILE \
+                -e AZURE_AUTHORITY_HOST \
+                -e ACTIONS_ID_TOKEN_REQUEST_URL \
+                -e ACTIONS_ID_TOKEN_REQUEST_TOKEN \
                 -w /work \
                 ${BUILDER_IMAGE} \
-                build kasfile.yaml
+                build kasfile-sb-production.yaml
 
-      - name: Simulate Build
+      - name: Simulate Secure Production Build
         if: inputs.simulate_build == 'true'
         run: |
-          echo "Simulating build for testing purposes"
+          echo "Simulating secure production build for testing purposes"
           image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
           mkdir -p ${image_folder}
-          echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
-          echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+          echo "something" > ${image_folder}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-production.mender
+          echo "something" > ${image_folder}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-production${{ inputs.tar_ending }}.tar
 
       - name: Store Cache for Yocto Builds
         if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
-        # Use a lock for the cache
         run: |
           while true; do
             if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
@@ -235,7 +469,6 @@ jobs:
               rsync -rht ~/downloads/* /yocto-cache/downloads/
               rsync -rht ~/sstate-cache/* /yocto-cache/sstate-cache/
 
-              # clean up after yourself, and release your trap
               rm -f "${{ env.CACHE_LOCKFILE }}"
               trap - INT TERM EXIT
               break
@@ -245,109 +478,56 @@ jobs:
             fi
           done
 
-      - name: Copy TAR artifacts for mender and minio deployment
-        if: inputs.output_type == 'tar' && inputs.simulate_build == 'false'
-        run: |
-          image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
-          TAR_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
-          MENDER_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
-
-          mkdir ${GITHUB_WORKSPACE}/minio
-          ls -t ${TAR_IMAGE_PATH}
-          cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
-
-          if [ "${{ inputs.have_mender}}" = "true" ]; then
-            ls -t ${MENDER_IMAGE_PATH}
-            cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
-          fi
-
-      # Currently not used
-      # - name: Copy SDIMG artifacts for mender and minio deployment
-      #   if: inputs.output_type == 'sdimg'
-      #   run: |
-      #     SDIMG_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
-      #     MENDER_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
-      #     VERSION=${{ needs.calculate-version.outputs.version }}
-      #     SUFFIX=${{ needs.calculate-version.outputs.name_suffix }}
-      #     mkdir ${GITHUB_WORKSPACE}/minio
-      #     ls -t ${SDIMG_IMAGE_PATH}
-      #     cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${{ inputs.image_start }}_${VERSION}${SUFFIX}.sdimg
-      #     if [ "${{ inputs.have_mender}}" = "true" ]; then
-      #       ls -t ${MENDER_IMAGE_PATH}
-      #     fi
-
-      - name: Push Images to Minio
-        if: inputs.simulate_build == 'false'
-        uses: hkdobrev/minio-deploy-action@v1.1
-        with:
-          endpoint: https://minio.ci4rail.com
-          access_key: ${{ secrets.minio_access_key }}
-          secret_key: ${{ secrets.minio_secret_key }}
-          bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
-          source_dir: minio
-          target_dir: "/"
-
-      - name: Push Images to Mender
-        if: inputs.have_mender == 'true' && inputs.simulate_build == 'false'
-        run: |
-          docker run \
-            -v ~/install:/install \
-            --entrypoint=/bin/sh \
-            ${MENDER_CLI_IMAGE} -c "
-              /mender-cli login --username ${{ secrets.mender_user_email }} --password ${{ secrets.mender_password }}
-              /mender-cli artifacts upload ${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_file_name }}
-            "
-
-      - name: Upload build artifacts
+      - name: Upload secure production build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts
+          name: secure-production-build-artifacts
           path: |
-            ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_file_name }}
-            ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+            ~/${{ needs.calculate-version.outputs.image_folder }}/*.mender
+            ~/${{ needs.calculate-version.outputs.image_folder }}/*.tar
 
-  test-image:
-    if: inputs.test_name != ''
-    needs: [calculate-version, build-and-push-image]
-    name: Test Yocto Image
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: ci4rail/teststation-action@v5
-        with:
-          pipeline-name: "${{ github.run_id }}"
-          mqtt-broker-url: ${{ env.TESTSTATION_MQTT_URL }}
-          test-name: ${{ inputs.test_name }}
-          artifact-override: |
-            {
-              \"desired_versions.cpu_firmware.version.version_string\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
-              \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
-              \"desired_versions.cpu_firmware.cputype\": \"${{ inputs.som_type }}\",
-              \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
-              \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
-              \"desired_versions.cpu_firmware.source.file\": \"${{ needs.calculate-version.outputs.mender_tezi_file_name }}\",
-              \"desired_versions.cpu_firmware.force_update\": \"true\"
-            }
-          access-token: ${{ secrets.private_token }}
-          tailscale-key: ${{ secrets.tailscale_auth_key}}
-          request-timeout: "7200"
-          minio_access_key: ${{ secrets.minio_access_key }}
-          minio_secret_key: ${{ secrets.minio_secret_key }}
+  # test-image:
+  #   if: inputs.test_name != ''
+  #   needs: [calculate-version, build-and-push-image]
+  #   name: Test Yocto Image
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - uses: ci4rail/teststation-action@v5
+  #       with:
+  #         pipeline-name: "${{ github.run_id }}"
+  #         mqtt-broker-url: ${{ env.TESTSTATION_MQTT_URL }}
+  #         test-name: ${{ inputs.test_name }}
+  #         artifact-override: |
+  #           {
+  #             \"desired_versions.cpu_firmware.version.version_string\": \"${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}\",
+  #             \"desired_versions.cpu_firmware.method\": \"toradex-installer\",
+  #             \"desired_versions.cpu_firmware.cputype\": \"${{ inputs.som_type }}\",
+  #             \"desired_versions.cpu_firmware.source.type\": \"ci4rail-minio\",
+  #             \"desired_versions.cpu_firmware.source.bucket\": \"${{ needs.build-and-push-image.outputs.bucket }}\",
+  #             \"desired_versions.cpu_firmware.source.file\": \"${{ needs.calculate-version.outputs.mender_tezi_file_name }}\",
+  #             \"desired_versions.cpu_firmware.force_update\": \"true\"
+  #           }
+  #         access-token: ${{ secrets.private_token }}
+  #         tailscale-key: ${{ secrets.tailscale_auth_key}}
+  #         request-timeout: "7200"
+  #         minio_access_key: ${{ secrets.minio_access_key }}
+  #         minio_secret_key: ${{ secrets.minio_secret_key }}
 
-  release-image:
-    if: github.event_name == 'release'
-    needs: [test-image]
-    name: Release Image
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-          path: ./artifact
-      - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ./artifact/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.private_token }}
+  # release-image:
+  #   if: github.event_name == 'release'
+  #   needs: [test-image]
+  #   name: Release Image
+  #   runs-on: ubuntu-22.04
+  #   steps:
+  #     - name: Download build artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: build-artifacts
+  #         path: ./artifact
+  #     - name: Create Release
+  #       id: create_release
+  #       uses: softprops/action-gh-release@v2
+  #       with:
+  #         files: ./artifact/*
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.private_token }}

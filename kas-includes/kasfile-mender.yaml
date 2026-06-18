@@ -22,10 +22,12 @@ local_conf_header:
     # boot + 2xroot partition must fit in MENDER_STORAGE_TOTAL_SIZE_MB
     # Keep it as small as possible, to reduce target programming time
     # Reduce size in devtools image
-    MENDER_STORAGE_TOTAL_SIZE_MB = "2500"
+    MENDER_STORAGE_TOTAL_SIZE_MB = "2048"
     IMAGE_INSTALL:append = " mender-connect"
+    # mender 5.1.0's client-version inventory script supports mender-connect 3.0.0.
+    # The compatible recipe is down-prioritized in meta-mender and must be selected.
+    PREFERRED_VERSION:pn-mender-connect = "3.0.0"
     MENDER_UPDATE_POLL_INTERVAL_SECONDS = "20"
     MENDER_RETRY_POLL_INTERVAL_SECONDS = "20"
     MENDER_INVENTORY_POLL_INTERVAL_SECONDS = "2000"
     MENDER_CONNECT_USER = "root"
-

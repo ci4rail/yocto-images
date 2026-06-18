@@ -4,7 +4,7 @@ header:
 repos:
   src/meta-mender-community:
     url: "https://github.com/ci4rail/meta-mender-community"
-    branch: scarthgap-ci-tdx-bsp-7.6.0
+    branch: scarthgap-secure-boot
     #commit: 075c0d27b06fc1e2e10598aa4e368e00f9f6aafc
     layers:
       meta-mender-toradex-nxp:
@@ -19,37 +19,40 @@ local_conf_header:
   # from meta-mender-community/meta-mender-toradex-nxp/templates/local.conf.append
   src/meta-ci4rail-mender-tdxbsp: |
     INHERIT += "mender-toradex"
-    # meta-mender-community needs the BSP version...
 
-    # Comment/remove below to enable GRUB integration instead of U-Boot
-    MENDER_FEATURES_ENABLE:append = " mender-uboot mender-image-sd"
+    # ensure that the correct U-Boot environment is used
+    UBOOT_ENV_TEZI ?= "${@ 'u-boot-initial-env-%s' % d.getVar('UBOOT_CONFIG') if d.getVar('UBOOT_CONFIG') else 'u-boot-initial-env'}"
+    UBOOT_ENV_TEZI_EMMC ?= "${UBOOT_ENV_TEZI}"
+
+    # Use U-Boot/Mender A/B switching. A shared ext4 boot partition contains
+    # one signed FIT (kernel plus initramfs) for each rootfs slot.
+    MENDER_FEATURES_ENABLE:append = " mender-uboot"
     MENDER_FEATURES_DISABLE:append = " mender-grub mender-image-uefi"
 
-    IMAGE_CLASSES += "image_type_mender_tezi"
-    IMAGE_FSTYPES:append = " mender_tezi"
-    IMAGE_FSTYPES:remove = " teziimg"
+    # Preserve Toradex U-Boot hardening with the custom Mender A/B boot flow.
+    # The fixed prefix is signed into the FIT; the selected rootfs PARTUUID is
+    # appended by U-Boot and validated as the allowed dynamic root argument.
+    TDX_UBOOT_HARDENING_ENABLE = "1"
+    TDX_SECBOOT_REQUIRED_BOOTARGS = "ro rootwait"
+    MENDER_UBOOT_POST_SETUP_COMMANDS:append = " setenv mender_secboot_overlay ${TDX_SECBOOT_KARGS_OVERLAY}.dtbo;"
 
-    # Default is Image.gz, which is not compatible with GRUB
-    KERNEL_IMAGETYPE:aarch64_mender-grub = "Image"
+    IMAGE_CLASSES:append:pn-ci4rail-base-image = " image_type_mender_tezi"
+    IMAGE_FSTYPES:append:pn-ci4rail-base-image = " mender_tezi mender-bootfit-rootfs"
+    IMAGE_FSTYPES:remove:pn-ci4rail-base-image = " teziimg mender"
 
-    # boot.scr conflicts when using GRUB
-    IMAGE_BOOT_FILES:remove:mender-grub = "boot.scr-verdin-imx8mm;boot.scr"
-
-    # Remove files from boot partition that are loaded by Mender
-    # from the root partitions; this allows the files to be updated OTA
-    IMAGE_BOOT_FILES:remove:mender-uboot = "zImage ${KERNEL_DEVICETREE} overlays.txt overlays/*;overlays/"
+    IMAGE_BOOT_FILES:remove:mender-uboot = "boot.scr boot.scr-${MACHINE};boot.scr boot.scr-verdin-imx8mm;boot.scr boot.scr-verdin-imx8mp;boot.scr"
 
     #
     # Settings for verdin-imx8mm
     #
-    MENDER_BOOT_PART_SIZE_MB:verdin-imx8mm = "32"
+    TEZI_CONFIG_FORMAT:verdin-imx8mm = "4"
     OFFSET_SPL_PAYLOAD:verdin-imx8mm = ""
     KERNEL_DEVICETREE:verdin-imx8mm = "freescale/imx8mm-verdin-wifi-moducop-cpu01.dtb"
 
     #
     # Settings for verdin-imx8mp
     #
-    MENDER_BOOT_PART_SIZE_MB:verdin-imx8mp = "32"
+    TEZI_CONFIG_FORMAT:verdin-imx8mp = "4"
     OFFSET_SPL_PAYLOAD:verdin-imx8mp = ""
     MENDER_IMAGE_BOOTLOADER_BOOTSECTOR_OFFSET:verdin-imx8mp = "0"
     MENDER_UBOOT_STORAGE_INTERFACE:verdin-imx8mp = "mmc"
@@ -57,11 +60,3 @@ local_conf_header:
     MENDER_STORAGE_DEVICE:verdin-imx8mp = "/dev/mmcblk2"
     #MENDER_STORAGE_TOTAL_SIZE_MB:verdin-imx8mp = "2048"
     KERNEL_DEVICETREE:verdin-imx8mp = "freescale/imx8mp-verdin-wifi-moducop-cpu01.dtb"
-
-    # Append the Mender provided bootargs to tdxargs
-    # the Toradex boot.scr will overwrite bootargs so we stash the context in tdxargs
-    MENDER_UBOOT_POST_SETUP_COMMANDS:append = " ; setenv tdxargs \${tdxargs} \${bootargs}; "
-
-    # Make sure the Toradex boot script finds the overlays and overlays.txt file in
-    # the /boot directory of the rootfs partition
-    MENDER_UBOOT_POST_SETUP_COMMANDS:append = " ; setenv overlays_file /boot/overlays.txt ; setenv overlays_prefix boot/overlays/ "

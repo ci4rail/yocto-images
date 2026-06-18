@@ -3,5 +3,5 @@
 [ ] bring back meta-virtualization
 [ ] test with closed device
 [x] meta-mender-community: wrong BSP folder 7.1.0
-[ ] sign with azure key vault
+[x] sign with azure key vault
 [x] Integrare CST tool

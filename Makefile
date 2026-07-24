@@ -12,6 +12,7 @@
 # - yocto-shell - start kas with a yocto shell
 # - mender-upload - upload latest image to mender server
 # - mender-deploy - deploy latest image to device with MENDER_DEVICE_ID
+# - compliance - build image and create the offline OSS clearing bundle
 # - mender - combine "image", "mender-upload", "mender-deploy"
 
 include config/custom.env
@@ -32,7 +33,7 @@ CURL_JQ_IMAGE := "dwdraju/alpine-curl-jq:latest"
 # Main-target to build image
 # Required variables from command line:
 # - IMAGE_DIR
-image yocto-shell mender mender-upload mender-deploy: test-main-args layer-revisions
+image compliance yocto-shell mender mender-upload mender-deploy: test-main-args layer-revisions
 	${MAKE} _$@ IMAGE_VERSION=${shell scripts/gen-image-version.sh . ${IMAGE_DIR}/layer-revs} IMAGE_DIR=${IMAGE_DIR}
 
 #----------------------------------
@@ -64,6 +65,11 @@ _mender: _image _mender-upload _mender-deploy
 _image: test-sub-args _mkdirs
 	@echo building image in ${IMAGE_DIR} with version ${IMAGE_VERSION}
 	docker run -it --rm ${KAS_ARGS} ${KAS_IMAGE} build kasfile.yaml
+
+_compliance: _image
+	python3 scripts/create-oss-clearing-bundle.py \
+		--deploy-dir ${ABS_IMAGE_DIR}/install \
+		--output ${ABS_IMAGE_DIR}/install/oss-clearing-${IMAGE_VERSION}.tar.gz
 
 _mender-upload: test-sub-args
 	docker run --rm -t \

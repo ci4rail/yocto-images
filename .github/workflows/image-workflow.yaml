@@ -99,6 +99,7 @@ jobs:
       mender_tezi_file_name: ${{ steps.eventCheck.outputs.mender_tezi_file_name }}
       mender_file_name: ${{ steps.eventCheck.outputs.mender_file_name }}
       sbom_file_name: ${{ steps.eventCheck.outputs.sbom_file_name }}
+      oss_clearing_file_name: ${{ steps.eventCheck.outputs.oss_clearing_file_name }}
       image_folder: ${{ steps.eventCheck.outputs.image_folder }}
     steps:
       - uses: actions/checkout@v6
@@ -124,6 +125,7 @@ jobs:
           echo "mender_tezi_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}${{ inputs.tar_ending }}.tar" >> $GITHUB_OUTPUT
           echo "mender_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}.mender" >> $GITHUB_OUTPUT
           echo "sbom_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}.spdx.tar.zst" >> $GITHUB_OUTPUT
+          echo "oss_clearing_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}.oss-clearing.tar.gz" >> $GITHUB_OUTPUT
           echo "image_folder=install/images/${{ inputs.machine_dir }}" >> $GITHUB_OUTPUT
 
   dumpversions:
@@ -139,6 +141,7 @@ jobs:
           echo "mender tezi file name is ${{ needs.calculate-version.outputs.mender_tezi_file_name }}"
           echo "mender file name is ${{ needs.calculate-version.outputs.mender_file_name }}"
           echo "sbom file name is ${{ needs.calculate-version.outputs.sbom_file_name }}"
+          echo "OSS clearing file name is ${{ needs.calculate-version.outputs.oss_clearing_file_name }}"
           echo "image folder is ${{ needs.calculate-version.outputs.image_folder }}"
 
   build-and-push-image:
@@ -216,6 +219,14 @@ jobs:
                 ${BUILDER_IMAGE} \
                 build kasfile.yaml
 
+      - name: Create offline OSS clearing delivery
+        if: inputs.simulate_build == 'false'
+        run: |
+          python3 scripts/create-oss-clearing-bundle.py \
+            --deploy-dir ~/install \
+            --image-spdx ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.sbom_file_name }} \
+            --output ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.oss_clearing_file_name }}
+
       - name: Simulate Build
         if: inputs.simulate_build == 'true'
         run: |
@@ -225,6 +236,7 @@ jobs:
           echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
           echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
           echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.sbom_file_name }}
+          echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.oss_clearing_file_name }}
 
       - name: Store Cache for Yocto Builds
         if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
@@ -310,6 +322,7 @@ jobs:
             ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_file_name }}
             ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
             ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.sbom_file_name }}
+            ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.oss_clearing_file_name }}
 
   test-image:
     if: inputs.test_name != ''

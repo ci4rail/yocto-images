@@ -85,6 +85,29 @@ make IMAGE_DIR=cpu01-devtools-image image
 
 See [Makefile](Makefile) for further build targets and instructions.
 
+## OSS clearing delivery
+
+To build an image and its offline third-party software documentation and
+corresponding-source delivery, run:
+
+```bash
+make IMAGE_DIR=cpu01-standard-image compliance
+```
+
+The resulting `install/oss-clearing-<image-version>.tar.gz` contains:
+
+- a self-contained `THIRD_PARTY_SOFTWARE.html` mapping every installed package
+  to its version, build recipe, license texts, copyright notices,
+  acknowledgements, and corresponding source;
+- `components.csv` and the SPDX 2.2 SBOM;
+- unpacked and patched source archives, grouped by recipe and version; and
+- the original Yocto license manifest.
+
+The clearing bundle is an offline deliverable: it contains no confidential
+marking and does not rely on Internet links or files outside the archive.
+See the [OSS clearing release procedure](doc/oss-clearing.md) for the
+contract-requirement mapping and mandatory release review.
+
 ## Install Images
 
 Download [Mender CLI](https://docs.mender.io/downloads#mender-cli) and install it to `/usr/local/bin`.

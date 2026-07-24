@@ -26,6 +26,7 @@ bblayers_conf_header:
   src/meta-general: |
     BBPATH = "${TOPDIR}"
     BBFILES ?= ""
+    BBLAYERS:append = " /kas-includes/meta-oss-compliance"
 
 local_conf_header:
   src/meta-ci4rail-general: |
@@ -52,7 +53,18 @@ local_conf_header:
     DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
     VIRTUAL-RUNTIME_initscripts = ""
     SPDX_INCLUDE_SOURCES = "1"
+    # Archive the unpacked and patched source used by the build.  The release
+    # tooling selects only recipes represented in the delivered image.
+    SPDX_ARCHIVE_SOURCES = "1"
     SPDX_PRETTY = "1"
+    # create-spdx intentionally omits shared GCC sources.  The copyleft
+    # archiver supplies patched source plus the BitBake recipe for those cases.
+    INHERIT += "archiver"
+    ARCHIVER_MODE[src] = "patched"
+    ARCHIVER_MODE[recipe] = "1"
+    ARCHIVER_MODE[dumpdata] = "0"
+    COPYLEFT_RECIPE_TYPES = "target"
+    COPYLEFT_LICENSE_INCLUDE = "GPL* LGPL* AGPL* MPL* EPL* CDDL* EUPL* OSL* CPAL*"
 
 env:
   IMAGE_NAME_SUFFIX: ""

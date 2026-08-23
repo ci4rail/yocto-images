@@ -14,16 +14,6 @@ SPEC.loader.exec_module(MODULE)
 
 
 class ClearingBundleTest(unittest.TestCase):
-    def test_uses_repository_name_for_source_revision_label(self):
-        self.assertEqual(
-            MODULE.git_repository_identifier(
-                "git+https://git.toradex.com/linux-toradex-kconfig.git@"
-                "c6957acbaaf98de436802c52cc9ca059959f08c1",
-                "linux-toradex-source-2",
-            ),
-            "linux-toradex-kconfig",
-        )
-
     def test_creates_review_preview_without_copying_sources(self):
         with tempfile.TemporaryDirectory() as temporary:
             deploy = Path(temporary) / "deploy"
@@ -109,9 +99,6 @@ class ClearingBundleTest(unittest.TestCase):
             disclosure = (root / "THIRD_PARTY_SOFTWARE.html").read_text()
             self.assertIn("demo-bin", disclosure)
             self.assertIn("components/demo-1.2.3.html", disclosure)
-            self.assertIn(
-                "0123456789abcdef0123456789abcdef01234567", disclosure
-            )
             detail = (root / "components" / "demo-1.2.3.html").read_text()
             self.assertIn("MIT full text", detail)
             self.assertIn("Copyright 2026 Example", detail)

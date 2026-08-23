@@ -140,14 +140,6 @@ def find_recipe_spdx(deploy_dir, recipe):
     return max(candidates, key=lambda path: path.stat().st_mtime) if candidates else None
 
 
-def git_repository_identifier(location, fallback):
-    repository = location.rsplit("@", 1)[0].rstrip("/")
-    repository = repository.rsplit("/", 1)[-1]
-    if repository.endswith(".git"):
-        repository = repository[:-4]
-    return repository or fallback
-
-
 def read_source_revisions(deploy_dir, recipe):
     recipe_spdx = find_recipe_spdx(deploy_dir, recipe)
     if not recipe_spdx:
@@ -161,10 +153,7 @@ def read_source_revisions(deploy_dir, recipe):
         match = re.search(r"@([0-9a-fA-F]{40,64})$", location)
         if not match:
             continue
-        entry = (
-            git_repository_identifier(location, package.get("name", "source")),
-            match.group(1).lower(),
-        )
+        entry = (package.get("name", "source"), match.group(1).lower())
         if entry not in revisions:
             revisions.append(entry)
     return revisions
@@ -224,25 +213,6 @@ def source_revision_text(revisions):
     return "; ".join(f"{name}: {revision}" for name, revision in revisions)
 
 
-def summary_source_revision_text(revisions):
-    if not revisions:
-        return "—"
-    if len(revisions) == 1:
-        return revisions[0][1]
-    return f"{len(revisions)} revisions (see component details)"
-
-
-def source_revision_html(revisions):
-    if not revisions:
-        return html.escape(source_revision_text(revisions))
-    items = "".join(
-        f"<li><strong>{html.escape(repository)}</strong>: "
-        f"<code>{html.escape(revision)}</code></li>"
-        for repository, revision in revisions
-    )
-    return f"<ul>{items}</ul>"
-
-
 def write_documentation(
     root,
     title,
@@ -270,7 +240,6 @@ def write_documentation(
             f"<td>{html.escape(version)}</td>"
             f"<td><a href=\"{html.escape(detail_link)}\">"
             f"{html.escape(recipe)}</a></td>"
-            f"<td>{html.escape(summary_source_revision_text(revisions_by_recipe[recipe]))}</td>"
             f"<td>{html.escape(license_expression)}</td>"
             "</tr>"
         )
@@ -296,7 +265,7 @@ This document is not confidential and may be disclosed to third parties.</p>
 license texts, copyright notices, acknowledgements and source information.</p>
 <h2>Installed package inventory</h2>
 <table><thead><tr><th>Component/package</th><th>Version</th><th>Recipe</th>
-<th>Source revision(s)</th><th>Applicable license (SPDX expression)</th></tr></thead>
+<th>Applicable license (SPDX expression)</th></tr></thead>
 <tbody>{''.join(rows)}</tbody></table>
 </body></html>"""
     (root / "THIRD_PARTY_SOFTWARE.html").write_text(
@@ -337,8 +306,8 @@ license texts, copyright notices, acknowledgements and source information.</p>
 <dl>
 <dt>Upstream/build component</dt><dd>{html.escape(recipe)}</dd>
 <dt>Recipe version</dt><dd>{html.escape(recipe_version)}</dd>
-<dt>Source repositories and revisions</dt>
-<dd>{source_revision_html(revisions_by_recipe[recipe])}</dd>
+<dt>Source revision(s)</dt>
+<dd>{html.escape(source_revision_text(revisions_by_recipe[recipe]))}</dd>
 <dt>Declared license(s)</dt><dd>{html.escape(', '.join(licenses))}</dd>
 <dt>Full license text</dt><dd>Included verbatim in the legal material below.</dd>
 <dt>Copyright notices</dt><dd>Included verbatim in the legal material below.</dd>

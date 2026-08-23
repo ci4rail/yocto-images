@@ -11,4 +11,3 @@ custom.env
 secret.env
 */layer-revs
 */.kas_shell_history
-__pycache__/

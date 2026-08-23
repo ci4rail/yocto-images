@@ -321,6 +321,7 @@ jobs:
           path: |
             ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_file_name }}
             ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+            ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.sbom_file_name }}
             ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.oss_clearing_file_name }}
 
   test-image:

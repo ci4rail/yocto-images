@@ -212,6 +212,9 @@ jobs:
                 -e IMAGE_NAME_SUFFIX=${{ needs.calculate-version.outputs.name_suffix }} \
                 -e IMAGE_GIT_VERSION=${{ needs.calculate-version.outputs.version }} \
                 -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
+                -e GIT_CONFIG_COUNT=1 \
+                -e GIT_CONFIG_KEY_0=http.version \
+                -e GIT_CONFIG_VALUE_0=HTTP/1.1 \
                 -w /work \
                 ${BUILDER_IMAGE} \
                 build kasfile.yaml

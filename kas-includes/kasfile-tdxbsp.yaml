@@ -5,7 +5,7 @@ repos:
   src/meta-ci4rail-bsp:
     url: https://github.com/ci4rail/meta-ci4rail-bsp.git
     branch: scarthgap-customization
-    commit: 3a7bbe1b1f70d2e5a7b366825db01d906606d040
+    commit: d96b723a489ae43f6add2323ad96b1cbbac0ed01
 
   # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=7.1.0
   src/meta-freescale-3rdparty.git:

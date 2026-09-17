@@ -350,9 +350,17 @@ jobs:
           name: build-artifacts
           path: ./artifact
       - name: Create Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ./artifact/*
         env:
-          GITHUB_TOKEN: ${{ secrets.private_token }}
+          GH_TOKEN: ${{ secrets.private_token }}
+        run: |
+          shopt -s nullglob
+          assets=(./artifact/*)
+
+          if [ ${#assets[@]} -eq 0 ]; then
+            echo "No release assets found in ./artifact"
+            exit 1
+          fi
+
+          for asset in "${assets[@]}"; do
+            gh release upload "${GITHUB_REF_NAME}" "${asset}" --clobber
+          done

@@ -349,18 +349,26 @@ jobs:
         with:
           name: build-artifacts
           path: ./artifact
-      - name: Create Release
+      - name: Create Release (mender artifact)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./artifact/*.mender
+          overwrite_files: true
         env:
-          GH_TOKEN: ${{ secrets.private_token }}
-        run: |
-          shopt -s nullglob
-          assets=(./artifact/*)
+          GITHUB_TOKEN: ${{ secrets.private_token }}
 
-          if [ ${#assets[@]} -eq 0 ]; then
-            echo "No release assets found in ./artifact"
-            exit 1
-          fi
+      - name: Create Release (tezi artifact)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./artifact/*.mender_tezi.tar
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.private_token }}
 
-          for asset in "${assets[@]}"; do
-            gh release upload "${GITHUB_REF_NAME}" "${asset}" --clobber
-          done
+      - name: Create Release (sbom artifact)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./artifact/*.spdx.tar.zst
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.private_token }}

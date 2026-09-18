@@ -349,10 +349,26 @@ jobs:
         with:
           name: build-artifacts
           path: ./artifact
-      - name: Create Release
-        id: create_release
+      - name: Create Release (mender artifact)
         uses: softprops/action-gh-release@v2
         with:
-          files: ./artifact/*
+          files: ./artifact/*.mender
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.private_token }}
+
+      - name: Create Release (tezi artifact)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./artifact/*.mender_tezi.tar
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.private_token }}
+
+      - name: Create Release (sbom artifact)
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./artifact/*.spdx.tar.zst
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.private_token }}

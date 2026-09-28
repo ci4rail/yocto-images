@@ -5,3 +5,6 @@
 [x] meta-mender-community: wrong BSP folder 7.1.0
 [x] sign with azure key vault
 [x] Integrare CST tool
+[ ] Upgrade to TDX BSP 7.8.0
+[ ] mender-artifact-signing
+[ ] merge changes from scarthgap branch

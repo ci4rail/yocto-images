@@ -4,7 +4,7 @@ repos:
   # docker
   src/meta-virtualization:
     url: https://git.yoctoproject.org/meta-virtualization
-    commit: 3dd635f613f7299d986a8ab6bc9f584370f8ed1d
+    commit: ee1ec1ee542389a3fc3692fdd232f9dd86c849a5 
 
 local_conf_header:
   src/meta-ci4rail-docker: |

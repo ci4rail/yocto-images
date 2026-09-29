@@ -19,8 +19,8 @@ The following images are currently built by this repo.
 
 An image for HW platform tests and bringup including the following features:
 
-- Podman
-- Podman Compose
+- Docker
+- Docker Compose
 - Read Only Filesystem
 - RW Data Partition
 - Tailscale
@@ -39,8 +39,8 @@ Target Platforms:
 
 An image for HW platform tests and bringup including the following features:
 
-- Podman
-- Podman Compose
+- Docker
+- Docker Compose
 - Read Only Filesystem
 - RW Data Partition
 - Tailscale

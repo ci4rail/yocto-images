@@ -15,10 +15,11 @@ distro: tdx-xwayland
 target: ci4rail-base-image
 
 local_conf_header:
-  src/meta-custom: |
+  root-login: |
     INHERIT += "extrausers"
     # encrypted "cheesebread"
     ROOT_PASSWD = "\$5\$.x/PBHo0ZCIQUgJU\$oArWPZxXmMSwJzQHZax8zh5INbh33dvfW2zWdx1dK83"
     EXTRA_USERS_PARAMS = "usermod -p '${ROOT_PASSWD}' root; "
+  src/meta-custom: |
     # Prefix to the resulting deployable tarball name
     BASENAME = "Standard-Image-Non-Secure-Boot"

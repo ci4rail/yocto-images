@@ -7,4 +7,9 @@
 [x] Integrare CST tool
 [ ] Upgrade to TDX BSP 7.8.0
 [ ] mender-artifact-signing
-[ ] merge changes from scarthgap branch
+[x] merge changes from scarthgap branch
+
+[ ] disable kernel messages on console
+[ ] nftables
+[ ] persistent logging
+[ ] watchdog support (via systemd)

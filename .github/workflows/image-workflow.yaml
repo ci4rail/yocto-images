@@ -101,9 +101,10 @@ jobs:
       name_suffix: ${{ steps.eventCheck.outputs.name_suffix }}
       mender_tezi_file_name: ${{ steps.eventCheck.outputs.mender_tezi_file_name }}
       mender_file_name: ${{ steps.eventCheck.outputs.mender_file_name }}
+      sbom_file_name: ${{ steps.eventCheck.outputs.sbom_file_name }}
       image_folder: ${{ steps.eventCheck.outputs.image_folder }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Determine Version
@@ -125,6 +126,7 @@ jobs:
           echo "name_suffix=$name_suffix" >> $GITHUB_OUTPUT
           echo "mender_tezi_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}${{ inputs.tar_ending }}.tar" >> $GITHUB_OUTPUT
           echo "mender_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}.mender" >> $GITHUB_OUTPUT
+          echo "sbom_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}.spdx.tar.zst" >> $GITHUB_OUTPUT
           echo "image_folder=install/images/${{ inputs.machine_dir }}" >> $GITHUB_OUTPUT
 
   dumpversions:
@@ -139,6 +141,7 @@ jobs:
           echo "name suffix is ${{ needs.calculate-version.outputs.name_suffix }}"
           echo "mender tezi file name is ${{ needs.calculate-version.outputs.mender_tezi_file_name }}"
           echo "mender file name is ${{ needs.calculate-version.outputs.mender_file_name }}"
+          echo "sbom file name is ${{ needs.calculate-version.outputs.sbom_file_name }}"
           echo "image folder is ${{ needs.calculate-version.outputs.image_folder }}"
 
   # build-and-push-image:
@@ -291,7 +294,7 @@ jobs:
   #         target_dir: "/"
 
   #     - name: Upload build artifacts
-  #       uses: actions/upload-artifact@v4
+  #       uses: actions/upload-artifact@v7
   #       with:
   #         name: build-artifacts
   #         path: |
@@ -304,7 +307,7 @@ jobs:
     runs-on: [self-hosted, linux, x64, yocto-runner]
     environment: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Log into Docker
         env:
@@ -444,6 +447,7 @@ jobs:
                 -e AZURE_AUTHORITY_HOST \
                 -e ACTIONS_ID_TOKEN_REQUEST_URL \
                 -e ACTIONS_ID_TOKEN_REQUEST_TOKEN \
+                -e GITCONFIG_FILE=/kas-includes/gitconfig \
                 -w /work \
                 ${BUILDER_IMAGE} \
                 build kasfile-sb-production.yaml
@@ -456,6 +460,7 @@ jobs:
           mkdir -p ${image_folder}
           echo "something" > ${image_folder}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-production.mender
           echo "something" > ${image_folder}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-production${{ inputs.tar_ending }}.tar
+          echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.sbom_file_name }}
 
       - name: Store Cache for Yocto Builds
         if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
@@ -479,12 +484,13 @@ jobs:
           done
 
       - name: Upload secure production build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: secure-production-build-artifacts
           path: |
             ~/${{ needs.calculate-version.outputs.image_folder }}/*.mender
             ~/${{ needs.calculate-version.outputs.image_folder }}/*.tar
+            ~/${{ needs.calculate-version.outputs.image_folder }}/*.spdx.tar.zst
 
   # test-image:
   #   if: inputs.test_name != ''
@@ -492,7 +498,7 @@ jobs:
   #   name: Test Yocto Image
   #   runs-on: ubuntu-22.04
   #   steps:
-  #     - uses: ci4rail/teststation-action@v5
+  #     - uses: ci4rail/teststation-action@v6
   #       with:
   #         pipeline-name: "${{ github.run_id }}"
   #         mqtt-broker-url: ${{ env.TESTSTATION_MQTT_URL }}

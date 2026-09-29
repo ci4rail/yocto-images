@@ -15,6 +15,9 @@ distro: tdx-xwayland
 target: ci4rail-base-image
 
 local_conf_header:
+  persistent-logging: |
+    VOLATILE_LOG_DIR = "no"
+    IMAGE_INSTALL:append = " persistent-logging"
   root-login: |
     INHERIT += "extrausers"
     # encrypted "cheesebread"

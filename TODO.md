@@ -9,7 +9,9 @@
 [ ] mender-artifact-signing
 [x] merge changes from scarthgap branch
 
-[ ] disable kernel messages on console
+[x] disable kernel messages on console
 [ ] nftables
-[ ] persistent logging
+[x] persistent logging
 [ ] watchdog support (via systemd)
+
+[ ] migration image

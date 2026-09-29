@@ -6,7 +6,7 @@ This repo can host several projects (with different Yocto versions, machines etc
 
 Yocto builds are performed using [kas](https://github.com/siemens/kas).
 
-**📖 Users, please refer to our [Yocto BSP Manual](https://docs.ci4rail.com/edge-solutions/moducop/yocto-bsp-manual/)**
+**📖 Users, please refer to our [Yocto BSP Manual](https://docs.ci4rail.com/user-docs/modblox7/moducop/yocto-bsp-manual/)**
 
 ## Images
 
@@ -19,8 +19,8 @@ The following images are currently built by this repo.
 
 An image for HW platform tests and bringup including the following features:
 
-- Podman
-- Podman Compose
+- Docker
+- Docker Compose
 - Read Only Filesystem
 - RW Data Partition
 - Tailscale
@@ -39,8 +39,8 @@ Target Platforms:
 
 An image for HW platform tests and bringup including the following features:
 
-- Podman
-- Podman Compose
+- Docker
+- Docker Compose
 - Read Only Filesystem
 - RW Data Partition
 - Tailscale

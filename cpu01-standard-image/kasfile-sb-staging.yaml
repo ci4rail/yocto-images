@@ -1,0 +1,18 @@
+header:
+  version: 11
+  includes:
+    - ./kasfile-common.yaml
+
+local_conf_header:
+  src/meta-custom: |
+    # Prefix to the resulting deployable tarball name
+    BASENAME = "Standard-Image-Staging"
+    CI4RAIL_DM_VERITY_IMAGE_BASENAME = "Standard-Image-Staging"
+    INHERIT += "tdxref-signed"
+    TDX_IMX_HAB_CST_BUILD_FROM_SOURCE = "1"
+    DM_VERITY_IMAGE = "ci4rail-base-image"
+    TDX_IMX_HAB_CST_KEY_SIZE = "3072"
+    TDX_IMX_HAB_CST_DIR = "/work/secure-boot-material/staging"
+    UBOOT_SIGN_KEYDIR = "/work/secure-boot-material/staging/keys/fit"
+    FIT_GENERATE_KEYS = "0"
+    

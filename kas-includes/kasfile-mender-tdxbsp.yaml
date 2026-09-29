@@ -5,7 +5,7 @@ repos:
   src/meta-mender-community:
     url: "https://github.com/ci4rail/meta-mender-community"
     branch: scarthgap-secure-boot
-    #commit: 075c0d27b06fc1e2e10598aa4e368e00f9f6aafc
+    commit: 65ae0f7c12cd38bfaeeb3fe0ef5ba1b867b05856
     layers:
       meta-mender-toradex-nxp:
 

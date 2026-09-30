@@ -44,12 +44,3 @@ def feature(station):
 def baseline():
     import yaml
     return yaml.safe_load((Path(__file__).parent / "config/security_baseline.yaml").read_text())["security_baseline"]
-
-
-@pytest.fixture(scope="session")
-def gps_client(station):
-    from yocto_tests.setup import install_gps_client
-    if "gnss" not in station.cfg.get("features", []):
-        pytest.skip("Station does not declare gnss")
-    install_gps_client(station, station.work)
-    return station.cfg["gpsdclient"]

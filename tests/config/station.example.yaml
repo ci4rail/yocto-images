@@ -45,9 +45,6 @@ wifi_device: mlan0
 wifi_ssid: ${WIFI_SSID}
 wifi_password: ${WIFI_PASSWORD}
 wifi_antenna: '0x01 0x01'
-gpsdclient: /root/bin/gpsdclient_v0.1.0/gpsdclient
-# Optional local ARM64 binary to install after flashing; otherwise fetched via TC gh.
-# gpsdclient_file: /absolute/path/to/gpsdclient
 serial_devices: [ttyS101-CPU01UC-com]
 io4edge_devices: [S101-CPU01UC, S101-IOU01-USB-EXT-1, S101-IOU03-USB-EXT-3, S101-IOU03-USB-EXT-5, S101-IOU04-USB-EXT-6, S101-IOU04-USB-EXT-7]
 io4edge_ips: [192.168.200.10, 192.168.201.10, 192.168.203.10, 192.168.205.10, 192.168.206.10, 192.168.207.10]

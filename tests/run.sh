@@ -9,4 +9,4 @@ fi
 python3 -m venv .venv
 .venv/bin/python -m pip install --disable-pip-version-check -r requirements.txt
 mkdir -p results
-exec .venv/bin/python -m pytest --junitxml=results/junit.xml "$@"
+exec .venv/bin/python -m pytest -s --junitxml=results/junit.xml "$@"

@@ -28,7 +28,9 @@ export TARGET_IP=192.168.24.65
 
 `run.sh` creates `.venv`, installs the pinned Python requirements, then runs
 pytest through that venv. If `tests/.env` exists, `run.sh` sources it and
-exports its variables to pytest. For an already provisioned venv:
+exports its variables to pytest. It passes `-s` so test progress printed to
+stdout appears immediately; use `-s` with direct pytest invocations too.
+For an already provisioned venv:
 
 ```sh
 .venv/bin/python -m pytest --station config/station.yaml --image /path/to/image.tezi.tar
@@ -48,6 +50,8 @@ Do not use pytest-xdist: tests mutate one shared target.
 
 The default logs and JUnit report from `run.sh` are in `results/`.
 `--results` controls command-log placement; pytest's `--junitxml` controls XML.
+JUnit test-case properties include iperf throughput in Mbit/s, fio read/write
+throughput in bytes/s, and LTE packet loss and mean RTT when measured.
 Sensitive command output is excluded from command logs. Do not enable pytest
 local-variable dumps on runs containing credentials.
 
@@ -82,9 +86,8 @@ DUT prerequisites: SSH with configured password authentication, Docker and
 Compose, iperf3, iproute2, udhcpc, NetworkManager/nmcli, ModemManager/mmcli,
 iw, gpsd, lsof, nftables, avahi-browse and mDNS resolution, ttynvt, ping,
 parted, sfdisk, mkfs.vfat, and ordinary shell/file utilities. Root privileges
-are needed for storage, network namespaces and nftables. The runner provisions
-ARM64 gpsdclient v0.1.0 through `gh` on the TC when GNSS is enabled, or copies
-`gpsdclient_file` if supplied. Its destination must be writable.
+are needed for storage, network namespaces and nftables. The GNSS test reads
+gpsd JSON reports through the BusyBox container.
 
 Container dependencies:
 

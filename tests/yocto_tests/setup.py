@@ -96,26 +96,6 @@ def flash(s, work):
     power_cycle(cfg)
 
 
-# TODO: make this generic for arbitrary binaries
-def install_gps_client(s, work):
-    destination = s.cfg["gpsdclient"]
-    if s.dut.run(f"test -x {quote(destination)} && echo present", check=False).strip() == "present":
-        return
-    with tempfile.TemporaryDirectory() as temporary:
-        binary = Path(temporary) / "gpsdclient"
-        if s.cfg.get("gpsdclient_file"):
-            binary = Path(s.cfg["gpsdclient_file"]).expanduser()
-        else:
-            s.tc.run(f"gh release download v0.1.0 -R ci4rail/gpsdtestclient "
-                     f"-p gpsdclient-v0.1.0-linux-arm64.tar.gz -D {quote(work)}", timeout=180)
-            s.tc.run(f"tar -xzf {quote(work + '/gpsdclient-v0.1.0-linux-arm64.tar.gz')} "
-                     f"-C {quote(work)} gpsdclient")
-            s.tc.get(f"{work}/gpsdclient", binary)
-        s.dut.run(f"mkdir -p {quote(str(Path(destination).parent))}")
-        s.dut.put(binary, destination)
-        s.dut.run(f"chmod 755 {quote(destination)}")
-
-
 @contextmanager
 def prepare(s, skip_flash=False):
     base = s.cfg["tc"].get("work_dir", "/var/tmp/yocto-tests")

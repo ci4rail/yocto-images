@@ -1,0 +1,34 @@
+security_baseline:
+  allowed_tcp_ports:
+    - 22
+  allowed_udp_ports:
+    - 5353
+  allowed_root_network_processes:
+    - sshd
+    - dropbear
+    - systemd
+    - snmpd
+    - snmptrapd
+    - tailscaled
+    - avahi-daemon
+  egress_monitor:
+    observation_seconds: 15
+    allowed_ipv4_cidrs: # TODO: adapt
+      - 192.168.0.0/16
+      - 224.0.0.0/4
+    allowed_ipv6_cidrs:
+      - fe80::/10
+      - ff00::/8
+    allowed_tcp_dports: []
+    allowed_udp_dports: []
+    allowed_udp_sports: []
+  abuse_test:
+    tcp_ports:
+      - 22
+    udp_ports:
+      - 5353
+    tcp_iterations: 5
+    udp_iterations: 5
+    tcp_connect_timeout_seconds: 2
+    udp_payload_bytes: 1200
+  max_cvss: 0.0

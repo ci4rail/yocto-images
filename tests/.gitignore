@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+.pytest_cache/
+results/
+config/station.yaml
+*.tar.gz
+.env

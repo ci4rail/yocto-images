@@ -93,6 +93,20 @@ env:
   IMAGE_DIR: ${{ inputs.machine }}-${{ inputs.image_type }}-image
 
 jobs:
+  package-pytest:
+    if: inputs.image_type == 'standard'
+    name: Package target integration tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Package pytest suite for the test computer
+        run: tests/scripts/package.sh yocto-pytest-package.tar.gz
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pytest-package-${{ inputs.machine }}-${{ github.run_id }}
+          path: yocto-pytest-package.tar.gz
+          if-no-files-found: error
+
   calculate-version:
     name: Calculate Version
     runs-on: ubuntu-22.04

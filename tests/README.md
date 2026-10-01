@@ -141,7 +141,10 @@ downloading; this change does not deploy or configure that separate service.
 Ports cover SSH authentication, Docker/Compose, both Ethernet interfaces,
 GNSS, LTE, eMMC, SD card, Wi-Fi, serial loopback, io4edge discovery, TCP/UDP
 attack surface, Nmap vulnerability scripts, root network services, nftables
-egress, and malformed TCP/UDP traffic. Serial tests require physical loopback;
+egress, and malformed TCP/UDP traffic. Persistence tests check journal rotation,
+log survival across a reboot, a 100 MB `/var/log` usage limit, a 100 MB persistent
+journal limit under more than 100 MB of random log input, and at least 10%
+free root filesystem capacity. The journal test reboots the target. Serial tests require physical loopback;
 GNSS requires reception; LTE requires an active SIM; Ethernet/Wi-Fi require
 station connectivity. Thresholds remain 900/80/5 Mbit/s for ETH1/ETH2/Wi-Fi,
 configured storage throughput, and LTE loss below 50% with mean RTT below

@@ -1,8 +1,8 @@
-Folder for integration tests on target machine
+Pytest suite for ModuCop target integration tests and local harness unit tests.
 
 All tests shall use pytest.
 
-Ultimately, tests execute against a target closed with staging keys. Initially the target is open; see the agreed implementation details below.
+Hardware tests currently execute against open CPU01 and CPU01Plus standard-image targets. Closed devices require a suitable signed installer; the default development installer is rejected for them.
 
 # Test environment
 
@@ -16,30 +16,27 @@ The TC is a raspberry pi that has these connections to the target device:
 
 # Who executes the tests
 
-Test shall be executable from the development computer and the test computer (TC).
+Test shall be executable from the development computer (DC) and the test computer (TC).
 
 # Device flashing
 
-The test setup shall initially flash the device with a given image file in tezi.tar format, thus erasing everything on the emmc of the target device (except fuses).
-To flash the device, first convert tezi file into disk image via scripts/make-gadget-image.sh, then transfer image to TC and
-execute tdx-installer container, see https://raw.githubusercontent.com/ci4rail/tc-lib/c16e1d0c68bdd802066f9f09f58aebd12901bd9c/dut_ctrl/tdx_inst.resource.
+Unless `--skip-flash` is set, session setup converts the supplied TEZI tarball into a disk image with `scripts/make-gadget-image.sh`, transfers it to the TC, and runs the configured tdx-installer container. This erases target eMMC except fuses. After flashing, setup releases recovery, power cycles the target, and waits for SSH. A station lock prevents concurrent use.
 
 # Tests
 
-Start with porting existing robot framework tests to pytest: https://github.com/ci4rail/cpu01-yocto-testcases/tree/yoto-security-tests.
+Hardware tests in `yocto_tests/test_functional.py` cover SSH password authentication; Docker login, BusyBox and Compose networking; gpsd access from a container and a 3D GNSS fix; ETH1 and ETH2 throughput; LTE connectivity; eMMC and removable SD card throughput; Wi-Fi throughput; serial loopback; and io4edge discovery and reachability. Tests for optional hardware use the station's `features` list and skip when the feature is absent. The SD card test is marked `destructive` and overwrites the configured removable card.
 
-# Test setuo configuration
+`yocto_tests/test_persistence.py` checks that a journal entry survives a target reboot, that journal rotation creates a new file, that `/var/log` uses at most 100 MB after rotation and reboot, and that the root filesystem has at least 10% available capacity. It also sends over 100 MB of random log input, verifies that the journal accepted each chunk, and checks that persistent journal data stays within 100 MB after rotation. The logging test reboots the shared target, so run hardware tests sequentially.
 
-Make the following parameters configurable for the test setup:
-- TARGET_IP: IP address of the target device
-- TC_IP: IP address of the test computer
-- IMAGE_FILE: Path to the image file to be flashed
-- SERIAL_PORT: Serial port of the target console on the test computer
-- IP/PORT of Tinkerforge brickd server on the test computer
-- Tinkerforge UID of the connected relay bricklet on the test computer
-- SIM APN
-- Wifi SSID and password to connect to for testing
-- SSH credentials for the target device (username and password or key file)
+Hardware security tests in `yocto_tests/test_security.py` cover TCP and UDP attack surface against the baseline, Nmap vulnerability-script output, privileged network services, nftables egress counters, and malformed TCP/UDP traffic followed by an availability check. The checks use `config/security_baseline.yaml`; the Nmap test checks vulnerability strings rather than CVSS scores.
+
+`unit/test_harness.py` covers configuration and closed-device guards, shell quoting and sensitive output, station lock cleanup, network inventory parsing, nftables counters, package allowlisting, installer machine selection and timeout cleanup, power-cycle relay behavior, and reflashed SSH host-key policy. Unit tests do not require target hardware.
+
+# Test setup configuration
+
+Copy `config/station.example.yaml` to a local station configuration. It defines the platform, target and TC connections, image path, serial port, relay/brickd settings, optional hardware features, network and storage thresholds, SIM APN, Wi-Fi credentials, Docker credentials, and SSH credentials. Environment references in YAML are expanded on the pytest runner. Keep credentials outside committed files and CI artifacts.
+
+Run through `run.sh` or a Python virtual environment. Hardware runs need `--station` and either `--image` or `image_file` in station configuration. Use `--skip-flash` to reuse an installed target. Run harness unit tests with `.venv/bin/python -m pytest unit`; `pytest.ini` selects hardware tests by default. Hardware tests share one target and must not run with pytest-xdist. See `README.md` for full setup and run instructions.
 
 # Agreed implementation details
 
@@ -54,8 +51,7 @@ Make the following parameters configurable for the test setup:
 - TC system utilities are managed separately through Ansible. The TC user
   has Docker access without sudo and noninteractive sudo access.
 - Keep the existing security baseline, performance thresholds and password
-  authentication expectations initially. Keep station credentials outside
-  committed files and CI artifacts.
+  authentication expectations.
 
 - After successful flashing, power cycle the target before waiting for SSH;
   the installer's warm reboot is insufficient.

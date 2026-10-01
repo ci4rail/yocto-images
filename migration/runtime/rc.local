@@ -1,0 +1,105 @@
+#!/bin/sh
+# Start the RAM-resident TEZI payload through TEZI's autoinstall feed.
+umask 077
+mkdir -p /run/migration /run/lock /run/media /var/volatile/log /var/run/dbus
+/sbin/ifup lo
+/etc/init.d/udev start
+udevadm settle --timeout=30
+dbus-daemon --system
+avahi-daemon --daemonize
+mkdir -p -m 0700 /run/tezi
+export XDG_RUNTIME_DIR=/run/tezi
+
+/usr/bin/tezi -autoinstall -platform offscreen </dev/null >/run/migration/tezi.log 2>&1 &
+tezi_pid=$!
+(
+    for attempt in $(seq 1 30); do
+        [ -d /sys/class/net/usb0 ] && break
+        sleep 1
+    done
+    if [ ! -d /sys/class/net/usb0 ]; then
+        echo 'Migration failed: TEZI USB network interface is missing.' >/dev/console
+        exit 1
+    fi
+    # TEZI initializes its image downloader when usb0 gets an IPv4 address.
+    /sbin/ip -4 addr show dev usb0 | grep -q '192.168.11.1/' ||
+        /sbin/ip addr add 192.168.11.1/24 dev usb0 || exit 1
+    /sbin/ip link set usb0 up || exit 1
+    /usr/bin/migration-http /migration/image 192.168.11.1 8765 \
+        >/run/migration/http.log 2>&1 &
+    http_pid=$!
+    server_ready=0
+    for attempt in $(seq 1 30); do
+        if wget -q -O /dev/null http://192.168.11.1:8765/image_list.json; then
+            server_ready=1
+            break
+        fi
+        sleep 1
+    done
+    if [ "$server_ready" != 1 ]; then
+        echo 'Migration failed: embedded image server unavailable.' >/dev/console
+        exit 1
+    fi
+
+    ready=0
+    for attempt in $(seq 1 120); do
+        status=$(/usr/bin/tezictl status 2>&1)
+        case "$status" in
+            idle|scanning) ready=1; break ;;
+        esac
+        printf 'Attempt %s: %s\n' "$attempt" "$status" >>/run/migration/control.log
+        if ! kill -0 "$tezi_pid" 2>/dev/null || ! kill -0 "$http_pid" 2>/dev/null; then
+            echo 'Migration failed: TEZI or local image server exited.' >/dev/console
+            exit 1
+        fi
+        sleep 1
+    done
+    if [ "$ready" != 1 ]; then
+        echo 'Migration failed: TEZI control API unavailable.' >/dev/console
+        exit 1
+    fi
+    if ! /usr/bin/tezictl feed-add \
+        http://192.168.11.1:8765/image_list.json >/run/migration/feed.log 2>&1; then
+        echo 'Migration failed: TEZI rejected the embedded image feed.' >/dev/console
+        exit 1
+    fi
+    for attempt in $(seq 1 120); do
+        status=$(/usr/bin/tezictl status 2>&1)
+        case "$status" in
+            installing) break ;;
+            installed)
+                if [ -f /run/migration/restored ]; then
+                    echo 'Migration complete: /data/mender restored. Reboot from eMMC.' >/dev/console
+                else
+                    echo 'Migration failed: restoration marker missing. DO NOT REBOOT.' >/dev/console
+                fi
+                exit 0 ;;
+            failed|aborted)
+                echo 'Migration failed. DO NOT REBOOT: inspect /run/migration.' >/dev/console
+                exit 1 ;;
+        esac
+        sleep 1
+    done
+    if [ "$status" != installing ]; then
+        echo 'Migration failed: TEZI did not start autoinstall.' >/dev/console
+        exit 1
+    fi
+    # Installation and hook logs remain in RAM for operator inspection.
+    while kill -0 "$tezi_pid" 2>/dev/null; do
+        status=$(/usr/bin/tezictl status 2>&1)
+        case "$status" in
+            installed)
+                if [ -f /run/migration/restored ]; then
+                    echo 'Migration complete: /data/mender restored. Reboot from eMMC.' >/dev/console
+                else
+                    echo 'Migration failed: restoration marker missing. DO NOT REBOOT.' >/dev/console
+                fi
+                exit 0 ;;
+            failed|aborted)
+                echo 'Migration failed. DO NOT REBOOT: inspect /run/migration.' >/dev/console
+                exit 1 ;;
+        esac
+        sleep 2
+    done
+    echo 'Migration failed: TEZI exited during installation. DO NOT REBOOT.' >/dev/console
+) &

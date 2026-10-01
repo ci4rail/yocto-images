@@ -1,0 +1,50 @@
+# Copy to station.yaml. Environment references are resolved on the pytest runner.
+platform: cpu01 # cpu01 or cpu01plus; standard images only
+closed: false
+image_file: null # supply --image, or an absolute path here
+target:
+  host: ${TARGET_IP}
+  username: root
+  password: ${TARGET_PASSWORD}
+  # key_file: /absolute/path/to/key
+  port: 22
+  # The target is reflashed; accept its new host key on this isolated station.
+  allow_unknown_host_key: true
+tc:
+  local: true # false when running pytest on the DC
+  host: 192.168.24.64
+  # username omitted: current DC user; SSH config/agent and standard keys are used.
+  work_dir: /var/tmp/yocto-tests
+serial_port: /dev/ttyMODUCOP
+serial_baudrate: 115200
+relay:
+  host: 192.168.24.64
+  port: 4223
+  uid: TeL
+  power_channel: 0
+  recovery_channel: 1
+installer_image: ci4rail/tdx-installer-dev:v3
+security_image: ci4rail/security-test-tools:latest
+testing_image: ghcr.io/ci4rail/linux-testing-container:latest
+docker_username: ci4rail
+docker_password: $DOCKER_PASSWORD # Expanded from the pytest runner environment.
+flash_timeout: 1200
+boot_timeout: 300
+features: [ethernet2, gnss, modem, sdcard, wifi, serial, io4edge]
+eth2_path: /sys/devices/platform/soc@0/33800000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/0000:02:03.0/0000:05:00.0
+eth2_mbps: 80
+emmc_read_bps: 1000000
+emmc_write_bps: 1000000
+sdcard: /dev/mmcblk1
+sdcard_read_bps: 1000000
+sdcard_write_bps: 1000000
+modem_model: SIMCOM_SIM7906E-M2
+modem_device: wwu1u1i5
+sim_apn: web.vodafone.de
+wifi_device: mlan0
+wifi_ssid: ${WIFI_SSID}
+wifi_password: ${WIFI_PASSWORD}
+wifi_antenna: '0x01 0x01'
+serial_devices: [ttyS101-CPU01UC-com]
+io4edge_devices: [S101-CPU01UC, S101-IOU01-USB-EXT-1, S101-IOU03-USB-EXT-3, S101-IOU03-USB-EXT-5, S101-IOU04-USB-EXT-6, S101-IOU04-USB-EXT-7]
+io4edge_ips: [192.168.200.10, 192.168.201.10, 192.168.203.10, 192.168.205.10, 192.168.206.10, 192.168.207.10]

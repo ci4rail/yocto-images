@@ -1,0 +1,34 @@
+services:
+  web:
+    image: docker.io/library/nginx:alpine
+    ports:
+      - "8080:80"
+    networks:
+      - testnet
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+
+  tester:
+    image: docker.io/library/alpine:latest
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - testnet
+    entrypoint: >
+      sh -c "
+      set -e;
+      echo 'Waiting for web service...';
+      date;
+      sleep 2;
+      date;
+      echo 'Testing connection to web:';
+      wget -qO- http://web:80 || echo 'Failed to connect';
+      "
+
+networks:
+  testnet:
+    driver: bridge

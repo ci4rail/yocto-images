@@ -79,7 +79,6 @@ jobs:
           RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.RECOVERY_ROOT_PASSWORD_HASH }}
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-          FIT_SPKI_SHA256: ${{ inputs.platform == 'cpu01' && vars.RECOVERY_CPU01_FIT_SPKI_SHA256 || vars.RECOVERY_CPU01PLUS_FIT_SPKI_SHA256 }}
         run: |
           export RECOVERY_WORK="$RUNNER_TEMP/recovery"
           echo "RECOVERY_WORK=$RECOVERY_WORK" >> "$GITHUB_ENV"
@@ -113,11 +112,10 @@ jobs:
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-          FIT_SPKI_SHA256: ${{ inputs.platform == 'cpu01' && vars.RECOVERY_CPU01_FIT_SPKI_SHA256 || vars.RECOVERY_CPU01PLUS_FIT_SPKI_SHA256 }}
         run: |
           docker run --rm --user "$(id -u):$(id -g)" \
             -e GIT_CONFIG_GLOBAL=/dev/null -e GIT_CONFIG_SYSTEM=/dev/null -v "$GITHUB_WORKSPACE:/work:ro" -v "$RECOVERY_WORK:/build" \
-            -e RECOVERY_ROOT_PASSWORD_HASH -e FIT_SPKI_SHA256 \
+            -e RECOVERY_ROOT_PASSWORD_HASH \
             -e AZURE_CLIENT_ID -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \
             -e ACTIONS_ID_TOKEN_REQUEST_URL -e ACTIONS_ID_TOKEN_REQUEST_TOKEN \
             -e GITHUB_SHA -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT -e RECOVERY_VERSION \

@@ -58,8 +58,6 @@ def validate_environment(mode):
         for name in ('AZURE_CLIENT_ID', 'AZURE_TENANT_ID'):
             if not os.environ.get(name):
                 raise ValueError(f'Missing production variable: {name}')
-        if not re.fullmatch(r'[0-9a-f]{64}', os.environ.get('FIT_SPKI_SHA256', '')):
-            raise ValueError('Production requires the device FIT public-key fingerprint')
 
 
 def fetch(url, sha256, destination):
@@ -123,7 +121,7 @@ def prepare(config, profile, work):
     run('dtc', '-@', '-I', 'dts', '-O', 'dtb', '-o', work / 'board.dtb', preprocessed)
 
 
-def trust_tree(certificate, keyname, algorithm, destination, expected_spki=None):
+def trust_tree(certificate, keyname, algorithm, destination):
     """Construct the U-Boot public-key node, independently of the signing tool."""
     from cryptography import x509
     from cryptography.hazmat.primitives import serialization
@@ -137,8 +135,6 @@ def trust_tree(certificate, keyname, algorithm, destination, expected_spki=None)
         raise ValueError('FIT key size does not match signing algorithm')
     spki = key.public_bytes(serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)
     fingerprint = hashlib.sha256(spki).hexdigest()
-    if expected_spki is not None and fingerprint != expected_spki:
-        raise ValueError('Production FIT certificate does not match the configured device trust anchor')
     numbers = key.public_numbers()
     def cells(value, length):
         return ' '.join(f'0x{(value >> shift) & 0xffffffff:08x}'
@@ -162,12 +158,8 @@ def signing_arguments(signing, mode, work):
     if mode == 'staging':
         keydir = REPO / signing['keydir']
         certificate = keydir / f'{name}.crt'
-        expected = None
         extra = ['--fit-keydir', str(keydir)]
     else:
-        expected = os.environ.get('FIT_SPKI_SHA256', '')
-        if not re.fullmatch(r'[0-9a-f]{64}', expected):
-            raise ValueError('Production requires FIT_SPKI_SHA256 from the device FIT trust anchor')
         for variable in ('AZURE_CLIENT_ID', 'AZURE_TENANT_ID'):
             if not os.environ.get(variable):
                 raise ValueError(f'Missing {variable}')
@@ -186,7 +178,7 @@ def signing_arguments(signing, mode, work):
             'certificate': base64.b64encode(der.read_bytes()).decode(),
         }]}))
         extra = ['--fit-keydir', f'token={name};object={name}', '--fit-engine', 'pkcs11']
-    fingerprint = trust_tree(certificate, name, algorithm, work / 'trust.dtb', expected)
+    fingerprint = trust_tree(certificate, name, algorithm, work / 'trust.dtb')
     return extra + ['--fit-keyname', name, '--fit-algorithm', algorithm], fingerprint
 
 

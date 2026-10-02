@@ -64,25 +64,18 @@ Production additionally uses environment variables `AZURE_CLIENT_ID`,
 Azure federated identity for GitHub's `production` environment. Azure access
 needs certificate read and FIT key sign permissions; HAB keys are not involved.
 
-Set `RECOVERY_CPU01_FIT_SPKI_SHA256` to the SHA-256 of the DER SubjectPublicKeyInfo
-of the FIT key trusted by the deployed U-Boot. Obtain its trusted public
-certificate and calculate:
-
-```sh
-openssl x509 -in trusted-fit.crt -pubkey -noout |
-  openssl pkey -pubin -outform DER |
-  sha256sum
-```
-
-The downloaded Azure certificate must match this fingerprint. CI constructs
-an independent U-Boot verification DTB from it and verifies the configuration
-signature and image hashes using `fit_check_sign` before uploading.
+Production fetches the public FIT certificate associated with the configured
+Azure Key Vault key ID using the same OIDC authentication and certificate-fetch
+helper as the image signing layer. No separate fingerprint variable is needed.
+CI constructs a U-Boot verification DTB from the downloaded certificate and
+verifies the configuration signature and image hashes with `fit_check_sign`.
+The certificate's public-key fingerprint is recorded in `build.json`.
 
 CPU01 staging uses the checked-in `dev` RSA-2048 dummy key; production uses
 `moducop-cpu01-fit` RSA-3072 from Azure. CPU01plus staging uses the same dummy
 FIT key, so its U-Boot must trust that key. CPU01plus production is intentionally
-unconfigured: add its reviewed key ID/name/algorithm to `platforms.json` and set
-`RECOVERY_CPU01PLUS_FIT_SPKI_SHA256` once that platform's trust anchor is defined.
+unconfigured: add its reviewed key ID/name/algorithm to `platforms.json` once that
+platform's signing key is defined.
 The workflow rejects unconfigured platform/mode combinations before building.
 
 ## MinIO configuration

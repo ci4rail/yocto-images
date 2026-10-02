@@ -23,6 +23,32 @@ class DestinationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'no reviewed signing configuration'):
             recovery.settings('cpu01plus', 'production')
 
+    def test_production_uses_azure_identity_without_fingerprint_variable(self):
+        with patch.dict(os.environ, {
+                'MINIO_ACCESS_KEY': 'fixture', 'MINIO_SECRET_KEY': 'fixture',
+                'MINIO_BUCKET': 'fixture-bucket',
+                'RECOVERY_ROOT_PASSWORD_HASH': '$6$salt$' + 'a' * 86,
+                'AZURE_CLIENT_ID': 'fixture-client', 'AZURE_TENANT_ID': 'fixture-tenant',
+        }, clear=True):
+            recovery.validate_environment('production')
+            with tempfile.TemporaryDirectory() as tmp:
+                work = Path(tmp)
+                _, _, signing = recovery.settings('cpu01', 'production')
+                def azure_tools(*args):
+                    if 'akv-fetch-certificate.py' in str(args[1]):
+                        (work / 'fit.der').write_bytes(b'Azure public certificate fixture')
+                    elif args[0] == 'openssl':
+                        (work / 'fit.crt').write_bytes(b'PEM certificate fixture')
+                with patch.object(recovery, 'run', side_effect=azure_tools) as command, \
+                        patch.object(recovery, 'trust_tree', return_value='fingerprint') as trust:
+                    arguments, fingerprint = recovery.signing_arguments(signing, 'production', work)
+                trust.assert_called_once_with(work / 'fit.crt', signing['keyname'],
+                                              signing['algorithm'], work / 'trust.dtb')
+                command.assert_any_call('python3', recovery.AKV / 'akv-fetch-certificate.py',
+                                        '--key-id', signing['key_id'], '--output', work / 'fit.der')
+                self.assertIn('pkcs11', arguments)
+                self.assertEqual(fingerprint, 'fingerprint')
+
     def test_public_policy_rejected_even_when_conditional(self):
         for principal in ('*', {'AWS': '*'}, {'AWS': ['*']}, {'AWS': ['user', '*']}):
             with self.subTest(principal=principal), self.assertRaises(ValueError):
@@ -88,9 +114,8 @@ class TrustTests(unittest.TestCase):
                 fingerprint = hashlib.sha256(key.public_bytes(
                     serialization.Encoding.DER, serialization.PublicFormat.SubjectPublicKeyInfo)).hexdigest()
                 algorithm = f'sha256,rsa{bits}'
-                recovery.trust_tree(root / 'dev.crt', 'dev', algorithm, root / 'trust.dtb', fingerprint)
-                with self.assertRaisesRegex(ValueError, 'trust anchor'):
-                    recovery.trust_tree(root / 'wrong.crt', 'dev', algorithm, root / 'wrong.dtb', fingerprint)
+                self.assertEqual(recovery.trust_tree(
+                    root / 'dev.crt', 'dev', algorithm, root / 'trust.dtb'), fingerprint)
                 recovery.trust_tree(root / 'wrong.crt', 'dev', algorithm, root / 'wrong.dtb')
                 (root / 'kernel').write_bytes(b'kernel CI fixture')
                 (root / 'ramdisk').write_bytes(b'ramdisk CI fixture')

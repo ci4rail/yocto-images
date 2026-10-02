@@ -1,7 +1,7 @@
 [x] test mender-update bootfit/rootfs
 [x] merge with latest meta-ci4rail-bsp
 [x] bring back meta-virtualization
-[ ] test with closed device
+[x] test with closed device
 [x] meta-mender-community: wrong BSP folder 7.1.0
 [x] sign with azure key vault
 [x] Integrare CST tool
@@ -14,9 +14,13 @@
 [x] persistent logging
 [ ] watchdog support (via systemd)
 
-[ ] migration image
+[x] migration image SDCard staging
+[ ] migration image SDCard production
 
 [ ] ci: add non-secure build
 [ ] ci: add staging build
+
+[ ] oss clearing
+[ ] cvs scanning
 
 [ ] update yocto.sh

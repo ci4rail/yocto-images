@@ -1,12 +1,13 @@
 #!/bin/sh
-# The immutable profile and payload are created by migration/build.py.
+# Shared guards for manual data backup and restore.
 set -eu
 umask 077
 . /migration/profile.conf
 STATE=/run/migration
 OLD=$STATE/old
 NEW=$STATE/new
-BACKUP=$STATE/backup/mender.tar
+MEDIA=/run/media/migration-sd
+TAR=/bin/tar.tar
 
 fail() {
     echo "Migration: $*" >&2
@@ -39,12 +40,43 @@ unmounted_emmc() {
 
 check_platform() {
     tr '\000' '\n' </proc/device-tree/compatible | grep -Fx "$SOC" >/dev/null || fail 'Wrong platform'
-    # Refuse invocation from a regular installed OS; hooks require our RAM root.
+    # Refuse invocation from a regular installed OS; manual tools require our RAM root.
     awk '$2 == "/" && $3 == "squashfs" { found=1 } END { exit !found }' /proc/mounts || fail 'Root must be the migration squashfs'
-    [ -f /migration/image/SHA256SUMS ] || fail 'SD payload missing'
 }
 
 cleanup_mounts() {
     mountpoint -q "$OLD" && umount "$OLD" || :
     mountpoint -q "$NEW" && umount "$NEW" || :
+}
+
+# Require the operator to name the data partition; never guess from old layouts.
+select_data_partition() {
+    identify_emmc
+    unmounted_emmc
+    PARTITION=$(readlink -f "$1")
+    case "$PARTITION" in
+        "${DEVICE}"p*) suffix=${PARTITION#"${DEVICE}"p} ;;
+        *) fail 'Data partition must belong to eMMC' ;;
+    esac
+    case "$suffix" in ''|*[!0-9]*) fail 'Invalid partition number' ;; esac
+    [ -b "$PARTITION" ] || fail 'Data partition missing'
+    TYPE=$(blkid -s TYPE -o value "$PARTITION")
+    case "$TYPE" in ext3|ext4) ;; *) fail 'Expected an ext3/ext4 data partition' ;; esac
+}
+
+backup_folder() {
+    mountpoint -q "$MEDIA" || fail 'SD card is not mounted'
+    parent=$(dirname "$1")
+    [ -d "$parent" ] || fail 'Create the backup parent directory first'
+    parent=$(readlink -f "$parent")
+    FOLDER=$parent/$(basename "$1")
+    [ ! -L "$FOLDER" ] || fail 'Backup folder must not be a symlink'
+    case "$(basename "$1")" in .|..) fail 'Invalid backup folder' ;; esac
+    case "$FOLDER" in "$MEDIA"/*) ;; *) fail "Backup folder must be below $MEDIA" ;; esac
+}
+
+check_data_filesystem() {
+    mkdir -p "$STATE"
+    e2fsck -fn "$PARTITION" >"$STATE/data-fsck.log" 2>&1 ||
+        fail "Data filesystem needs attention; see $STATE/data-fsck.log"
 }

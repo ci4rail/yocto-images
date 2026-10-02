@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import subprocess
 import unittest
+from unittest.mock import patch
 
 SPEC = importlib.util.spec_from_file_location('migration_build', Path(__file__).parents[1] / 'build.py')
 build = importlib.util.module_from_spec(SPEC)
@@ -52,28 +53,53 @@ class PayloadTests(unittest.TestCase):
 
     def validate(self):
         (self.root / 'image.json').write_text(json.dumps(self.data))
-        return build.validate_payload(self.root, ['0055'])
+        return build.validate_payload(self.root)
 
     def test_current_layout_normalized_without_changing_contents(self):
         original = copy.deepcopy(self.data)
-        result, refs, size = self.validate()
+        result, refs = self.validate()
         self.assertEqual(result['blockdevs'][0]['name'], 'emmc')
         self.assertEqual(result['blockdevs'][1]['name'], 'emmc-boot0')
         self.assertEqual(result['blockdevs'][0]['partitions'], original['blockdevs'][0]['partitions'])
         self.assertFalse(result['autoinstall'])
-        self.assertEqual(result['prepare_script'], 'prepare.sh')
+        self.assertNotIn('prepare_script', result)
+        self.assertNotIn('wrapup_script', result)
         self.assertNotIn('old-prepare.sh', refs)
-        self.assertGreater(size, 256)
 
-    def test_wrong_platform(self):
-        self.data['supported_product_ids'] = ['0063']
-        with self.assertRaisesRegex(ValueError, 'product IDs'):
-            self.validate()
+    def test_product_ids_preserved(self):
+        self.data['supported_product_ids'] = ['0063', '0055']
+        result, _ = self.validate()
+        self.assertEqual(result['supported_product_ids'], ['0063', '0055'])
+
+    def test_invalid_product_ids_rejected(self):
+        for ids in (None, [], '0055', [55], [''], ['   ']):
+            with self.subTest(ids=ids):
+                self.data['supported_product_ids'] = ids
+                with self.assertRaisesRegex(ValueError, 'product IDs'):
+                    self.validate()
+
+    def test_payload_build_without_tezi(self):
+        self.validate()
+        archive = self.root / 'release.tar'
+        with tarfile.open(archive, 'w') as tf:
+            for path in sorted(self.root.iterdir()):
+                if path != archive:
+                    tf.add(path, arcname='release/' + path.name)
+        destination = self.root / 'output'
+        args = build.argument_parser('payload').parse_args([
+            '--payload', str(archive), '--output', str(destination)])
+        self.assertFalse(hasattr(args, 'tezi'))
+        build.build(args, 'payload')
+        result = json.loads((destination / 'image.json').read_text())
+        self.assertEqual(result['supported_product_ids'], self.data['supported_product_ids'])
+        self.assertFalse(result['autoinstall'])
+        self.assertEqual((destination / 'rootfs.ext4').read_bytes(), b'fixture')
+        self.assertTrue((destination / 'SHA256SUMS').is_file())
 
     def test_unknown_hooks_not_executed(self):
         self.data['error_script'] = 'fuse.sh'
-        result, refs, _ = self.validate()
-        self.assertEqual(result['error_script'], 'error.sh')
+        result, refs = self.validate()
+        self.assertNotIn('error_script', result)
         self.assertNotIn('fuse.sh', refs)
 
     def test_fusing_environment_rejected(self):
@@ -114,13 +140,34 @@ class PayloadTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'larger'):
             self.validate()
 
-    def test_target_environment_layout(self):
-        path = self.root / 'fw_env.config'
-        path.write_text('/dev/mmcblk2boot0 -0x2200 0x2000\n/dev/mmcblk2boot0 -0x4200 0x2000\n')
-        self.assertIn('/dev/emmc-boot0', build.validate_env_config(path))
-        path.write_text('/dev/mmcblk2 0x400000 0x20000\n')
-        with self.assertRaises(ValueError):
-            build.validate_env_config(path)
+
+class RecoveryInputTests(unittest.TestCase):
+    def test_signed_recovery_needs_no_bootloader_or_exported_environment(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'image.json').write_text(json.dumps({'isinstaller': True}))
+            args = build.argument_parser('recovery').parse_args([
+                '--platform', 'cpu01', '--tezi', str(root), '--dtb', str(root / 'board.dtb'),
+                '--output', str(root / 'output'), '--fit-keydir', str(root / 'keys')])
+            with patch.object(build, 'require_tools'), patch.object(build, 'output', side_effect=[
+                    'fsl,imx8mm', 'ModuCop CPU01', 'verdin-imx8mm']):
+                self.assertEqual(build.validate_recovery_inputs(args, {'soc': 'fsl,imx8mm'}),
+                                 (root, root / 'board.dtb'))
+            args.fit_keydir = None
+            with self.assertRaisesRegex(ValueError, 'requires --fit-keydir'):
+                build.validate_recovery_inputs(args, {'soc': 'fsl,imx8mm'})
+
+    def test_runtime_installs_redundant_environment_configuration(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'etc/network').mkdir(parents=True)
+            (root / 'etc/fw_env.config').write_text('/dev/emmc-boot0 -0x2200 0x2000\n')
+            with patch.object(build, 'run'):
+                build.configure_runtime(root, {'soc': 'fsl,imx8mm'})
+            rows = [line.split() for line in (root / 'etc/fw_env.config').read_text().splitlines()
+                    if line and not line.startswith('#')]
+            self.assertEqual(rows, [['/dev/emmc-boot0', '-0x2200', '0x2000'],
+                                    ['/dev/emmc-boot0', '-0x4200', '0x2000']])
 
 
 @unittest.skipUnless(all(shutil.which(t) for t in ('mkimage', 'fdtget', 'fdtput', 'dtc', 'openssl')),

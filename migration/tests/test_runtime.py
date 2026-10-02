@@ -1,9 +1,8 @@
-"""Execute the real hook bodies with simulated mounts and eMMC sysfs.
+"""Execute manual backup/restore with simulated mounts and eMMC sysfs.
 
 No block devices, privileges, or actual mounts are used. tar, its metadata
-preservation, checksums, and the phase markers are real.
+preservation, checksums, and the completion markers are real.
 """
-import hashlib
 import os
 from pathlib import Path
 import shlex
@@ -19,8 +18,8 @@ class PreservationTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        for name in ('state/old/mender', 'state/new/mender', 'image',
-                     'sys/emmc/device', 'proc', 'bin'):
+        for name in ('state/old/mender', 'state/new/mender', 'media/backups',
+                     'sys/emmc/device', 'bin'):
             (self.root / name).mkdir(parents=True)
         self.old = self.root / 'state/old/mender'
         self.new = self.root / 'state/new/mender'
@@ -34,163 +33,103 @@ class PreservationTests(unittest.TestCase):
         (self.new / 'factory-identity').write_bytes(b'must be removed on restoration')
         (self.root / 'emmc').touch()
         (self.root / 'emmcp1').touch()
-        (self.root / 'sys/emmc/size').write_text('10000000\n')
         (self.root / 'sys/emmc/device/cid').write_text('fixture-cid\n')
-        (self.root / 'proc/meminfo').write_text('MemAvailable: 1048576 kB\n')
-        payload = self.root / 'image/payload'
-        payload.write_bytes(b'payload fixture')
-        (self.root / 'image/SHA256SUMS').write_text(
-            hashlib.sha256(payload.read_bytes()).hexdigest() + '  payload\n')
-        (self.root / 'profile.conf').write_text(
-            "SOC='fixture'\nMAX_BACKUP_MIB=128\nMINIMUM_DISK_MIB=128\nDATA_FREE_KIB=131072\n"
-            f"PAYLOAD_CHECKSUM_SHA256={hashlib.sha256((self.root / 'image/SHA256SUMS').read_bytes()).hexdigest()}\n")
+        (self.root / 'profile.conf').write_text("SOC='fixture'\n")
         common = (RUNTIME / 'common.sh').read_text()
         common = common.replace('/migration/profile.conf', str(self.root / 'profile.conf'))
         common = common.replace('/run/migration', str(self.root / 'state'))
         common = common.replace('/dev/console', str(self.root / 'console'))
+        common = common.replace('TAR=/bin/tar.tar', 'TAR=tar')
         common += f'''
 identify_emmc() {{ DEVICE={shlex.quote(str(self.root / 'emmc'))}; DISK=emmc; }}
 unmounted_emmc() {{ :; }}
 check_platform() {{ :; }}
 cleanup_mounts() {{ :; }}
+backup_folder() {{ FOLDER=$1; }}
+select_data_partition() {{ identify_emmc; PARTITION=$1; TYPE=ext4; }}
+check_data_filesystem() {{ :; }}
 '''
         (self.root / 'common.sh').write_text(common)
+        subprocess.run(['cc', '-DBACKUP_CHUNK_BYTES=131072', '-Wall', '-Wextra', '-Werror', str(RUNTIME / 'split-backup.c'), '-o', str(self.root / 'bin/split-backup')], check=True)
+        (self.old.parent / '.hidden').write_text('outside mender')
         for tool, body in {'mount': 'exit 0', 'umount': 'exit 0',
                            'blkid': 'echo ext4', 'e2fsck': 'exit 0', 'sync': 'exit 0'}.items():
             path = self.root / 'bin' / tool
             path.write_text('#!/bin/sh\n' + body + '\n')
             path.chmod(0o755)
 
-    def hook(self, name):
+    def run_script(self, name):
         text = (RUNTIME / name).read_text()
         for original, replacement in {
+            '/migration/split-backup': str(self.root / 'bin/split-backup'),
             '/migration/common.sh': str(self.root / 'common.sh'),
-            '/migration/image': str(self.root / 'image'),
             '/sys/class/block': str(self.root / 'sys'),
-            '/proc/meminfo': str(self.root / 'proc/meminfo'),
             '/dev/console': str(self.root / 'console'),
             '[ -b ': '[ -f ',
         }.items():
             text = text.replace(original, replacement)
         script = self.root / name
         script.write_text(text)
-        return subprocess.run(['sh', str(script)], capture_output=True, text=True,
+        return subprocess.run(['sh', str(script), str(self.root / 'media/backups/test'), str(self.root / 'emmcp1')], capture_output=True, text=True,
                               env={**os.environ, 'PATH': str(self.root / 'bin') + ':' + os.environ['PATH']})
 
-    def test_replaced_payload_and_checksum_manifest_rejected(self):
-        (self.root / 'image/payload').write_bytes(b'replacement')
-        (self.root / 'image/SHA256SUMS').write_text(
-            hashlib.sha256(b'replacement').hexdigest() + '  payload\n')
-        result = self.hook('prepare.sh')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertFalse((self.root / 'state/prepared').exists())
-        self.assertFalse((self.root / 'state/backup/mender.tar').exists())
-
-    def test_preserve_and_verify_full_directory_metadata(self):
-        result = self.hook('prepare.sh')
+    def test_preserve_entire_data_and_metadata(self):
+        result = self.run_script('backup-data.sh')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.root / 'state/prepared').exists())
-        result = self.hook('wrapup.sh')
+        result = self.run_script('restore-data.sh')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.root / 'state/restored').exists())
         self.assertFalse((self.new / 'factory-identity').exists())
-        self.assertEqual((self.new / 'mender-agent.pem').read_bytes(), (self.old / 'mender-agent.pem').read_bytes())
+        self.assertEqual((self.new.parent / '.hidden').read_text(), 'outside mender')
         self.assertEqual((self.new / 'mender-agent.pem').stat().st_mode & 0o777, 0o600)
         self.assertEqual(os.getxattr(self.new / 'mender-agent.pem', 'user.migration-test'), b'preserved')
         self.assertEqual(os.readlink(self.new / 'key-link'), 'mender-agent.pem')
         self.assertEqual((self.new / 'database').stat().st_ino, (self.new / 'database-link').stat().st_ino)
 
-    def test_missing_mender_aborts_before_prepared(self):
-        (self.old).rename(self.old.with_name('not-mender'))
-        result = self.hook('prepare.sh')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('No separate legacy data partition', result.stderr)
-        self.assertFalse((self.root / 'state/prepared').exists())
-
-    def test_ambiguous_partitions_aborted(self):
-        (self.root / 'emmcp2').touch()
-        result = self.hook('prepare.sh')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('Multiple legacy', result.stderr)
-        self.assertFalse((self.root / 'state/prepared').exists())
-
-    def test_corrupt_payload_aborts_before_backup(self):
-        (self.root / 'image/payload').write_bytes(b'corrupt')
-        result = self.hook('prepare.sh')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertFalse((self.root / 'state/backup/mender.tar').exists())
-
-    def test_legacy_data_is_repaired_and_verified_before_backup(self):
-        fsck = self.root / 'bin/e2fsck'
-        fsck.write_text('''#!/bin/sh
-case "$1" in
-    -fy) printf 'repaired\\n' >"$FSCK_STATE"; exit 1 ;;
-    -fn) [ -e "$FSCK_STATE" ] && exit 0 || exit 4 ;;
-esac
-exit 8
-'''.replace('$FSCK_STATE', shlex.quote(str(self.root / 'fsck-repaired'))))
-        result = self.hook('prepare.sh')
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertTrue((self.root / 'state/legacy-fsck-repair.log').exists())
-        self.assertTrue((self.root / 'state/legacy-fsck-verify.log').exists())
-        self.assertTrue((self.root / 'state/backup/mender.tar').exists())
-
-    def test_unrepairable_legacy_data_aborts_before_backup(self):
-        fsck = self.root / 'bin/e2fsck'
-        fsck.write_text('#!/bin/sh\n[ "$1" = -fy ] && exit 4\nexit 4\n')
-        result = self.hook('prepare.sh')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('Legacy data repair failed', result.stderr)
-        self.assertFalse((self.root / 'state/backup/mender.tar').exists())
-
-    def test_repair_requiring_reboot_aborts_before_backup(self):
-        fsck = self.root / 'bin/e2fsck'
-        fsck.write_text('#!/bin/sh\n[ "$1" = -fy ] && exit 2\nexit 4\n')
-        result = self.hook('prepare.sh')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('e2fsck exit 2', result.stderr)
-        self.assertFalse((self.root / 'state/backup/mender.tar').exists())
-
-    def test_fsck_operational_failure_does_not_attempt_repair(self):
-        fsck = self.root / 'bin/e2fsck'
-        marker = self.root / 'repair-attempted'
-        fsck.write_text('#!/bin/sh\n[ "$1" = -fy ] && touch ' +
-                        shlex.quote(str(marker)) + '\nexit 8\n')
-        result = self.hook('prepare.sh')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('e2fsck exit 8', result.stderr)
-        self.assertFalse(marker.exists())
-        self.assertFalse((self.root / 'state/backup/mender.tar').exists())
-
-    def test_repair_must_pass_followup_check(self):
-        fsck = self.root / 'bin/e2fsck'
-        fsck.write_text('#!/bin/sh\n[ "$1" = -fy ] && exit 1\nexit 4\n')
-        result = self.hook('prepare.sh')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('still has errors', result.stderr)
-        self.assertFalse((self.root / 'state/backup/mender.tar').exists())
-
-    def test_insufficient_ram_aborted(self):
-        (self.root / 'proc/meminfo').write_text('MemAvailable: 100 kB\n')
-        result = self.hook('prepare.sh')
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn('Insufficient free RAM', result.stderr)
-
-    def test_corrupt_backup_does_not_replace_new_data(self):
-        self.assertEqual(self.hook('prepare.sh').returncode, 0)
-        (self.root / 'state/backup/mender.tar').write_bytes(b'corrupt')
-        result = self.hook('wrapup.sh')
-        self.assertNotEqual(result.returncode, 0)
+    def test_corrupt_backup_does_not_replace_data(self):
+        self.assertEqual(self.run_script('backup-data.sh').returncode, 0)
+        (self.root / 'media/backups/test/data.tar.part-0000').write_bytes(b'corrupt')
+        self.assertNotEqual(self.run_script('restore-data.sh').returncode, 0)
         self.assertTrue((self.new / 'factory-identity').exists())
-        self.assertFalse((self.root / 'state/restored').exists())
 
-    def test_rerun_cannot_overwrite_backup(self):
-        self.assertEqual(self.hook('prepare.sh').returncode, 0)
-        backup = self.root / 'state/backup/mender.tar'
-        previous = backup.read_bytes()
-        self.assertNotEqual(self.hook('prepare.sh').returncode, 0)
-        self.assertEqual(backup.read_bytes(), previous)
+    def test_rerun_preserves_backup(self):
+        self.assertEqual(self.run_script('backup-data.sh').returncode, 0)
+        backup = self.root / 'media/backups/test/data.tar.part-0000'
+        original = backup.read_bytes()
+        self.assertNotEqual(self.run_script('backup-data.sh').returncode, 0)
+        self.assertEqual(backup.read_bytes(), original)
 
+    def test_incomplete_backup_rejected(self):
+        self.assertEqual(self.run_script('backup-data.sh').returncode, 0)
+        (self.root / 'media/backups/test/complete').unlink()
+        self.assertNotEqual(self.run_script('restore-data.sh').returncode, 0)
+        self.assertTrue((self.new / 'factory-identity').exists())
 
-if __name__ == '__main__':
-    unittest.main()
+    def test_wrong_device_backup_rejected(self):
+        self.assertEqual(self.run_script('backup-data.sh').returncode, 0)
+        (self.root / 'media/backups/test/emmc-cid').write_text('other')
+        self.assertNotEqual(self.run_script('restore-data.sh').returncode, 0)
+        self.assertTrue((self.new / 'factory-identity').exists())
+
+    def test_chunk_boundaries_and_existing_file_protection(self):
+        prefix = self.root / 'chunks-'
+        content = bytes(range(256)) * 1100
+        result = subprocess.run([str(self.root / 'bin/split-backup'), str(prefix)],
+                                input=content, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        chunks = sorted(self.root.glob('chunks-*'))
+        self.assertEqual([p.stat().st_size for p in chunks], [131072, 131072, 19456])
+        self.assertEqual(b''.join(p.read_bytes() for p in chunks), content)
+        result = subprocess.run([str(self.root / 'bin/split-backup'), str(prefix)],
+                                input=b'replacement', capture_output=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(b''.join(p.read_bytes() for p in chunks), content)
+
+    def test_insufficient_space_does_not_replace_data(self):
+        self.assertEqual(self.run_script('backup-data.sh').returncode, 0)
+        df = self.root / 'bin/df'
+        df.write_text('#!/bin/sh\necho filesystem 100 100 0 100% /\n')
+        df.chmod(0o755)
+        result = self.run_script('restore-data.sh')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('too small', result.stderr)
+        self.assertTrue((self.new / 'factory-identity').exists())

@@ -141,6 +141,43 @@ class PayloadTests(unittest.TestCase):
             self.validate()
 
 
+class ConsoleAuthTests(unittest.TestCase):
+    password_hash = '$6$salt$' + 'a' * 86
+
+    def test_hash_validation(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / 'hash'
+            path.write_text(self.password_hash + '\n')
+            self.assertEqual(build.read_root_password_hash(path), self.password_hash)
+            for invalid in ('', 'password', '!', self.password_hash + '\nroot::',
+                            self.password_hash + ':', '$6$salt$short'):
+                path.write_text(invalid)
+                with self.assertRaises(ValueError):
+                    build.read_root_password_hash(path)
+
+    def test_console_authentication_preserves_respawn(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / 'sbin').mkdir()
+            (root / 'etc').mkdir()
+            init = root / 'sbin/init'
+            init.write_text('while true; do\n\tsetsid cttyhack sh\n\tsleep 1\ndone\n')
+            init.chmod(0o755)
+            (root / 'sbin/sulogin.util-linux').touch()
+            shadow = root / 'etc/shadow'
+            shadow.write_text('root::0:0:99999:7:::\nother:!:0:0:99999:7:::\n')
+            shadow.chmod(0o400)  # Vendor TEZI shadow is read-only after extraction.
+            build.configure_console_auth(root, self.password_hash)
+            self.assertEqual(init.read_text(),
+                             'while true; do\n\tsetsid cttyhack /sbin/sulogin.util-linux\n\tsleep 1\ndone\n')
+            self.assertEqual(init.stat().st_mode & 0o777, 0o755)
+            self.assertEqual(shadow.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(shadow.read_text(),
+                             f'root:{self.password_hash}:0:0:99999:7:::\nother:!:0:0:99999:7:::\n')
+            with self.assertRaisesRegex(ValueError, 'Unsupported TEZI init'):
+                build.configure_console_auth(root, self.password_hash)
+
+
 class RecoveryInputTests(unittest.TestCase):
     def test_signed_recovery_needs_no_bootloader_or_exported_environment(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -148,6 +185,7 @@ class RecoveryInputTests(unittest.TestCase):
             (root / 'image.json').write_text(json.dumps({'isinstaller': True}))
             args = build.argument_parser('recovery').parse_args([
                 '--platform', 'cpu01', '--tezi', str(root), '--dtb', str(root / 'board.dtb'),
+                '--root-password-hash-file', str(root / 'root.hash'),
                 '--output', str(root / 'output'), '--fit-keydir', str(root / 'keys')])
             with patch.object(build, 'require_tools'), patch.object(build, 'output', side_effect=[
                     'fsl,imx8mm', 'ModuCop CPU01', 'verdin-imx8mm']):

@@ -3,7 +3,7 @@
 The RAM-resident `recovery.itb` supports CPU01 (i.MX8MM) and CPU01plus
 (i.MX8MP). Recovery and the TEZI OS payload are built independently. Copy
 `recovery.itb` and the payload directory `image/` to SD partition 1.
-Boot opens a serial shell, requests DHCP on eth0, mounts SD read/write, and
+Boot opens a password-protected root serial console, requests DHCP on eth0, mounts SD read/write, and
 starts the TEZI UI. All migration operations are manual.
 
 ## Build recovery
@@ -11,14 +11,26 @@ starts the TEZI UI. All migration operations are manual.
 Host dependencies (Debian/Ubuntu):
 
 ```sh
-sudo apt-get install python3 u-boot-tools device-tree-compiler squashfs-tools gcc-aarch64-linux-gnu libc6-dev-arm64-cross
+sudo apt-get install python3 u-boot-tools device-tree-compiler squashfs-tools gcc-aarch64-linux-gnu libc6-dev-arm64-cross openssl
+umask 077
+openssl passwd -6 > /path/to/recovery-root.hash
 python3 migration/build-recovery.py \
   --platform cpu01 \
   --tezi migration/tezi/Verdin-iMX8MM_ToradexEasyInstaller_7.7.0+build.13 \
   --dtb /path/to/imx8mm-verdin-wifi-moducop-cpu01.dtb \
+  --root-password-hash-file /path/to/recovery-root.hash \
   --fit-keydir /path/to/staging-keys --fit-keyname dev \
   --output gen/cpu01-recovery
 ```
+
+`openssl passwd` prompts for the password without putting it in the command
+line. Both recovery build entry points require `--root-password-hash-file`;
+there is no default password. The SHA-512 crypt hash is embedded in the signed
+recovery filesystem, not in `build.json`. Keep the hash file outside version
+control. Changing the password requires rebuilding and signing recovery.
+The serial console asks for the root password before opening a shell and again
+after logout. DHCP, SD mounting and TEZI start before login. This protects only
+the serial shell; TEZI's VNC interface remains unauthenticated.
 
 Use the matching ModuCop installer-kernel DTB. Recovery includes
 [`runtime/fw_env.config`](runtime/fw_env.config), matching this project's Mender
@@ -110,7 +122,7 @@ imx-boot into such a filesystem. Use the partitioned layout below for ROM SD boo
 
 Startup mounts the SD card read/write at `/run/media/migration-sd`, starts
 DHCP on `eth0` and TEZI over VNC (port 5900), and returns immediately to the
-serial shell. TEZI discovers `image/image.json` on local SD media. There is no
+serial password prompt. TEZI discovers `image/image.json` on local SD media. There is no
 HTTP server, feed registration, automatic backup, installation, restore or reboot.
 The UI starts even if the SD card is missing. Inspect `/run/migration/media.log`,
 `dhcp.log`, `startup.log`, `weston.log` and `tezi.log` for diagnostics.

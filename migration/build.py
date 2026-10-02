@@ -346,6 +346,36 @@ def unpack_installer(tezi, work):
     return rootfs, kernel, load, compression
 
 
+def read_root_password_hash(path):
+    """Accept SHA-512 crypt only; never include credentials in error messages."""
+    value = path.read_text().rstrip('\n')
+    if not re.fullmatch(r'\$6\$(?:rounds=[1-9][0-9]{3,8}\$)?[./A-Za-z0-9]{1,16}\$[./A-Za-z0-9]{86}', value):
+        raise ValueError('Root password hash must be a single SHA-512 crypt hash')
+    return value
+
+
+def configure_console_auth(rootfs, password_hash):
+    """Replace TEZI's unauthenticated shell, refusing unknown init layouts."""
+    init = rootfs / 'sbin/init'
+    startup = init.read_text()
+    shell = '\tsetsid cttyhack sh\n'
+    if startup.count(shell) != 1:
+        raise ValueError('Unsupported TEZI init: expected one serial shell launch')
+    # Use the concrete binary: the vendor sulogin symlink is absolute.
+    if not (rootfs / 'sbin/sulogin.util-linux').is_file():
+        raise ValueError('TEZI runtime needs util-linux sulogin')
+    shadow = rootfs / 'etc/shadow'
+    rows = shadow.read_text().splitlines()
+    if sum(row.startswith('root:') for row in rows) != 1:
+        raise ValueError('Expected one root shadow entry')
+    rows = [f'root:{password_hash}:0:0:99999:7:::' if row.startswith('root:') else row
+            for row in rows]
+    shadow.chmod(0o600)
+    shadow.write_text('\n'.join(rows) + '\n')
+    # No --force: authentication errors and EOF must never open a shell.
+    init.write_text(startup.replace(shell, '\tsetsid cttyhack /sbin/sulogin.util-linux\n'))
+
+
 def configure_runtime(rootfs, profile):
     """Install manual data tools and minimal shell/network/TEZI startup."""
     embedded = rootfs / 'migration'
@@ -379,11 +409,13 @@ def configure_runtime(rootfs, profile):
 def package_recovery(args, destination):
     """Build recovery.itb without reading or embedding an OS payload."""
     profile = load_profile(args.platform)
+    password_hash = read_root_password_hash(args.root_password_hash_file)
     tezi, dtb = validate_recovery_inputs(args, profile)
     with tempfile.TemporaryDirectory(prefix='migration-recovery-') as temp:
         work = Path(temp).resolve()
         rootfs, kernel, load, compression = unpack_installer(tezi, work)
         configure_runtime(rootfs, profile)
+        configure_console_auth(rootfs, password_hash)
         squashfs = work / 'migration.squashfs'
         run('mksquashfs', rootfs, squashfs, '-noappend', '-all-root', '-comp', 'gzip',
             '-no-progress', '-processors', '2', stdout=subprocess.DEVNULL)
@@ -442,6 +474,8 @@ def add_recovery_arguments(parser):
     parser.add_argument('--tezi', type=Path, required=True, help='Extracted platform TEZI runtime')
     parser.add_argument('--platform', choices=('cpu01', 'cpu01plus'), required=True)
     parser.add_argument('--dtb', type=Path, required=True)
+    parser.add_argument('--root-password-hash-file', type=Path, required=True,
+                        help='File containing a SHA-512 crypt hash for the recovery root password')
     parser.add_argument('--fit-keydir', help='mkimage signing key directory (production: CI only)')
     parser.add_argument('--fit-keyname', default='dev')
     parser.add_argument('--fit-engine', help='OpenSSL signing engine, e.g. pkcs11')

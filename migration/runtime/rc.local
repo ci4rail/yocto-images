@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sourced by TEZI init: return promptly so PID 1 opens the serial shell.
+# Sourced by TEZI init: return promptly so PID 1 opens the authenticated serial console.
 umask 077
 mkdir -p /run/migration /run/lock /run/media /var/volatile/log /var/run/dbus
 /etc/init.d/udev start

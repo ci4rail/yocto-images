@@ -1,0 +1,28 @@
+name: CPU01plus Recovery Production
+
+on:
+  push:
+    branches:
+      - secure-boot-migration-image
+  workflow_dispatch:
+    inputs:
+      minio_bucket:
+        description: Existing private bucket on minio.ci4rail.com
+        type: string
+        required: true
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  recovery:
+    uses: ./.github/workflows/recovery-workflow.yaml
+    with:
+      platform: cpu01plus
+      signing_mode: production
+      minio_bucket: ${{ inputs.minio_bucket || vars.RECOVERY_MINIO_BUCKET }}
+    secrets:
+      RECOVERY_MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+      RECOVERY_MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+      RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.RECOVERY_ROOT_PASSWORD_HASH }}

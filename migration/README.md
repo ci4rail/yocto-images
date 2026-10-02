@@ -8,6 +8,12 @@ starts the TEZI UI. All migration operations are manual.
 
 ## Build recovery
 
+For CI builds, choose the platform’s **Recovery Staging** or **Recovery Production**
+GitHub action, or call the reusable
+[`recovery-workflow.yaml`](../.github/workflows/recovery-workflow.yaml).
+See [CI configuration and input provenance](ci/README.md) for signing secrets,
+platform support, and private MinIO storage.
+
 Host dependencies (Debian/Ubuntu):
 
 ```sh

@@ -180,15 +180,17 @@ def prepare_recovery_dtb(dtb, console):
 
 
 def make_fit(kernel, ramdisk, dtb, load, compression, dest,
-             keydir=None, keyname='dev', engine=None):
+             keydir=None, keyname='dev', engine=None, algorithm='sha256,rsa2048'):
     # ramdisk has no fixed load address: U-Boot relocates it, avoiding overlap
     # between the RAM root filesystem and the original FIT buffer.
     if not re.fullmatch(r'[A-Za-z0-9_+-]+', keyname):
         raise ValueError('Invalid FIT key name')
+    if algorithm not in ('sha256,rsa2048', 'sha256,rsa3072', 'sha256,rsa4096'):
+        raise ValueError('Unsupported FIT signing algorithm')
     signature = ''
     if keydir:
         signature = f'''signature {{
-    algo = "sha256,rsa2048"; key-name-hint = "{keyname}";
+    algo = "{algorithm}"; key-name-hint = "{keyname}";
     sign-images = "kernel", "fdt", "ramdisk";
    }};'''
     its = dest.parent / 'migration.its'
@@ -423,7 +425,8 @@ def package_recovery(args, destination):
         shutil.copyfile(dtb, work / 'board.dtb')
         prepare_recovery_dtb(work / 'board.dtb', profile['console'])
         make_fit(kernel, squashfs, work / 'board.dtb', load, compression,
-                 destination / 'recovery.itb', args.fit_keydir, args.fit_keyname, args.fit_engine)
+                 destination / 'recovery.itb', args.fit_keydir, args.fit_keyname, args.fit_engine,
+                 args.fit_algorithm)
         size = (destination / 'recovery.itb').stat().st_size
         if size > profile['maximum_fit_mib'] * MIB:
             raise ValueError(f"Recovery FIT exceeds {profile['maximum_fit_mib']} MiB loader limit")
@@ -434,6 +437,7 @@ def package_recovery(args, destination):
             'fw_env_config_sha256': digest(ROOT / 'runtime/fw_env.config'), 'fit_size_bytes': size,
             'fit_signed': bool(args.fit_keydir),
             'fit_keyname': args.fit_keyname if args.fit_keydir else None,
+            'fit_algorithm': args.fit_algorithm if args.fit_keydir else None,
             'fuse_programming': False, 'hardware_validated': False,
         })
         write_checksums(destination)
@@ -479,6 +483,8 @@ def add_recovery_arguments(parser):
     parser.add_argument('--fit-keydir', help='mkimage signing key directory (production: CI only)')
     parser.add_argument('--fit-keyname', default='dev')
     parser.add_argument('--fit-engine', help='OpenSSL signing engine, e.g. pkcs11')
+    parser.add_argument('--fit-algorithm', default='sha256,rsa2048',
+                        choices=('sha256,rsa2048', 'sha256,rsa3072', 'sha256,rsa4096'))
     parser.add_argument('--allow-unsigned', action='store_true', help='Open development devices only')
 
 

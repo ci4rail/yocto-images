@@ -20,6 +20,8 @@
 [ ] ci: add non-secure build
 [ ] ci: add staging build
 
+[ ] support CPU01plus
+
 [ ] oss clearing
 [ ] cvs scanning
 

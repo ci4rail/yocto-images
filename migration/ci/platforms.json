@@ -1,0 +1,43 @@
+{
+  "tezi_version": "7.7.0+build.13",
+  "kernel_revision": "d1cfde2d5d15be14123bdd1689162bd27f995a90",
+  "bsp_revision": "0fa5efea03f13fe36fdedab229ff6a176a4b971d",
+  "platforms": {
+    "cpu01": {
+      "tezi_url": "https://artifacts.toradex.com/artifactory/tezi-oe-prod-frankfurt/scarthgap-7.x.y/release/13/verdin-imx8mm/tezi/tezi-run/teziimage",
+      "tezi_sha256": {
+        "tezi.itb": "b4ab2c22f46058e1c118503c7e424784419353af04fff794ccb8bd3fd2e2485b",
+        "image.json": "96559109a4f5124d38d909fc7864a1edc6389abc72e81fad6677423144af49ef"
+      },
+      "dts": "imx8mm-verdin-wifi-moducop-cpu01",
+      "signing": {
+        "staging": {
+          "keydir": "cpu01-standard-image/secure-boot-material/staging/keys/fit",
+          "keyname": "dev",
+          "algorithm": "sha256,rsa2048"
+        },
+        "production": {
+          "key_id": "https://vault-firmware-signing.vault.azure.net/keys/moducop-cpu01-fit",
+          "keyname": "moducop-cpu01-fit",
+          "algorithm": "sha256,rsa3072"
+        }
+      }
+    },
+    "cpu01plus": {
+      "tezi_url": "https://artifacts.toradex.com/artifactory/tezi-oe-prod-frankfurt/scarthgap-7.x.y/release/13/verdin-imx8mp/tezi/tezi-run/teziimage",
+      "tezi_sha256": {
+        "tezi.itb": "ea53f3fea4ef1574c64c0b3313247e2065a3303c0995594b4e7610a7a9bf5b5e",
+        "image.json": "92eb18916c79c1fe450e6576391448dad437a7a97bc7503c884e04c50f546d3d"
+      },
+      "dts": "imx8mp-verdin-wifi-moducop-cpu01",
+      "signing": {
+        "staging": {
+          "keydir": "cpu01-standard-image/secure-boot-material/staging/keys/fit",
+          "keyname": "dev",
+          "algorithm": "sha256,rsa2048"
+        }
+      }
+    }
+  },
+  "ci4rail_bsp_revision": "cb4d0fa4320b3dda1bd75ad73705361d77de34dc"
+}

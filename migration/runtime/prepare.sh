@@ -8,6 +8,8 @@ unmounted_emmc
 sectors=$(cat "/sys/class/block/$DISK/size")
 [ "$sectors" -ge $((MINIMUM_DISK_MIB * 2048)) ] || fail 'eMMC too small for target layout'
 mkdir -p "$OLD" "$NEW"
+printf '%s  %s\n' "$PAYLOAD_CHECKSUM_SHA256" /migration/image/SHA256SUMS |
+    sha256sum -c - || fail 'Payload checksum manifest changed'
 (cd /migration/image && sha256sum -c SHA256SUMS) || fail 'Payload checksum failed'
 
 # Probe only ext filesystems on this eMMC, read-only without journal replay.

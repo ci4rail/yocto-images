@@ -1,16 +1,73 @@
 #!/bin/sh
-# Start the RAM-resident TEZI payload through TEZI's autoinstall feed.
+# Offer the SD payload for manual installation through the TEZI UI.
 umask 077
 mkdir -p /run/migration /run/lock /run/media /var/volatile/log /var/run/dbus
 /sbin/ifup lo
 /etc/init.d/udev start
 udevadm settle --timeout=30
+# Bring up networking even if payload discovery fails, so the serial shell
+# can report the lease and diagnostics. rc.local is sourced by TEZI's PID 1.
+/sbin/ifup eth0 >/run/migration/dhcp.log 2>&1 &
 dbus-daemon --system
 avahi-daemon --daemonize
-mkdir -p -m 0700 /run/tezi
-export XDG_RUNTIME_DIR=/run/tezi
 
-/usr/bin/tezi -autoinstall -platform offscreen </dev/null >/run/migration/tezi.log 2>&1 &
+# Use only SD media, never eMMC. Wait for asynchronous partition discovery.
+# A whole-card FAT filesystem is accepted only when there are no partitions.
+. /migration/profile.conf
+mount_sd_payload() {
+    mkdir -p /run/migration-media
+    for attempt in $(seq 1 30); do
+        for card in /sys/class/block/mmcblk*; do
+            [ -f "$card/device/type" ] || continue
+            [ "$(cat "$card/device/type")" = SD ] || continue
+            disk="/dev/${card##*/}"
+            partition="${disk}p1"
+            if [ ! -b "$partition" ]; then
+                [ -b "$disk" ] || continue
+                [ ! -e "${card}p1" ] || continue
+                # Do not mistake an unrecognized partition table for a filesystem.
+                [ "$(blkid -s TYPE -o value "$disk")" = vfat ] || continue
+                partition="$disk"
+            fi
+            echo "Checking SD payload on $partition"
+            mount -o ro,nosuid,nodev "$partition" /run/migration-media || continue
+            if printf '%s  %s\n' "$PAYLOAD_CHECKSUM_SHA256" /migration/image/SHA256SUMS | sha256sum -c - &&
+               (cd /migration/image && sha256sum -c SHA256SUMS); then
+                echo "Verified SD payload on $partition"
+                return 0
+            fi
+            umount /run/migration-media || return 1
+            # A mounted but invalid payload needs operator attention, not retries.
+            return 1
+        done
+        sleep 1
+    done
+    echo 'No readable SD payload filesystem found within 30 seconds.'
+    ls -l /dev/mmcblk* 2>/dev/null
+    return 1
+}
+if ! mount_sd_payload >/run/migration/media.log 2>&1; then
+    cat /run/migration/media.log >/dev/console
+    echo 'Migration payload unavailable. Serial shell and DHCP remain available; inspect /run/migration/media.log.' >/dev/console
+    # Never exit here: this script is sourced by /sbin/init (PID 1).
+    return 0
+fi
+# Start the interactive UI only after the payload has been verified.
+mkdir -p -m 0700 /run/wayland
+export XDG_RUNTIME_DIR=/run/wayland
+export QT_WAYLAND_FORCE_DPI=72
+# CPU01 has no installer display requirement; expose the UI over Ethernet VNC.
+/usr/bin/weston --backend=vnc-backend.so --shell=kiosk-shell.so --no-config \
+    </dev/null >/run/migration/weston.log 2>&1 &
+for attempt in $(seq 1 40); do
+    [ -S "$XDG_RUNTIME_DIR/wayland-0" ] && break
+    sleep 1
+done
+if [ ! -S "$XDG_RUNTIME_DIR/wayland-0" ]; then
+    echo 'Migration UI failed: inspect /run/migration/weston.log. Serial shell remains available.' >/dev/console
+    return 0
+fi
+/usr/bin/tezi -platform wayland </dev/null >/run/migration/tezi.log 2>&1 &
 tezi_pid=$!
 (
     for attempt in $(seq 1 30); do
@@ -37,7 +94,7 @@ tezi_pid=$!
         sleep 1
     done
     if [ "$server_ready" != 1 ]; then
-        echo 'Migration failed: embedded image server unavailable.' >/dev/console
+        echo 'Migration failed: SD payload server unavailable.' >/dev/console
         exit 1
     fi
 
@@ -60,30 +117,10 @@ tezi_pid=$!
     fi
     if ! /usr/bin/tezictl feed-add \
         http://192.168.11.1:8765/image_list.json >/run/migration/feed.log 2>&1; then
-        echo 'Migration failed: TEZI rejected the embedded image feed.' >/dev/console
+        echo 'Migration failed: TEZI rejected the SD payload feed.' >/dev/console
         exit 1
     fi
-    for attempt in $(seq 1 120); do
-        status=$(/usr/bin/tezictl status 2>&1)
-        case "$status" in
-            installing) break ;;
-            installed)
-                if [ -f /run/migration/restored ]; then
-                    echo 'Migration complete: /data/mender restored. Reboot from eMMC.' >/dev/console
-                else
-                    echo 'Migration failed: restoration marker missing. DO NOT REBOOT.' >/dev/console
-                fi
-                exit 0 ;;
-            failed|aborted)
-                echo 'Migration failed. DO NOT REBOOT: inspect /run/migration.' >/dev/console
-                exit 1 ;;
-        esac
-        sleep 1
-    done
-    if [ "$status" != installing ]; then
-        echo 'Migration failed: TEZI did not start autoinstall.' >/dev/console
-        exit 1
-    fi
+    echo 'Select the migration payload in the TEZI UI over VNC on eth0:5900.' >/dev/console
     # Installation and hook logs remain in RAM for operator inspection.
     while kill -0 "$tezi_pid" 2>/dev/null; do
         status=$(/usr/bin/tezictl status 2>&1)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package a platform-specific RAM installer from TEZI and a released Mender image.
+"""Package a platform-specific SD recovery installer from TEZI and a released Mender image.
 
 No target devices are accessed. Input archives must come from trusted builds.
 The deliberately narrow payload format is this repository's four-partition
@@ -151,7 +151,7 @@ def validate_payload(folder, installer_product_ids):
         if not (folder / name).is_file() or (folder / name).is_symlink():
             raise ValueError(f'Missing regular payload file: {name}')
     disk['name'], boot['name'] = 'emmc', 'emmc-boot0'
-    manifest['autoinstall'] = True  # TEZI autoinstalls only after discovering our local feed
+    manifest['autoinstall'] = False  # Installation requires selection in the TEZI UI
     # These hooks replace the standard no-op preparation and data resize hook.
     # TEZI already maximizes partition 4. The data filesystem remains at its
     # image size, so preparation checks its free space before erasing.
@@ -189,9 +189,28 @@ def fit_component(fit, kind, work):
     return target, node, compression
 
 
-def make_fit(kernel, ramdisk, dtb, load, compression, dest):
+def recovery_bootargs(console):
+    # Must match moducop-recovery.c, independently of the FIT size limit.
+    return f'console={console},115200 root=/dev/ram0 rootfstype=squashfs ro ramdisk_size=393216'
+
+
+def prepare_recovery_dtb(dtb, console):
+    run('fdtput', '-p', '-t', 's', dtb,
+        '/chosen/toradex,secure-boot', 'required-bootargs', recovery_bootargs(console))
+
+
+def make_fit(kernel, ramdisk, dtb, load, compression, dest,
+             keydir=None, keyname='dev', engine=None):
     # ramdisk has no fixed load address: U-Boot relocates it, avoiding overlap
-    # between a large embedded payload and the original FIT buffer.
+    # between the RAM root filesystem and the original FIT buffer.
+    if not re.fullmatch(r'[A-Za-z0-9_+-]+', keyname):
+        raise ValueError('Invalid FIT key name')
+    signature = ''
+    if keydir:
+        signature = f'''signature {{
+    algo = "sha256,rsa2048"; key-name-hint = "{keyname}";
+    sign-images = "kernel", "fdt", "ramdisk";
+   }};'''
     its = dest.parent / 'migration.its'
     its.write_text(f'''/dts-v1/;
 / {{
@@ -214,34 +233,45 @@ def make_fit(kernel, ramdisk, dtb, load, compression, dest):
   }};
  }};
  configurations {{
-  default = "migration";
-  migration {{ kernel = "kernel"; fdt = "fdt"; ramdisk = "ramdisk"; }};
+  default = "recovery";
+  recovery {{ kernel = "kernel"; fdt = "fdt"; ramdisk = "ramdisk";
+   {signature}
+  }};
  }};
 }};
 ''')
-    run('mkimage', '-f', its, dest, stdout=subprocess.DEVNULL)
+    signing = ['-k', keydir] if keydir else []
+    if engine:
+        signing += ['-N', engine]
+    run('mkimage', '-f', its, *signing, dest, stdout=subprocess.DEVNULL)
+    if keydir and not output('fdtget', '-t', 'bx', dest,
+                             '/configurations/recovery/signature', 'value'):
+        raise ValueError('FIT signature missing')
     its.unlink()
 
 
-def boot_scripts(dest, maximum_mib, console):
-    boot = f'''# The complete FIT (including payload) is loaded before Linux starts.
+def boot_scripts(dest, console):
+    boot = f'''# The recovery FIT is loaded before Linux starts; the payload stays on SD.
 # No saveenv, eMMC writes, or fuse commands are performed here.
-setenv bootargs console={console},115200 root=/dev/ram0 rootfstype=squashfs ro ramdisk_size={maximum_mib * 1024}
+setenv bootargs {recovery_bootargs(console)}
 setenv fdt_high
 setenv initrd_high
 setenv bootm_low 0x40000000
-setenv bootm_size 0x{(maximum_mib * 3 + 256) * MIB:x}
-if load ${{devtype}} ${{devnum}}:${{distro_bootpart}} 0x60000000 ${{prefix}}migration.itb; then
-    bootm 0x60000000#migration
+setenv bootm_size 0x58000000
+if load ${{devtype}} ${{devnum}}:${{distro_bootpart}} 0x60000000 ${{prefix}}recovery.itb; then
+    bootm 0x60000000#recovery
 fi
 '''
+    (dest / 'sd.cmd').write_text(boot.replace(
+        'load ${devtype} ${devnum}:${distro_bootpart} 0x60000000 ${prefix}recovery.itb',
+        'load mmc 1:1 0x60000000 /recovery.itb'))
     (dest / 'boot.cmd').write_text(boot)
     run('mkimage', '-A', 'arm64', '-O', 'linux', '-T', 'script', '-C', 'none',
         '-n', 'Ci4Rail migration', '-d', dest / 'boot.cmd', dest / 'boot.scr',
         stdout=subprocess.DEVNULL)
     (dest / 'tftp.cmd').write_text(boot.replace(
-        'load ${devtype} ${devnum}:${distro_bootpart} 0x60000000 ${prefix}migration.itb',
-        'tftpboot 0x60000000 migration.itb'))
+        'load ${devtype} ${devnum}:${distro_bootpart} 0x60000000 ${prefix}recovery.itb',
+        'tftpboot 0x60000000 recovery.itb'))
     run('mkimage', '-A', 'arm64', '-O', 'linux', '-T', 'script', '-C', 'none',
         '-n', 'Ci4Rail migration TFTP', '-d', dest / 'tftp.cmd', dest / 'tftp.scr',
         stdout=subprocess.DEVNULL)
@@ -249,7 +279,14 @@ fi
 
 def build(args):
     profile = json.loads((ROOT.parent / f'{args.platform}-migration-image/profile.json').read_text())
-    for tool in ('dumpimage', 'mkimage', 'fdtget', 'dtc', 'unsquashfs', 'mksquashfs',
+    if not args.allow_unsigned and not (args.fit_keydir and args.signed_imx_boot):
+        raise ValueError('Signed recovery requires --fit-keydir and --signed-imx-boot; '
+                         'use --allow-unsigned only for open development devices')
+    if args.fit_engine and not args.fit_keydir:
+        raise ValueError('--fit-engine requires --fit-keydir')
+    if args.signed_imx_boot and not args.signed_imx_boot.is_file():
+        raise ValueError('Signed imx-boot input is missing')
+    for tool in ('fdtput', 'dumpimage', 'mkimage', 'fdtget', 'dtc', 'unsquashfs', 'mksquashfs',
                  'dumpe2fs', 'aarch64-linux-gnu-gcc'):
         if not shutil.which(tool):
             raise ValueError(f'Missing host tool: {tool}')
@@ -292,14 +329,15 @@ def build(args):
             raise ValueError('Expected an uncompressed FIT component containing squashfs')
         rootfs = work / 'rootfs'
         run('unsquashfs', '-no-progress', '-d', rootfs, ramdisk, stdout=subprocess.DEVNULL)
-        if not (rootfs / 'usr/bin/tezictl').is_file() or not (rootfs / 'usr/lib/plugins/platforms/libqoffscreen.so').is_file():
-            raise ValueError('TEZI runtime needs tezictl and the offscreen Qt platform')
+        if not (rootfs / 'usr/bin/tezictl').is_file() or not (rootfs / 'usr/bin/weston').is_file():
+            raise ValueError('TEZI runtime needs tezictl and Weston for the interactive UI')
         if not (rootfs / 'bin/tar.tar').is_file():
             raise ValueError('TEZI runtime needs GNU tar for metadata-preserving backup')
         embedded = rootfs / 'migration'
         embedded.mkdir()
-        image = embedded / 'image'
+        image = work / 'image'
         image.mkdir()
+        (embedded / 'image').symlink_to('/run/migration-media/image')
         for filename in refs:
             shutil.copyfile(payload / filename, image / filename)
         for name in ('common.sh', 'prepare.sh', 'wrapup.sh', 'error.sh'):
@@ -314,7 +352,8 @@ def build(args):
             f'{digest(p)}  {p.name}\n' for p in sorted(image.iterdir())))
         (embedded / 'profile.conf').write_text(
             f"SOC='{profile['soc']}'\nMAX_BACKUP_MIB={profile['maximum_backup_mib']}\n"
-            f'MINIMUM_DISK_MIB={minimum_mib}\nDATA_FREE_KIB={data_free_kib}\n')
+            f'MINIMUM_DISK_MIB={minimum_mib}\nDATA_FREE_KIB={data_free_kib}\n'
+            f"PAYLOAD_CHECKSUM_SHA256='{digest(image / 'SHA256SUMS')}'\n")
         shutil.copyfile(ROOT / 'runtime/rc.local', rootfs / 'etc/rc.local')
         http_server = work / 'migration-http'
         run('aarch64-linux-gnu-gcc', '-static', '-Os', '-Wall', '-Wextra', '-Werror', '-s',
@@ -326,7 +365,12 @@ def build(args):
         shutil.copyfile(http_server, rootfs / 'usr/bin/migration-http')
         (rootfs / 'usr/bin/migration-http').chmod(0o755)
         (rootfs / 'etc/fw_env.config').write_text(env_config)
-        # Avoid mounting old storage or starting network image discovery.
+        (rootfs / 'etc/network/interfaces').write_text(
+            'auto lo\niface lo inet loopback\n\n'
+            'auto eth0\niface eth0 inet manual\n'
+            '    up ip link set eth0 up\n'
+            '    up udhcpc -b -i eth0 -p /run/udhcpc.eth0.pid\n')
+        # Avoid mounting old storage; networking is started explicitly below.
         for base in ('etc/udev/rules.d', 'lib/udev/rules.d', 'usr/lib/udev/rules.d'):
             for pattern in ('*automount*', '*ifplugd*'):
                 for rule in (rootfs / base).glob(pattern):
@@ -339,13 +383,19 @@ def build(args):
             '-no-progress', '-processors', '2', stdout=subprocess.DEVNULL)
         dest = work / 'result'
         dest.mkdir()
+        shutil.move(image, dest / 'image')
         # Copy to stable simple names so ITS never embeds unescaped user paths.
         shutil.copyfile(dtb, work / 'board.dtb')
-        make_fit(kernel, squashfs, work / 'board.dtb', load, compression, dest / 'migration.itb')
-        size = (dest / 'migration.itb').stat().st_size
+        prepare_recovery_dtb(work / 'board.dtb', profile['console'])
+        make_fit(kernel, squashfs, work / 'board.dtb', load, compression, dest / 'recovery.itb',
+                 args.fit_keydir, args.fit_keyname, args.fit_engine)
+        size = (dest / 'recovery.itb').stat().st_size
+        if args.signed_imx_boot:
+            # HAB signing belongs to the secure Yocto build; never repackage its bytes.
+            shutil.copyfile(args.signed_imx_boot, dest / 'imx-boot-signed')
         if size > profile['maximum_fit_mib'] * MIB:
-            raise ValueError(f"Embedded FIT is {size / MIB:.1f} MiB; {args.platform} limit is {profile['maximum_fit_mib']} MiB. Use a smaller payload; this build does not silently switch to external storage.")
-        boot_scripts(dest, profile['maximum_fit_mib'], profile['console'])
+            raise ValueError(f"Embedded FIT is {size / MIB:.1f} MiB; {args.platform} limit is {profile['maximum_fit_mib']} MiB. The recovery loader cannot accept a larger FIT.")
+        boot_scripts(dest, profile['console'])
         (dest / 'build.json').write_text(json.dumps({
             'platform': args.platform, 'profile': profile,
             'payload_sha256': digest(args.payload), 'tezi_fit_sha256': digest(tezi / 'tezi.itb'),
@@ -354,10 +404,13 @@ def build(args):
             'local_http_sha256': digest(http_server),
             'fw_env_config_sha256': digest(args.fw_env_config),
             'fuse_programming': False, 'preserve': ['/data/mender'],
+            'fit_signed': bool(args.fit_keydir),
+            'fit_keyname': args.fit_keyname if args.fit_keydir else None,
+            'imx_boot_sha256': digest(args.signed_imx_boot) if args.signed_imx_boot else None,
             'hardware_validated': False,
         }, indent=2) + '\n')
         (dest / 'SHA256SUMS').write_text(''.join(
-            f'{digest(p)}  {p.name}\n' for p in sorted(dest.iterdir())))
+            f'{digest(p)}  {p.relative_to(dest)}\n' for p in sorted(dest.rglob('*')) if p.is_file()))
         shutil.move(dest, args.output)
     print(f'Created {args.output} ({size / MIB:.1f} MiB FIT). Hardware validation still required.')
 
@@ -371,6 +424,13 @@ def main():
                         help='Exported /etc/fw_env.config from the target OS build')
     parser.add_argument('--payload', type=Path, required=True, help='Trusted current four-partition .mender_tezi.tar')
     parser.add_argument('--output', type=Path, required=True, help='New output directory')
+    parser.add_argument('--fit-keydir', help='mkimage key directory or HSM token URI (production: CI only)')
+    parser.add_argument('--fit-keyname', default='dev', help='Existing trusted RSA2048 FIT key name')
+    parser.add_argument('--fit-engine', help='OpenSSL signing engine, e.g. pkcs11')
+    parser.add_argument('--signed-imx-boot', type=Path,
+                        help='HAB-signed platform imx-boot with fixed SD recovery and matching FIT public key')
+    parser.add_argument('--allow-unsigned', action='store_true',
+                        help='Allow an unsigned development bundle for open devices only')
     args = parser.parse_args()
     try:
         build(args)

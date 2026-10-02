@@ -42,7 +42,8 @@ class PreservationTests(unittest.TestCase):
         (self.root / 'image/SHA256SUMS').write_text(
             hashlib.sha256(payload.read_bytes()).hexdigest() + '  payload\n')
         (self.root / 'profile.conf').write_text(
-            "SOC='fixture'\nMAX_BACKUP_MIB=128\nMINIMUM_DISK_MIB=128\nDATA_FREE_KIB=131072\n")
+            "SOC='fixture'\nMAX_BACKUP_MIB=128\nMINIMUM_DISK_MIB=128\nDATA_FREE_KIB=131072\n"
+            f"PAYLOAD_CHECKSUM_SHA256={hashlib.sha256((self.root / 'image/SHA256SUMS').read_bytes()).hexdigest()}\n")
         common = (RUNTIME / 'common.sh').read_text()
         common = common.replace('/migration/profile.conf', str(self.root / 'profile.conf'))
         common = common.replace('/run/migration', str(self.root / 'state'))
@@ -75,6 +76,15 @@ cleanup_mounts() {{ :; }}
         script.write_text(text)
         return subprocess.run(['sh', str(script)], capture_output=True, text=True,
                               env={**os.environ, 'PATH': str(self.root / 'bin') + ':' + os.environ['PATH']})
+
+    def test_replaced_payload_and_checksum_manifest_rejected(self):
+        (self.root / 'image/payload').write_bytes(b'replacement')
+        (self.root / 'image/SHA256SUMS').write_text(
+            hashlib.sha256(b'replacement').hexdigest() + '  payload\n')
+        result = self.hook('prepare.sh')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((self.root / 'state/prepared').exists())
+        self.assertFalse((self.root / 'state/backup/mender.tar').exists())
 
     def test_preserve_and_verify_full_directory_metadata(self):
         result = self.hook('prepare.sh')

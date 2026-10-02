@@ -5,6 +5,8 @@ import json
 from pathlib import Path
 import tarfile
 import tempfile
+import shutil
+import subprocess
 import unittest
 
 SPEC = importlib.util.spec_from_file_location('migration_build', Path(__file__).parents[1] / 'build.py')
@@ -58,7 +60,7 @@ class PayloadTests(unittest.TestCase):
         self.assertEqual(result['blockdevs'][0]['name'], 'emmc')
         self.assertEqual(result['blockdevs'][1]['name'], 'emmc-boot0')
         self.assertEqual(result['blockdevs'][0]['partitions'], original['blockdevs'][0]['partitions'])
-        self.assertTrue(result['autoinstall'])
+        self.assertFalse(result['autoinstall'])
         self.assertEqual(result['prepare_script'], 'prepare.sh')
         self.assertNotIn('old-prepare.sh', refs)
         self.assertGreater(size, 256)
@@ -119,6 +121,43 @@ class PayloadTests(unittest.TestCase):
         path.write_text('/dev/mmcblk2 0x400000 0x20000\n')
         with self.assertRaises(ValueError):
             build.validate_env_config(path)
+
+
+@unittest.skipUnless(all(shutil.which(t) for t in ('mkimage', 'fdtget', 'fdtput', 'dtc', 'openssl')),
+                     'FIT host tools required')
+class RecoveryFitTests(unittest.TestCase):
+    def test_signed_recovery_contract(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            kernel, ramdisk, dtb = [root / n for n in ('kernel', 'ramdisk', 'board.dtb')]
+            kernel.write_bytes(b'kernel fixture')
+            ramdisk.write_bytes(b'rootfs fixture')
+            subprocess.run(['dtc', '-O', 'dtb', '-o', str(dtb)],
+                           input='/dts-v1/; / {};', text=True, check=True)
+            build.prepare_recovery_dtb(dtb, 'ttymxc0')
+            self.assertEqual(build.output('fdtget', dtb, '/chosen/toradex,secure-boot',
+                                          'required-bootargs'), build.recovery_bootargs('ttymxc0'))
+            subprocess.run(['openssl', 'req', '-new', '-x509', '-newkey', 'rsa:2048',
+                            '-nodes', '-subj', '/CN=test/', '-keyout', str(root / 'dev.key'),
+                            '-out', str(root / 'dev.crt'), '-days', '1'],
+                           check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            fit = root / 'recovery.itb'
+            build.make_fit(kernel, ramdisk, dtb, 0x48200000, 'none', fit, str(root))
+            self.assertEqual(build.output('fdtget', fit, '/configurations', 'default'), 'recovery')
+            node = '/configurations/recovery/signature'
+            self.assertEqual(build.output('fdtget', fit, node, 'sign-images'), 'kernel fdt ramdisk')
+            self.assertEqual(len(build.output('fdtget', '-t', 'bx', fit, node, 'value').split()), 256)
+            signed_nodes = build.output('fdtget', fit, node, 'hashed-nodes')
+            for image in ('kernel', 'fdt', 'ramdisk'):
+                self.assertIn('/images/' + image + '/hash', signed_nodes)
+            build.boot_scripts(root, 'ttymxc0')
+            self.assertIn('load mmc 1:1 0x60000000 /recovery.itb', (root / 'sd.cmd').read_text())
+            self.assertIn('bootm 0x60000000#recovery', (root / 'sd.cmd').read_text())
+            # mkimage can leave a hash-only FIT when signing fails; never accept it.
+            missing = root / 'missing'
+            missing.mkdir()
+            with self.assertRaises((ValueError, subprocess.CalledProcessError)):
+                build.make_fit(kernel, ramdisk, dtb, 0x48200000, 'none', fit, str(missing))
 
 
 class ArchiveTests(unittest.TestCase):

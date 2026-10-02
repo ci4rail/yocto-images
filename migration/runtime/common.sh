@@ -41,7 +41,7 @@ check_platform() {
     tr '\000' '\n' </proc/device-tree/compatible | grep -Fx "$SOC" >/dev/null || fail 'Wrong platform'
     # Refuse invocation from a regular installed OS; hooks require our RAM root.
     awk '$2 == "/" && $3 == "squashfs" { found=1 } END { exit !found }' /proc/mounts || fail 'Root must be the migration squashfs'
-    [ -f /migration/image/SHA256SUMS ] || fail 'Embedded payload missing'
+    [ -f /migration/image/SHA256SUMS ] || fail 'SD payload missing'
 }
 
 cleanup_mounts() {

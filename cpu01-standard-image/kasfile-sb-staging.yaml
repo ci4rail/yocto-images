@@ -2,6 +2,7 @@ header:
   version: 11
   includes:
     - ./kasfile-common.yaml
+    - ../kas-includes/kasfile-ota-protection.yaml
 
 local_conf_header:
   ci4rail-image-metadata: |
@@ -19,3 +20,7 @@ local_conf_header:
     UBOOT_SIGN_KEYDIR = "/work/secure-boot-material/staging/keys/fit"
     FIT_GENERATE_KEYS = "0"
     
+
+  ci4rail-ota-keys: |
+    CI4RAIL_OTA_KEY_ENVIRONMENT = "staging"
+    MENDER_ARTIFACT_SIGNING_KEY = "${CI4RAIL_OTA_KEY_DIR}/ci4rail-artifact.key.pem"

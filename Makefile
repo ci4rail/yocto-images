@@ -54,6 +54,7 @@ KAS_ARGS := \
 		-w=/work \
 		-v${ABS_IMAGE_DIR}:/work \
 		-v$(shell pwd)/kas-includes:/kas-includes \
+		-v$(shell pwd)/ota-signing-material:/ota-signing-material:ro \
 		-v$(ABS_DOWNLOAD_DIR):/downloads \
 		-v${ABS_SSTATE_DIR}:/sstate-cache \
 		-v${ABS_IMAGE_DIR}/install:/install \
@@ -61,6 +62,7 @@ KAS_ARGS := \
 			-e MENDER_TENANT_TOKEN=${MENDER_TENANT_TOKEN} \
 			-e AZURE_APP_ID=${AZURE_APP_ID} \
 			-e AZURE_CLIENT_ID=${AZURE_CLIENT_ID} \
+			-e CI4RAIL_OTA_AZURE_KEY_ID=${CI4RAIL_OTA_AZURE_KEY_ID} \
 			-e AZURE_TENANT_ID=${AZURE_TENANT_ID} \
 			-e AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID} \
 			-e AZURE_FEDERATED_TOKEN_FILE=${AZURE_FEDERATED_TOKEN_FILE} \

@@ -1,0 +1,17 @@
+header:
+  version: 11
+
+env:
+  CI4RAIL_OTA_AZURE_KEY_ID: ""
+
+local_conf_header:
+  ci4rail-ota-protection: |
+    CI4RAIL_OTA_PROTECTION = "1"
+    # Shared by every platform; only the signing environment selects the keys.
+    CI4RAIL_OTA_KEY_ENVIRONMENT ??= ""
+    CI4RAIL_OTA_KEY_DIR = "/ota-signing-material/${CI4RAIL_OTA_KEY_ENVIRONMENT}"
+    CI4RAIL_OTA_ARTIFACT_PUBLIC_KEY = "${CI4RAIL_OTA_KEY_DIR}/ci4rail-artifact-pub.pem"
+    CI4RAIL_OTA_DELEGATION_PUBLIC_KEY = "${CI4RAIL_OTA_KEY_DIR}/ci4rail-delegation-pub.pem"
+    # The source patch is maintained and tested against this exact client version.
+    REQUIRED_VERSION:pn-mender = "5.1.0"
+    BB_ENV_PASSTHROUGH_ADDITIONS:append = " CI4RAIL_OTA_AZURE_KEY_ID"

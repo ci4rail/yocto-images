@@ -5,7 +5,7 @@
 [x] meta-mender-community: wrong BSP folder 7.1.0
 [x] sign with azure key vault
 [x] Integrare CST tool
-[ ] Upgrade to TDX BSP 7.8.0
+[ ] Upgrade to TDX BSP 7.8.0  -> BSP not yet released!
 [ ] mender-artifact-signing
 [x] merge changes from scarthgap branch
 
@@ -20,6 +20,9 @@
 
 [ ] ci: add non-secure build
 [ ] ci: add staging build
+[ ] ci: add integration test for staging
+
+[ ] tests: 
 
 [ ] support CPU01plus
 

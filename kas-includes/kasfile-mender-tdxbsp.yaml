@@ -20,6 +20,9 @@ local_conf_header:
   src/meta-ci4rail-mender-tdxbsp: |
     INHERIT += "mender-toradex"
 
+    # CI supplies the release version; local builds use IMAGE_GIT_VERSION from env.
+    MENDER_TEZI_VERSION = "${IMAGE_GIT_VERSION}"
+
     # ensure that the correct U-Boot environment is used
     UBOOT_ENV_TEZI ?= "${@ 'u-boot-initial-env-%s' % d.getVar('UBOOT_CONFIG') if d.getVar('UBOOT_CONFIG') else 'u-boot-initial-env'}"
     UBOOT_ENV_TEZI_EMMC ?= "${UBOOT_ENV_TEZI}"

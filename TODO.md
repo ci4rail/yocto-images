@@ -13,9 +13,10 @@
 [ ] nftables
 [x] persistent logging
 [ ] watchdog support (via systemd)
+[ ] initially LEDs off
 
 [x] migration image SDCard staging
-[ ] migration image SDCard production
+[x] migration image SDCard production
 
 [ ] ci: add non-secure build
 [ ] ci: add staging build

@@ -88,7 +88,7 @@ jobs:
           sys.path.insert(0, 'migration/ci')
           from recovery import object_prefix
           object_prefix(os.environ['MINIO_PREFIX'], os.environ['PLATFORM'], os.environ['SIGNING_MODE'],
-                        os.environ['RECOVERY_VERSION'], os.environ['GITHUB_SHA'],
+                        os.environ['RECOVERY_VERSION'],
                         os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT'])
           PY
           mkdir -m 700 "$RECOVERY_WORK"
@@ -131,7 +131,7 @@ jobs:
           docker run --rm --user "$(id -u):$(id -g)" \
             -e GIT_CONFIG_GLOBAL=/dev/null -e GIT_CONFIG_SYSTEM=/dev/null -v "$GITHUB_WORKSPACE:/work:ro" -v "$RECOVERY_WORK:/build" \
             -e MINIO_ACCESS_KEY -e MINIO_SECRET_KEY -e MINIO_BUCKET -e MINIO_PREFIX \
-            -e RECOVERY_VERSION -e GITHUB_SHA -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT \
+            -e RECOVERY_VERSION -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT \
             -e GITHUB_OUTPUT=/build/upload.outputs \
             recovery-tools python3 migration/ci/recovery.py upload \
             --platform "$PLATFORM" --mode "$SIGNING_MODE" --work /build

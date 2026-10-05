@@ -65,8 +65,8 @@ class DestinationTests(unittest.TestCase):
         ]})
 
     def test_destination_cannot_escape_namespace_or_inject_outputs(self):
-        args = ['recovery', 'cpu01', 'production', '1.0', 'a' * 40, '123', '1']
-        self.assertTrue(recovery.object_prefix(*args).endswith('/123-1'))
+        args = ['recovery', 'cpu01', 'production', '1.0', '123', '1']
+        self.assertEqual(recovery.object_prefix(*args), 'recovery/cpu01/production/1.0/123-1')
         for value in ('../public', '.', '..', 'a\nsha256=bad', '/absolute', 'a/b'):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 recovery.object_prefix(value, *args[1:])

@@ -35,7 +35,7 @@ there is no default password. The SHA-512 crypt hash is embedded in the signed
 recovery filesystem, not in `build.json`. Keep the hash file outside version
 control. Changing the password requires rebuilding and signing recovery.
 The serial console asks for the root password before opening a shell and again
-after logout. DHCP, SD mounting and TEZI start before login. This protects only
+after logout. DHCP and TEZI start before login. This protects only
 the serial shell; TEZI's VNC interface remains unauthenticated.
 
 Use the matching ModuCop installer-kernel DTB. Recovery includes
@@ -87,9 +87,15 @@ partition layout. The scripts require an explicit eMMC partition; they do not
 guess that old `/data` is partition 4. Example only, **after checking the device**:
 
 ```sh
+/migration/mount-sd.sh
 mkdir -p /run/media/migration-sd/backups
 /migration/backup-data.sh /run/media/migration-sd/backups/device-001 /dev/mmcblk2p4
+umount /run/media/migration-sd
 ```
+
+TEZI owns local-media mounting during discovery and installation. Run manual
+SD backup/restore operations only while TEZI is idle, and unmount the SD card
+afterwards so TEZI can mount it itself.
 
 The new backup folder must not exist. The script checks that eMMC is unmounted,
 checks the ext3/ext4 filesystem without repair, mounts it read-only without
@@ -105,7 +111,9 @@ select the payload in TEZI. Installation repartitions eMMC and erases the old
 data. After TEZI finishes, explicitly restore to the new data partition:
 
 ```sh
+/migration/mount-sd.sh
 /migration/restore-data.sh /run/media/migration-sd/backups/device-001 /dev/mmcblk2p4
+umount /run/media/migration-sd
 ```
 
 Restore requires the same eMMC identity, a complete backup and valid checksums.
@@ -121,23 +129,27 @@ state; check its compatibility with the new OS. Backups contain credentials.
 Prepare SD partition 1 as FAT32, starting at 8 MiB or later. Copy
 `recovery.itb` and the complete `image/` directory to its root. U-Boot uses
 `mmc 1:1`; Linux finds the SD card by its sysfs card type, not by assuming
-Linux uses the same MMC numbering. Discovery waits up to 30 seconds for the
+Linux uses the same MMC numbering. The manual mount helper waits up to 30 seconds for the
 card/partition device. For FIT boot through the existing U-Boot, an unpartitioned
 card containing a whole-card FAT filesystem is also accepted; do not write raw
 imx-boot into such a filesystem. Use the partitioned layout below for ROM SD boot.
 
-Startup mounts the SD card read/write at `/run/media/migration-sd`, starts
-DHCP on `eth0` and TEZI over VNC (port 5900), and returns immediately to the
+Startup starts DHCP on `eth0` and TEZI over VNC (port 5900), and returns immediately to the
 serial password prompt. TEZI discovers `image/image.json` on local SD media. There is no
 HTTP server, feed registration, automatic backup, installation, restore or reboot.
-The UI starts even if the SD card is missing. Inspect `/run/migration/media.log`,
-`dhcp.log`, `startup.log`, `weston.log` and `tezi.log` for diagnostics.
+The SD card is left unmounted for TEZI to probe and mount on demand. For manual
+backup/restore, `/migration/mount-sd.sh` mounts it read/write at
+`/run/media/migration-sd`. The UI starts even if the SD card is missing. Inspect
+`/run/migration/dhcp.log`, `startup.log`, `weston.log` and `tezi.log` for diagnostics.
 
 If eMMC already contains the signed U-Boot with the fixed recovery patch,
 inserting this card makes it load `/recovery.itb#recovery` before environment
 boot policy. No unsigned boot script or interactive CLI is needed.
 
-To also boot the initial imx-boot from SD on CPU01, obtain the matching
+### Boot the initial imx-boot from SDCard - Not verified!
+
+Place SOM in recovery mode.
+To boot the initial imx-boot from SD on CPU01, obtain the matching
 HAB-signed bootloader separately from the secure Yocto build and write it
 into the unpartitioned area at **33 KiB**, preserving the partition table.
 For example, with `/dev/sdX` replaced by the verified SD device:

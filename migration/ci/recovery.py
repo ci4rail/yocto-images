@@ -35,11 +35,11 @@ def settings(platform, mode):
     return config, profile, signing
 
 
-def object_prefix(prefix, platform, mode, version, commit, run_id, attempt):
-    for part in (prefix, version, commit, run_id, attempt):
+def object_prefix(prefix, platform, mode, version, run_id, attempt):
+    for part in (prefix, version, run_id, attempt):
         if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._+-]*', part) or part in ('.', '..'):
             raise ValueError('Invalid output path component')
-    return f'{prefix}/{platform}/{mode}/{version}/{commit}/{run_id}-{attempt}'
+    return f'{prefix}/{platform}/{mode}/{version}/{run_id}-{attempt}'
 
 
 def validate_environment(mode):
@@ -237,7 +237,7 @@ def upload(args):
         policy = {}
     assert_private_policy(policy)
     prefix = object_prefix(os.environ['MINIO_PREFIX'], args.platform, args.mode,
-                           os.environ['RECOVERY_VERSION'], os.environ['GITHUB_SHA'],
+                           os.environ['RECOVERY_VERSION'],
                            os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT'])
     for name in ('recovery.itb', 'build.json', 'SHA256SUMS'):
         path = args.work / 'output' / name

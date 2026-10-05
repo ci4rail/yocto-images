@@ -9,7 +9,7 @@ avahi-daemon --daemonize
 (
     udevadm settle --timeout=30
     /sbin/ifup eth0 >/run/migration/dhcp.log 2>&1 &
-    /migration/mount-sd.sh >/run/migration/media.log 2>&1 ||
-        echo 'SD mount failed; inspect /run/migration/media.log.' >/dev/console
+    # TEZI mounts local media itself; a writable SD mount prevents its probe.
+    # Mount SD manually only for backup/restore, then unmount before installing.
     /migration/start-tezi.sh
 ) </dev/null >/run/migration/startup.log 2>&1 &

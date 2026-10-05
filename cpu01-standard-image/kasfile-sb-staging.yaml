@@ -4,6 +4,9 @@ header:
     - ./kasfile-common.yaml
 
 local_conf_header:
+  ci4rail-image-metadata: |
+    SUMMARY:pn-ci4rail-base-image = "Ci4Rail ModuCop CPU01 Standard (Staging)"
+    DESCRIPTION:pn-ci4rail-base-image = "Staging Linux image with secure boot, dummy signatures, and Mender OTA updates"
   src/meta-custom: |
     # Prefix to the resulting deployable tarball name
     BASENAME = "Standard-Image-Staging"

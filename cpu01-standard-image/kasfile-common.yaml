@@ -15,6 +15,9 @@ distro: tdx-xwayland
 target: ci4rail-base-image
 
 local_conf_header:
+  ci4rail-image-metadata: |
+    SUMMARY:pn-ci4rail-base-image = "Ci4Rail ModuCop CPU01 Standard (Non-Secure Boot)"
+    DESCRIPTION:pn-ci4rail-base-image = "Linux image with Mender OTA updates"
   persistent-logging: |
     VOLATILE_LOG_DIR = "no"
     IMAGE_INSTALL:append = " persistent-logging"

@@ -21,3 +21,8 @@ repos:
     url: https://github.com/ci4rail/meta-ci4rail-devtools.git
     branch: scarthgap
     commit: 446944c95a856c10d247b73fab7492dfd99f7b0a
+
+local_conf_header:
+  ci4rail-image-metadata: |
+    SUMMARY:pn-ci4rail-devtools-image = "Ci4Rail ModuCop CPU01 Devtools"
+    DESCRIPTION:pn-ci4rail-devtools-image = "Development and debugging Linux image with Mender OTA updates"

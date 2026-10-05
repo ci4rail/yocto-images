@@ -1,0 +1,142 @@
+name: Build signed recovery
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        description: cpu01 or cpu01plus
+        required: true
+        type: string
+      signing_mode:
+        description: staging or production
+        required: true
+        type: string
+      minio_bucket:
+        description: Existing private bucket on minio.ci4rail.com
+        required: true
+        type: string
+      minio_prefix:
+        description: Single top-level directory in the bucket
+        default: recovery
+        type: string
+    # May be supplied by the caller or by the selected GitHub environment.
+    secrets:
+      RECOVERY_MINIO_ACCESS_KEY:
+        required: false
+      RECOVERY_MINIO_SECRET_KEY:
+        required: false
+      RECOVERY_ROOT_PASSWORD_HASH:
+        required: false
+    outputs:
+      version:
+        description: Repository version used for the recovery build
+        value: ${{ jobs.recovery.outputs.version }}
+      object_uri:
+        description: Private S3 URI of recovery.itb
+        value: ${{ jobs.recovery.outputs.object_uri }}
+      sha256:
+        description: SHA-256 of recovery.itb
+        value: ${{ jobs.recovery.outputs.sha256 }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  recovery:
+    # Never expose signing/upload credentials to pull-request builds.
+    if: github.event_name != 'pull_request' && github.event_name != 'pull_request_target'
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.signing_mode == 'production' && 'production' || 'staging' }}
+    timeout-minutes: 60
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      object_uri: ${{ steps.upload.outputs.object_uri }}
+      sha256: ${{ steps.upload.outputs.sha256 }}
+    env:
+      PLATFORM: ${{ inputs.platform }}
+      SIGNING_MODE: ${{ inputs.signing_mode }}
+      MINIO_BUCKET: ${{ inputs.minio_bucket }}
+      MINIO_PREFIX: ${{ inputs.minio_prefix }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Determine repository version
+        id: version
+        run: |
+          version="$(scripts/gen-image-version.sh . /dev/null)"
+          echo "RECOVERY_VERSION=$version" >> "$GITHUB_ENV"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Validate configuration
+        env:
+          MINIO_ACCESS_KEY: ${{ secrets.RECOVERY_MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.RECOVERY_MINIO_SECRET_KEY }}
+          RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.RECOVERY_ROOT_PASSWORD_HASH }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          export RECOVERY_WORK="$RUNNER_TEMP/recovery"
+          echo "RECOVERY_WORK=$RECOVERY_WORK" >> "$GITHUB_ENV"
+          python3 migration/ci/recovery.py validate --platform "$PLATFORM" --mode "$SIGNING_MODE" --work "$RECOVERY_WORK"
+          python3 - <<'PY'
+          import os, sys
+          sys.path.insert(0, 'migration/ci')
+          from recovery import object_prefix
+          object_prefix(os.environ['MINIO_PREFIX'], os.environ['PLATFORM'], os.environ['SIGNING_MODE'],
+                        os.environ['RECOVERY_VERSION'],
+                        os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT'])
+          PY
+          mkdir -m 700 "$RECOVERY_WORK"
+
+      - name: Build host tooling
+        run: |
+          target=tools
+          if [ "$SIGNING_MODE" = production ]; then target=production; fi
+          docker build --target "$target" -t recovery-tools -f migration/ci/Dockerfile migration/ci
+
+      - name: Download TEZI and compile installer DTB
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e GIT_CONFIG_GLOBAL=/dev/null -e GIT_CONFIG_SYSTEM=/dev/null -v "$GITHUB_WORKSPACE:/work:ro" -v "$RECOVERY_WORK:/build" \
+            recovery-tools python3 migration/ci/recovery.py prepare \
+            --platform "$PLATFORM" --mode "$SIGNING_MODE" --work /build
+
+      - name: Build and verify signed recovery
+        env:
+          RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.RECOVERY_ROOT_PASSWORD_HASH }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e GIT_CONFIG_GLOBAL=/dev/null -e GIT_CONFIG_SYSTEM=/dev/null -v "$GITHUB_WORKSPACE:/work:ro" -v "$RECOVERY_WORK:/build" \
+            -e RECOVERY_ROOT_PASSWORD_HASH \
+            -e AZURE_CLIENT_ID -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \
+            -e ACTIONS_ID_TOKEN_REQUEST_URL -e ACTIONS_ID_TOKEN_REQUEST_TOKEN \
+            -e GITHUB_SHA -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT -e RECOVERY_VERSION \
+            recovery-tools python3 migration/ci/recovery.py package \
+            --platform "$PLATFORM" --mode "$SIGNING_MODE" --work /build
+
+      - name: Upload to private MinIO bucket
+        id: upload
+        env:
+          MINIO_ACCESS_KEY: ${{ secrets.RECOVERY_MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.RECOVERY_MINIO_SECRET_KEY }}
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e GIT_CONFIG_GLOBAL=/dev/null -e GIT_CONFIG_SYSTEM=/dev/null -v "$GITHUB_WORKSPACE:/work:ro" -v "$RECOVERY_WORK:/build" \
+            -e MINIO_ACCESS_KEY -e MINIO_SECRET_KEY -e MINIO_BUCKET -e MINIO_PREFIX \
+            -e RECOVERY_VERSION -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT \
+            -e GITHUB_OUTPUT=/build/upload.outputs \
+            recovery-tools python3 migration/ci/recovery.py upload \
+            --platform "$PLATFORM" --mode "$SIGNING_MODE" --work /build
+          cat "$RECOVERY_WORK/upload.outputs" >> "$GITHUB_OUTPUT"
+
+      - name: Remove recovery and credential files
+        if: always()
+        run: rm -rf -- "$RECOVERY_WORK"

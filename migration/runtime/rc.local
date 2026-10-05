@@ -1,0 +1,15 @@
+#!/bin/sh
+# Sourced by TEZI init: return promptly so PID 1 opens the authenticated serial console.
+umask 077
+mkdir -p /run/migration /run/lock /run/media /var/volatile/log /var/run/dbus
+/etc/init.d/udev start
+/sbin/ifup lo
+dbus-daemon --system
+avahi-daemon --daemonize
+(
+    udevadm settle --timeout=30
+    /sbin/ifup eth0 >/run/migration/dhcp.log 2>&1 &
+    # TEZI mounts local media itself; a writable SD mount prevents its probe.
+    # Mount SD manually only for backup/restore, then unmount before installing.
+    /migration/start-tezi.sh
+) </dev/null >/run/migration/startup.log 2>&1 &

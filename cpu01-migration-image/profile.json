@@ -1,0 +1,7 @@
+{
+  "platform": "cpu01",
+  "soc": "fsl,imx8mm",
+  "minimum_ram_mib": 2048,
+  "maximum_fit_mib": 256,
+  "console": "ttymxc0"
+}

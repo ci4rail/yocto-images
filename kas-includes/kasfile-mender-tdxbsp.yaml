@@ -5,7 +5,7 @@ repos:
   src/meta-mender-community:
     url: "https://github.com/ci4rail/meta-mender-community"
     branch: scarthgap-secure-boot
-    commit: 65ae0f7c12cd38bfaeeb3fe0ef5ba1b867b05856
+    commit: 7f0c873c2610013aba1d26fbc6879aa8dfa42745
     layers:
       meta-mender-toradex-nxp:
 
@@ -19,6 +19,9 @@ local_conf_header:
   # from meta-mender-community/meta-mender-toradex-nxp/templates/local.conf.append
   src/meta-ci4rail-mender-tdxbsp: |
     INHERIT += "mender-toradex"
+
+    # CI supplies the release version; local builds use IMAGE_GIT_VERSION from env.
+    MENDER_TEZI_VERSION = "${IMAGE_GIT_VERSION}"
 
     # ensure that the correct U-Boot environment is used
     UBOOT_ENV_TEZI ?= "${@ 'u-boot-initial-env-%s' % d.getVar('UBOOT_CONFIG') if d.getVar('UBOOT_CONFIG') else 'u-boot-initial-env'}"

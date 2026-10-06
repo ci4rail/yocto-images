@@ -32,3 +32,4 @@
 [ ] update yocto.sh
 
 [ ] os-customization mender: fix: /usr/share/mender/inventory/os-customization' doesn't have the 'mender-inventory-' prefix, skipping"
+

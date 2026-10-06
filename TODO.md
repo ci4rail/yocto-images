@@ -6,7 +6,7 @@
 [x] sign with azure key vault
 [x] Integrare CST tool
 [ ] Upgrade to TDX BSP 7.8.0  -> BSP not yet released!
-[ ] mender-artifact-signing
+[x] mender-artifact-signing
 [x] merge changes from scarthgap branch
 
 [x] disable kernel messages on console
@@ -22,11 +22,13 @@
 [ ] ci: add staging build
 [ ] ci: add integration test for staging
 
-[ ] tests: 
-
+[ ] test moducop-core-api-server
+  
 [ ] support CPU01plus
 
 [ ] oss clearing
 [ ] cvs scanning
 
 [ ] update yocto.sh
+
+[ ] os-customization mender: fix: /usr/share/mender/inventory/os-customization' doesn't have the 'mender-inventory-' prefix, skipping"

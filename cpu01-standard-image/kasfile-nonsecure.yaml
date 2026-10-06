@@ -2,3 +2,13 @@ header:
   version: 11
   includes:
     - ./kasfile-common.yaml
+
+local_conf_header:
+  ci4rail-nonsecure-boot: |
+    # The Mender A/B boot command uses bootm and the TEZI boot partition
+    # contains fitImage-A/B, so unsigned builds also need a real FIT.
+    KERNEL_CLASSES:append = " kernel-fitimage"
+    # Override the Toradex mx8-generic-bsp image type and shared hardening.
+    KERNEL_IMAGETYPE:forcevariable = "fitImage"
+    UBOOT_SIGN_ENABLE = "0"
+    TDX_UBOOT_HARDENING_ENABLE:forcevariable = "0"

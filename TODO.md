@@ -32,3 +32,5 @@
 [ ] update yocto.sh
 
 [ ] os-customization mender: fix: /usr/share/mender/inventory/os-customization' doesn't have the 'mender-inventory-' prefix, skipping"
+
+[ ] non-secure build: WARNING: You have included the meta-security layer, but 'security' has not been enabled in your DISTRO_FEATURES. Some bbappend files and preferred version setting may not take effect. See the meta-security README for details on enabling security support.

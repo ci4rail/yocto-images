@@ -12,3 +12,7 @@ local_conf_header:
     KERNEL_IMAGETYPE:forcevariable = "fitImage"
     UBOOT_SIGN_ENABLE = "0"
     TDX_UBOOT_HARDENING_ENABLE:forcevariable = "0"
+
+    # Non-secure OTA updates carry a plain ext4 rootfs without dm-verity.
+    CI4RAIL_MENDER_BOOTFIT_ROOTFS_ROOTFS_PAYLOAD_PATTERN = "*.ext4"
+    CI4RAIL_MENDER_BOOTFIT_ROOTFS_REQUIRE_DM_VERITY_ROOT = "0"

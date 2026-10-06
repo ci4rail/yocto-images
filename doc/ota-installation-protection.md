@@ -38,11 +38,11 @@ Immutable, in the dm-verity-protected rootfs:
 /usr/share/ci4rail/ota/ci4rail-delegation-pub.pem
 ```
 
-Provisioned on the data partition:
+Provisioned through the os-customization layer, visible in the `/etc` overlay:
 
 ```text
-/data/ci4rail/ota/customer-artifact-pub.pem
-/data/ci4rail/ota/customer-artifact-pub.pem.sig
+/etc/ota/customer-artifact-pub.pem
+/etc/ota/customer-artifact-pub.pem.sig
 ```
 
 The main `/etc/mender/mender.conf` contains exactly these verification paths:
@@ -51,7 +51,7 @@ The main `/etc/mender/mender.conf` contains exactly these verification paths:
 {
   "ArtifactVerifyKeys": [
     "/usr/share/ci4rail/ota/ci4rail-artifact-pub.pem",
-    "/data/ci4rail/ota/customer-artifact-pub.pem"
+    "/etc/ota/customer-artifact-pub.pem"
   ]
 }
 ```
@@ -75,8 +75,15 @@ rejected. Client path overrides through `--config`, `--fallback-config`,
 When migrating an existing device, reconcile persisted `/etc` overlay content
 with the new image's configuration. A stale overlaid `mender.conf` will fail
 validation. Configuration defaults that change between OS releases may also
-require reconciliation. The provisioned key directory and persistent Mender configuration are added to
-factory-reset exclusions in protected builds.
+require reconciliation. Existing devices must move the customer key and signature
+from `/data/ci4rail/ota` to `/etc/ota` and update the overlaid `ArtifactVerifyKeys`
+path before starting the new updater. There is no fallback to the old location.
+
+Persistent Mender configuration is excluded from factory reset in protected
+builds. Include the customer key and signature in the os-customization **factory**
+layer to restore them after a reset. Keys supplied only by an active customization
+or writable `/etc` state may be removed by a factory reset; updates then fail
+closed until the key pair is provisioned again.
 
 ## Customer delegation and provisioning
 
@@ -92,11 +99,19 @@ Keep production delegation private material off devices and outside this
 repository. The customer retains their artifact private key. Provision only
 the customer public key and its signature.
 
-During production test, stop `mender-updated`, create `/data/ci4rail/ota`, install
-both files with root ownership, and start `mender-updated` only after both are
-in place. Missing or partially provisioned material fails closed. The complete
-pair can be staged in a sibling directory and renamed into place for initial
-provisioning. Do not rewrite PEM line endings after signing.
+Include these regular files in the os-customization payload:
+
+```text
+etc/ota/customer-artifact-pub.pem
+etc/ota/customer-artifact-pub.pem.sig
+```
+
+Apply the customization through its normal lifecycle so both files are visible
+at `/etc/ota` before `mender-updated` starts. Do not use symlinks for the directory
+or files. During initial provisioning, use the local os-customization tooling:
+a Mender-delivered customization cannot bootstrap missing keys because the
+updater fails closed until they are present. Do not rewrite PEM line endings
+after signing.
 
 For staging, use the test pair in
 `ota-signing-material/staging/`. These checked-in private

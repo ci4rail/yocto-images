@@ -13,7 +13,7 @@ FILES = LAYER / "recipes-mender/mender/files"
 KEYS = ROOT / "ota-signing-material/staging"
 VERIFY_KEYS = [
     "/usr/share/ci4rail/ota/ci4rail-artifact-pub.pem",
-    "/data/ci4rail/ota/customer-artifact-pub.pem",
+    "/etc/ota/customer-artifact-pub.pem",
 ]
 
 
@@ -52,13 +52,13 @@ int main(int argc, char **argv) {
 @pytest.fixture
 def device(tmp_path):
     for name in ("usr/share/ci4rail/ota", "etc/mender", "data/mender",
-                 "data/ci4rail/ota", "var/lib"):
+                 "etc/ota", "var/lib"):
         (tmp_path / name).mkdir(parents=True)
     (tmp_path / "var/lib/mender").symlink_to(tmp_path / "data/mender")
     for name in ("ci4rail-artifact-pub.pem", "ci4rail-delegation-pub.pem"):
         shutil.copyfile(KEYS / name, tmp_path / "usr/share/ci4rail/ota" / name)
     for name in ("customer-artifact-pub.pem", "customer-artifact-pub.pem.sig"):
-        shutil.copyfile(KEYS / name, tmp_path / "data/ci4rail/ota" / name)
+        shutil.copyfile(KEYS / name, tmp_path / "etc/ota" / name)
     main = {"ArtifactVerifyKeys": VERIFY_KEYS, "RootfsPartA": "/dev/mmcblk0p2"}
     fallback = {"TenantToken": "provisioned-token"}
     (tmp_path / "etc/mender/mender.conf").write_text(json.dumps(main))
@@ -80,13 +80,13 @@ def test_valid_delegation(verifier, device):
 
 @pytest.mark.parametrize("filename", ["customer-artifact-pub.pem", "customer-artifact-pub.pem.sig"])
 def test_missing_provisioning(verifier, device, filename):
-    (device / "data/ci4rail/ota" / filename).unlink()
+    (device / "etc/ota" / filename).unlink()
     assert run(verifier, device).returncode == 1
 
 
 @pytest.mark.parametrize("filename", ["customer-artifact-pub.pem", "customer-artifact-pub.pem.sig"])
 def test_tampered_provisioning(verifier, device, filename):
-    path = device / "data/ci4rail/ota" / filename
+    path = device / "etc/ota" / filename
     path.write_bytes(path.read_bytes() + b"tampered")
     assert run(verifier, device).returncode == 1
 
@@ -134,14 +134,14 @@ def test_environment_path_overrides_rejected(verifier, device, variable):
 
 
 def test_customer_key_symlink_rejected(verifier, device):
-    path = device / "data/ci4rail/ota/customer-artifact-pub.pem"
+    path = device / "etc/ota/customer-artifact-pub.pem"
     path.unlink()
     path.symlink_to(KEYS / path.name)
     assert run(verifier, device).returncode == 1
 
 
 def test_parent_symlink_rejected(verifier, device):
-    path = device / "data/ci4rail/ota"
+    path = device / "etc/ota"
     path.rename(path.with_name("elsewhere"))
     path.symlink_to(path.with_name("elsewhere"))
     assert run(verifier, device).returncode == 1

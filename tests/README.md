@@ -151,3 +151,76 @@ configured storage throughput, and LTE loss below 50% with mean RTT below
 1500 ms. Security baseline values remain unchanged, including the existing
 egress CIDR TODO. `max_cvss` is retained but unused by the upstream Nmap
 string-based vulnerability test; this is not a CVSS-scored scanner.
+
+## Application update module tests
+
+`yocto_tests/test_application_module.py` exercises the installed `app` Update
+Module and Docker Compose v2 helper with real containers. It calls Mender v3 states
+with generated payload trees, without modifying the Mender deployment database
+or contacting a deployment server. The target must have the rollback-capable
+module installed. No automatic module installation or rootfs remount occurs in
+the test suite.
+
+```sh
+.venv/bin/python -m pytest yocto_tests/test_application_module.py \
+  --station config/station.yaml --skip-flash
+```
+
+The fixture uses `alpine:latest`, pulling it only if absent. Preload it to run
+without registry access, or set `application_test_image` in station configuration
+to an image with `/bin/sh`, `sleep`, `test`, and `touch`.
+Tests build two small image variants without network access and use unique
+Compose project names, tags and directories under `/data`. Cleanup removes
+only these test resources; existing applications and volumes remain untouched.
+The engine retains its normal build cache. Use the same station lock as other
+hardware runs, and run sequentially.
+
+Coverage includes commit/cleanup, reused image tags, first-install rollback,
+manifest-only updates, corrupt images, malformed manifests, failures and process
+termination during installation and rollback, recovery retry, missing backups,
+ordinary delta payloads (including shared base tags), layer deltas, environment preservation,
+unmanaged projects, and optional readiness checks.
+Fault injection kills only the test module process at helper-call boundaries.
+These checks do not simulate physical power loss or exercise the Mender client's
+server-driven state machine. Output is captured in `<results>/dut.log`; direct
+SSH invocations do not send module output to journald.
+
+Docker 25's exports can contain current timestamps in tar headers, so repeated
+`docker image save` calls need not produce identical archive bytes. The ordinary
+binary-delta fixtures freeze the base export and verify its live image ID before
+returning it through the helper's `SAVE` call. This tests reconstruction, tag
+ordering and rollback without depending on archive timestamp coincidence. The
+layer-delta case uses actual repeated Docker exports and stable layer bytes.
+Production whole-archive deltas require a reproducible base archive; use full
+image payloads or layer deltas when that condition cannot be met.
+
+Health checking defaults to disabled in `/etc/mender/mender-app.conf`. Set
+`APP_HEALTHCHECK_ENABLED=yes`, `APP_HEALTHCHECK_TIMEOUT=60`, and optionally
+`APP_HEALTHCHECK_INTERVAL=2` to enable bounded readiness checks. A service with a
+container healthcheck must become healthy; a service without one must be
+running. Intentional one-shot services must have the Compose label
+`io.ci4rail.mender.oneshot: "true"` and exit successfully. Readiness is checked
+at rollout and commit. The transaction keeps the configured settings across
+separate module calls.
+
+Rollback snapshots preserve resolved Compose configuration, image archives,
+image IDs and tag mappings until `Cleanup`, including through `ArtifactCommit`.
+Each service in the previous composition must still have a container (running
+or stopped) so its exact deployed image can be saved. Missing containers or
+mixed image versions within a scaled service cause installation to fail before
+changing the running application. Inactive profiles and services scaled to zero
+therefore need to be excluded from the managed composition. Persistent volume
+contents and external bind-mount data are not rolled back; schema migrations
+must remain compatible or supply their own recovery strategy. Reserve space for
+image backups, incoming archives and delta working files. Images are not pruned
+automatically because other applications may share them.
+
+An unsuccessful rollback retains its transaction directory and per-application
+lock under `/data/mender-app/.transactions`, preventing a later update from
+destroying recovery data. Inspect the error and repair the underlying cause
+before retrying `ArtifactRollback` with the original module file tree. If Mender
+has already removed that tree, create a temporary file tree with `tmp/` and put
+the retained transaction's absolute path in `tmp/app-transaction`; invoke the
+installed module with `ArtifactRollback <tree>` and then `Cleanup <tree>` using
+the same configuration. Do not remove the lock or backup to bypass a failed
+recovery.

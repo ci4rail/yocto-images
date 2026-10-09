@@ -39,9 +39,15 @@ def test_requires_compose_v2(helper, version, success):
 
 @pytest.mark.parametrize('settings', [
     {'APP_HEALTHCHECK_ENABLED': 'maybe'},
+    {'APP_HEALTHCHECK_TIMEOUT': '0'},
     {'APP_HEALTHCHECK_ENABLED': 'yes', 'APP_HEALTHCHECK_TIMEOUT': '0'},
     {'APP_HEALTHCHECK_ENABLED': 'yes', 'APP_HEALTHCHECK_INTERVAL': '-1'},
     {'APP_HEALTHCHECK_ENABLED': 'yes', 'APP_HEALTHCHECK_TIMEOUT': 'abc'},
 ])
 def test_invalid_health_settings_fail_before_install(helper, settings):
     assert helper(**settings).returncode != 0
+
+
+def test_health_checks_can_be_disabled(helper):
+    result = helper(APP_HEALTHCHECK_ENABLED='no', APP_HEALTHCHECK_TIMEOUT='0')
+    assert result.returncode == 0, result.stderr

@@ -185,6 +185,47 @@ These checks do not simulate physical power loss or exercise the Mender client's
 server-driven state machine. Output is captured in `<results>/dut.log`; direct
 SSH invocations do not send module output to journald.
 
+`yocto_tests/test_application_mender_update.py` separately exercises the installed
+modules through the target's `mender-update` standalone client. It builds real
+`.mender` Artifacts on the pytest runner, transfers them to the target,
+and invokes `install`, `commit`, and `rollback`. Install/commit failures must
+trigger the client's automatic rollback and cleanup. Coverage includes first
+installation, committed updates, reused image tags, manifest-only updates,
+explicit rollback and subsequent updates, corrupt images, invalid manifests,
+container startup failure, and health rejection at install and commit.
+
+Install `mender-artifact` on the pytest runner (DC or TC), or set
+`mender_artifact_binary` in station YAML to its executable path. The target must
+already contain `mender-update` and both rollback-capable app modules. Run with:
+
+```bash
+cd tests
+.venv/bin/python -m pytest --station config/station.local.yaml --skip-flash \
+  yocto_tests/test_application_mender_update.py
+```
+
+These tests invoke `mender-update` with the installed configuration, database,
+state scripts, module paths, and app store. The updater service remains in its
+existing state and can run alongside the tests. The normal database's artifact
+name/provides change as updates are committed; run
+on a dedicated test target with no update already in progress. Test containers,
+tags, payload directories and their application manifests are removed afterward.
+
+For targets that require signed Artifacts, set `mender_artifact_signing_key` in
+station YAML to a private key file on the pytest runner whose public key the
+target already trusts. The private key stays on the runner. Signature checks and
+protected OTA policy remain enabled, including on `CI4RAIL_OTA_PROTECTION=1`
+images. Without this setting, Artifacts are unsigned and require a target whose
+installed policy accepts them.
+
+Health rejection cases require the default `APP_HEALTHCHECK_ENABLED=yes` in the installed
+`/etc/mender/mender-app.conf`; they skip when health checking is disabled. The
+tests do not modify this configuration. This suite exercises client Artifact
+parsing, signature/compatibility policy, state transitions, module execution and
+cleanup. Server deployment/authentication and physical power loss remain outside
+its coverage. Client output is captured in `<results>/dut.log`; the existing
+application-module tests retain detailed fault-injection and delta coverage.
+
 Docker 25's exports can contain current timestamps in tar headers, so repeated
 `docker image save` calls need not produce identical archive bytes. The ordinary
 binary-delta fixtures freeze the base export and verify its live image ID before
@@ -194,9 +235,10 @@ layer-delta case uses actual repeated Docker exports and stable layer bytes.
 Production whole-archive deltas require a reproducible base archive; use full
 image payloads or layer deltas when that condition cannot be met.
 
-Health checking defaults to disabled in `/etc/mender/mender-app.conf`. Set
-`APP_HEALTHCHECK_ENABLED=yes`, `APP_HEALTHCHECK_TIMEOUT=60`, and optionally
-`APP_HEALTHCHECK_INTERVAL=2` to enable bounded readiness checks. A service with a
+Health checking defaults to enabled in `/etc/mender/mender-app.conf`, with
+`APP_HEALTHCHECK_ENABLED=yes`, `APP_HEALTHCHECK_TIMEOUT=60`, and
+`APP_HEALTHCHECK_INTERVAL=2`. Set `APP_HEALTHCHECK_ENABLED=no` to disable readiness
+checks. A service with a
 container healthcheck must become healthy; a service without one must be
 running. Intentional one-shot services must have the Compose label
 `io.ci4rail.mender.oneshot: "true"` and exit successfully. Readiness is checked

@@ -30,6 +30,9 @@ docker_username: ci4rail
 docker_password: $DOCKER_PASSWORD # Expanded from the pytest runner environment.
 flash_timeout: 1200
 boot_timeout: 300
+# Standalone app-update tests use the installed Mender configuration/database.
+# mender_artifact_binary: /absolute/path/to/mender-artifact # on the pytest runner
+# mender_artifact_signing_key: /absolute/path/to/trusted-private.pem # runner only
 features: [ethernet2, gnss, modem, sdcard, wifi, serial, io4edge]
 eth2_path: /sys/devices/platform/soc@0/33800000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/0000:02:03.0/0000:05:00.0
 eth2_mbps: 80

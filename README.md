@@ -87,6 +87,9 @@ See [Makefile](Makefile) for further build targets and instructions.
 
 ## Install Images
 
+For repair and recovery using an SD card, see
+[CPU01 SD card recovery: build, prepare and boot](doc/cpu01-sdcard-boot.md).
+
 Download [Mender CLI](https://docs.mender.io/downloads#mender-cli) and install it to `/usr/local/bin`.
 ```bash
 mv mender-cli /usr/local/bin

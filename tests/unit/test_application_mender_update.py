@@ -4,7 +4,25 @@ import shlex
 
 import pytest
 
-from yocto_tests.test_application_mender_update import MenderApplication
+from yocto_tests.test_application_mender_update import MenderApplication, check_client_ready
+
+
+@pytest.mark.parametrize("status", [0, 1])
+def test_client_preflight(status):
+    commands = []
+
+    def run(command):
+        commands.append(command)
+        return ("OTA protection: missing or symlinked path: /etc/ota\n"
+                f"CLIENT_EXIT={status}\n")
+
+    dut = SimpleNamespace(run=run)
+    if status:
+        with pytest.raises(AssertionError, match="Staging also requires provisioning"):
+            check_client_ready(dut)
+    else:
+        check_client_ready(dut)
+    assert commands[0].splitlines()[0] == "mender-update show-artifact 2>&1"
 
 
 def test_client_uses_installed_configuration():

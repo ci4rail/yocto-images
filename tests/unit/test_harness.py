@@ -92,6 +92,13 @@ def test_package_allowlist(tmp_path):
         names = package.getnames()
     assert 'run.sh' in names and 'yocto_tests/test_security.py' in names
     assert 'config/station.example.yaml' in names
+    assert 'yocto_tests/test_core_api_server.py' in names
+    assert {p for p in names if p.endswith('.pem')} == {
+        'staging-ota-keys/ci4rail-artifact.key.pem',
+        'staging-ota-keys/ci4rail-artifact-pub.pem',
+        'staging-ota-keys/customer-artifact.key.pem',
+        'staging-ota-keys/customer-artifact-pub.pem',
+    }
     assert not any('station.yaml' in p or '.venv' in p or 'results/' in p or '__pycache__' in p for p in names)
 
 

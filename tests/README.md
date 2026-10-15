@@ -211,12 +211,20 @@ name/provides change as updates are committed; run
 on a dedicated test target with no update already in progress. Test containers,
 tags, payload directories and their application manifests are removed afterward.
 
-For targets that require signed Artifacts, set `mender_artifact_signing_key` in
-station YAML to a private key file on the pytest runner whose public key the
-target already trusts. The private key stays on the runner. Signature checks and
-protected OTA policy remain enabled, including on `CI4RAIL_OTA_PROTECTION=1`
-images. Without this setting, Artifacts are unsigned and require a target whose
-installed policy accepts them.
+Set `ota_signing_material_dir` in station YAML to the signing directory on the
+pytest runner to enable signing and automatic OTA provisioning. Session setup
+copies `customer-artifact-pub.pem` and `customer-artifact-pub.pem.sig` into the
+os-customization factory layer using `os-customization-set install-factory`,
+preserving existing factory content. It reboots to activate the layer and start `mender-updated`. This also runs with `--skip-flash` and leaves the
+provisioned factory keys installed after the tests.
+
+CoreOS artifacts are signed with `ci4rail-artifact.key.pem`; application and
+os-customization artifacts use `customer-artifact.key.pem`. Private keys stay
+on the runner. The Core API test re-signs a local copy of the supplied CoreOS
+artifact. With this setting absent, generated artifacts are unsigned and no
+keys are provisioned. The target's installed policy must accept those artifacts.
+For staging, point to `ota-signing-material/staging/`; never use these test keys
+for production. See [OTA provisioning](../doc/ota-installation-protection.md).
 
 Health rejection cases require the default `APP_HEALTHCHECK_ENABLED=yes` in the installed
 `/etc/mender/mender-app.conf`; they skip when health checking is disabled. The
@@ -266,3 +274,62 @@ the retained transaction's absolute path in `tmp/app-transaction`; invoke the
 installed module with `ArtifactRollback <tree>` and then `Cleanup <tree>` using
 the same configuration. Do not remove the lock or backup to bypass a failed
 recovery.
+
+## Core API staging update smoke test
+
+`yocto_tests/test_core_api_server.py` uploads signed artifacts through the installed
+`moducop-core-api-server` HTTP API. It installs two application versions, installs
+an empty site customization with a successful health check, then installs a new
+CoreOS version. Each deployment must report success and the expected installed
+`current.name` and `current.version` through GET requests. Application and
+customization versions are checked again after the CoreOS reboot. The API owns
+Mender install/reboot/commit; the smoke test never invokes those client commands.
+The HTTP requests run on the DUT via SSH, using its loopback API on port 8090.
+
+Use a dedicated **staging** target. The test leaves the new CoreOS and site
+customization installed; the empty customization replaces the previous site
+layer. Successful runs remove their application resources. Failed runs preserve
+application/update resources for diagnosis rather than forcing a rollback of an
+asynchronous API job. Reflash before repeating the same CoreOS artifact.
+
+The API derives CoreOS version from `/etc/issue`, so renaming an artifact with
+unchanged FIT/rootfs bytes cannot test a new installed version. Build the same
+staging image with only its version changed; Yocto regenerates the matching
+verity rootfs and staging-signed FIT. From the repository root, for example:
+
+```sh
+bash tests/scripts/build-core-api-smoke-image.sh cpu01 v3.0.0.smoke.1
+# Choose a version different from the installed one.
+```
+
+This uses the existing Makefile/configuration/cache and `kasfile-sb-staging.yaml`,
+with the developer artifact suffix disabled so Artifact and `/etc/issue` versions
+match.
+
+Set `core_api_core_os_artifact` in station YAML to the resulting `.mender` file
+under `<platform>-standard-image/install/images/` on the pytest runner. The test
+skips when this setting is absent, fails for a missing/invalid artifact, and
+verifies its staging signature and distinct version before changing the target.
+Both the initial image and update must include an API server that supports
+`bootfit-rootfs`, `/software/core-os-customization`, and the staging image
+version banner in `/etc/issue`. Upstream main currently parses `-Image` and
+`-Image-Non-Secure-Boot` banners but not `-Image-Staging`; a server with that
+limitation will fail the initial API version check. The smoke test intentionally
+uses the reported version rather than substituting artifact metadata.
+
+```sh
+cd tests
+.venv/bin/python -m pytest -s yocto_tests/test_core_api_server.py \
+  --station config/station.yaml --skip-flash
+```
+
+Set `ota_signing_material_dir` to enable factory provisioning and artifact signing
+as described above. The package includes dummy staging material under
+`staging-ota-keys/`; set the configuration to that directory to use it.
+Production signing material and station credentials are excluded.
+Install `mender-artifact` and OpenSSL on the runner;
+`mender_artifact_binary` can specify its path. `core_api_update_timeout` defaults
+to 900 seconds per deployment, including automatic reboot and commit.
+
+The HTTP flow follows the upstream
+[Core API update examples](https://github.com/ci4rail/moducop-core-api-server/tree/main/tests/testcases).

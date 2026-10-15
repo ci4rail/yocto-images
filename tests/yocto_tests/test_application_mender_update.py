@@ -10,16 +10,35 @@ import subprocess
 import pytest
 
 from .station import quote
+from .ota import signing_key, sign_artifact
 from .test_application_module import Application, application_images
 
 pytestmark = pytest.mark.hardware
+
+
+def check_client_ready(dut):
+    # This read-only command exercises the same startup policy as install.
+    out = dut.run(
+        "mender-update show-artifact 2>&1\n"
+        "rc=$?\nprintf '\\nCLIENT_EXIT=%s\\n' \"$rc\"")
+    log, status = out.rsplit("CLIENT_EXIT=", 1)
+    assert int(status.strip()) == 0, (
+        "Mender client preflight failed before app test setup:\n"
+        f"{log.strip()}\n"
+        "Protected images require customer-artifact-pub.pem and its delegation "
+        "signature customer-artifact-pub.pem.sig provisioned as regular files "
+        "under /etc/ota through local os-customization tooling before updates. "
+        "Staging also requires provisioning. See doc/ota-installation-protection.md. "
+        "Set ota_signing_material_dir on the runner to provision and sign test updates."
+    )
 
 
 class MenderApplication(Application):
     def __init__(self, station, root, images, artifact_tool, local):
         super().__init__(station, root, images)
         self.artifact_tool, self.local = artifact_tool, local
-        self.signing_key = station.cfg.get("mender_artifact_signing_key")
+        self.station_config = station.cfg
+        self.signing_key = signing_key(station.cfg, "application")
         self.pending = False
         values = self.dut.run("cat /var/lib/mender/device_type").splitlines()
         self.device_type = next(line.split("=", 1)[1] for line in values
@@ -71,10 +90,9 @@ class MenderApplication(Application):
             "-f", str(directory / "images.tar.gz"),
             "-f", str(directory / "manifests.tar.gz"),
         ]
-        if self.signing_key:
-            command.extend(["-k", self.signing_key])
         result = subprocess.run(command, capture_output=True, text=True, timeout=180)
         assert result.returncode == 0, result.stdout + result.stderr
+        sign_artifact(self.artifact_tool, output, self.station_config, "application")
         remote = f"{files}/app.mender"
         self.dut.put(output, remote)
         return remote, name
@@ -102,6 +120,7 @@ def mender_application(station, request, tmp_path):
     station.dut.run("command -v mender-update >/dev/null")
     tool = shutil.which(station.cfg.get("mender_artifact_binary", "mender-artifact"))
     assert tool, "Install mender-artifact on the pytest runner or set mender_artifact_binary"
+    check_client_ready(station.dut)
     # Resolve the image fixture only after checking client prerequisites.
     root, images = request.getfixturevalue("application_images")
     app = MenderApplication(station, root, images, tool, tmp_path)

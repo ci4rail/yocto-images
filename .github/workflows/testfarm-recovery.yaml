@@ -61,6 +61,7 @@ jobs:
       SIGNING_MODE: ${{ inputs.signing_mode }}
       MINIO_BUCKET: ${{ inputs.minio_bucket }}
       BUILDER_IMAGE: ghcr.io/siemens/kas/kas:4.7
+      YOCTO_CACHE_DIR: /yocto-cache
     steps:
       - uses: actions/checkout@v4
         with:
@@ -78,11 +79,21 @@ jobs:
         run: |
           python3 migration/ci/recovery.py validate --platform "$PLATFORM" --mode "$SIGNING_MODE" --work "$RUNNER_TEMP/testfarm-recovery"
           work="$(mktemp -d "$RUNNER_TEMP/testfarm-recovery.XXXXXXXX")"
-          mkdir "$work/install" "$work/runtime" "$work/output" "$work/sstate" "$work/downloads"
+          mkdir "$work/install" "$work/runtime" "$work/output"
           echo "TESTFARM_WORK=$work" >> "$GITHUB_ENV"
           version="$(scripts/gen-image-version.sh . /dev/null)"
           echo "RECOVERY_VERSION=$version" >> "$GITHUB_ENV"
           python3 -m unittest discover -s testfarm-recovery/tests -v
+
+      - name: Prepare persistent Yocto caches
+        run: |
+          # The yocto-runner exposes this persistent volume to its Docker daemon.
+          # Fail rather than silently building with an ephemeral cache.
+          test -d "$YOCTO_CACHE_DIR" || { echo "Missing runner cache volume: $YOCTO_CACHE_DIR"; exit 1; }
+          mkdir -p "$YOCTO_CACHE_DIR/sstate-cache" "$YOCTO_CACHE_DIR/downloads"
+          for cache in sstate-cache downloads; do
+            test -w "$YOCTO_CACHE_DIR/$cache" || { echo "Cache is not writable: $YOCTO_CACHE_DIR/$cache"; exit 1; }
+          done
 
       - name: Build signed USB recovery bootloader
         env:
@@ -95,7 +106,8 @@ jobs:
           if [ "$PLATFORM" = cpu01plus ]; then config="$config:kas-cpu01plus.yaml"; fi
           docker run --rm --user "$(id -u):$(id -g)" \
             -v "$GITHUB_WORKSPACE:/work" -v "$TESTFARM_WORK/install:/install" \
-            -v "$TESTFARM_WORK/sstate:/sstate-cache" -v "$TESTFARM_WORK/downloads:/downloads" \
+            --mount "type=bind,source=$YOCTO_CACHE_DIR/sstate-cache,target=/sstate-cache" \
+            --mount "type=bind,source=$YOCTO_CACHE_DIR/downloads,target=/downloads" \
             -e AZURE_APP_ID -e AZURE_CLIENT_ID -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \
             -e ACTIONS_ID_TOKEN_REQUEST_URL -e ACTIONS_ID_TOKEN_REQUEST_TOKEN \
             -e GITCONFIG_FILE=/work/kas-includes/gitconfig \

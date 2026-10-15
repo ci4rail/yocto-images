@@ -49,7 +49,14 @@ Uses the existing `staging` and `production` GitHub environments. Configure:
 
 The runner uses the existing `yocto-runner` label and kas 4.7. Bootloader layers
 are pinned; the signing layer matches the migration production tooling pin.
-Build outputs/downloads/sstate use a job-specific temporary directory. No
+Downloads and sstate are mounted directly from the runner's persistent
+`/yocto-cache/downloads` and `/yocto-cache/sstate-cache` directories, reusing
+compatible entries from previous recovery and OS builds. BitBake manages cache
+locking; no per-job cache copy is needed. Completed cache entries survive failed
+builds as well. The cache volume must be writable by the runner and visible at
+the same path to its Docker daemon; the workflow fails if it is unavailable.
+Build outputs and signing work directories remain temporary and are cleaned up
+after each job; the persistent caches are retained. No
 production private keys are downloaded to the runner or bundled. The uploader
 requires `s3:GetBucketPolicy` and `s3:PutObject` on its destination, and rejects
 anonymous bucket access. It does not create buckets or change policies.

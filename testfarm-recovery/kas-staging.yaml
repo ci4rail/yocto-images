@@ -1,0 +1,9 @@
+header:
+  version: 11
+  includes:
+    - kas-common.yaml
+local_conf_header:
+  testfarm-signing: |
+    TDX_IMX_HAB_CST_KEY_SIZE = "3072"
+    TDX_IMX_HAB_CST_DIR = "/work/cpu01-standard-image/secure-boot-material/staging"
+    UBOOT_SIGN_KEYDIR = "/work/cpu01-standard-image/secure-boot-material/staging/keys/fit"

@@ -1,0 +1,172 @@
+name: Build testfarm USB recovery bundle
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        type: choice
+        options: [cpu01, cpu01plus]
+        default: cpu01
+        required: true
+      signing_mode:
+        type: choice
+        options: [staging, production]
+        default: staging
+        required: true
+      minio_bucket:
+        description: Existing private bucket on minio.ci4rail.com
+        type: string
+        required: true
+  workflow_call:
+    inputs:
+      platform:
+        type: string
+        required: true
+      signing_mode:
+        type: string
+        required: true
+      minio_bucket:
+        type: string
+        required: true
+    secrets:
+      RECOVERY_ROOT_PASSWORD_HASH:
+        required: false
+      RECOVERY_MINIO_ACCESS_KEY:
+        required: false
+      RECOVERY_MINIO_SECRET_KEY:
+        required: false
+    outputs:
+      object_uri:
+        description: Private MinIO URI of the recovery bundle
+        value: ${{ jobs.bundle.outputs.object_uri }}
+      sha256:
+        description: SHA-256 of the recovery bundle
+        value: ${{ jobs.bundle.outputs.sha256 }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  bundle:
+    if: github.event_name != 'pull_request' && github.event_name != 'pull_request_target'
+    runs-on: [self-hosted, linux, x64, yocto-runner]
+    environment: ${{ inputs.signing_mode == 'production' && 'production' || 'staging' }}
+    timeout-minutes: 180
+    outputs:
+      object_uri: ${{ steps.upload.outputs.object_uri }}
+      sha256: ${{ steps.upload.outputs.sha256 }}
+    env:
+      PLATFORM: ${{ inputs.platform }}
+      SIGNING_MODE: ${{ inputs.signing_mode }}
+      MINIO_BUCKET: ${{ inputs.minio_bucket }}
+      BUILDER_IMAGE: ghcr.io/siemens/kas/kas:4.7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Validate inputs and create isolated output directories
+        env:
+          MINIO_ACCESS_KEY: ${{ secrets.RECOVERY_MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.RECOVERY_MINIO_SECRET_KEY }}
+          RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.RECOVERY_ROOT_PASSWORD_HASH }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          python3 migration/ci/recovery.py validate --platform "$PLATFORM" --mode "$SIGNING_MODE" --work "$RUNNER_TEMP/testfarm-recovery"
+          work="$(mktemp -d "$RUNNER_TEMP/testfarm-recovery.XXXXXXXX")"
+          mkdir "$work/install" "$work/runtime" "$work/output" "$work/sstate" "$work/downloads"
+          echo "TESTFARM_WORK=$work" >> "$GITHUB_ENV"
+          version="$(scripts/gen-image-version.sh . /dev/null)"
+          echo "RECOVERY_VERSION=$version" >> "$GITHUB_ENV"
+          python3 -m unittest discover -s testfarm-recovery/tests -v
+
+      - name: Build signed USB recovery bootloader
+        env:
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_APP_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          config="kas-$SIGNING_MODE.yaml"
+          if [ "$PLATFORM" = cpu01plus ]; then config="$config:kas-cpu01plus.yaml"; fi
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$GITHUB_WORKSPACE:/work" -v "$TESTFARM_WORK/install:/install" \
+            -v "$TESTFARM_WORK/sstate:/sstate-cache" -v "$TESTFARM_WORK/downloads:/downloads" \
+            -e AZURE_APP_ID -e AZURE_CLIENT_ID -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \
+            -e ACTIONS_ID_TOKEN_REQUEST_URL -e ACTIONS_ID_TOKEN_REQUEST_TOKEN \
+            -e GITCONFIG_FILE=/work/kas-includes/gitconfig \
+            -w /work/testfarm-recovery "$BUILDER_IMAGE" build "$config"
+          python3 - <<'PY'
+          import json, os, subprocess
+          from pathlib import Path
+          revisions = {}
+          for repo in sorted(Path('testfarm-recovery/src').iterdir()):
+              if (repo / '.git').exists():
+                  revisions[repo.name] = subprocess.check_output(
+                      ['git', '-C', str(repo), 'rev-parse', 'HEAD'], text=True).strip()
+          Path(os.environ['TESTFARM_WORK'], 'revisions.json').write_text(json.dumps(revisions, indent=2))
+          PY
+
+      - name: Build recovery host tools
+        run: |
+          target=tools
+          if [ "$SIGNING_MODE" = production ]; then target=production; fi
+          docker build --target "$target" -t "testfarm-recovery-tools:$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            -f migration/ci/Dockerfile migration/ci
+
+      - name: Build the existing signed recovery runtime
+        env:
+          RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.RECOVERY_ROOT_PASSWORD_HASH }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$GITHUB_WORKSPACE:/work:ro" -v "$TESTFARM_WORK/runtime:/build" \
+            "testfarm-recovery-tools:$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            python3 migration/ci/recovery.py prepare --platform "$PLATFORM" --mode "$SIGNING_MODE" --work /build
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$GITHUB_WORKSPACE:/work:ro" -v "$TESTFARM_WORK/runtime:/build" \
+            -e RECOVERY_ROOT_PASSWORD_HASH -e AZURE_CLIENT_ID -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \
+            -e ACTIONS_ID_TOKEN_REQUEST_URL -e ACTIONS_ID_TOKEN_REQUEST_TOKEN \
+            -e GITHUB_SHA -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT -e RECOVERY_VERSION \
+            "testfarm-recovery-tools:$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            python3 migration/ci/recovery.py package --platform "$PLATFORM" --mode "$SIGNING_MODE" --work /build
+
+      - name: Verify FIT against recovery bootloader and package bundle
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$GITHUB_WORKSPACE:/work:ro" -v "$TESTFARM_WORK:/build" \
+            -e GITHUB_SHA -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT \
+            "testfarm-recovery-tools:$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            python3 testfarm-recovery/bundle.py package --platform "$PLATFORM" --mode "$SIGNING_MODE" \
+            --bootloader "/build/install/images/moducop-$PLATFORM/testfarm-recovery" \
+            --runtime /build/runtime/output --revisions /build/revisions.json \
+            --output /build/output/recovery-bundle.tar.gz
+
+      - name: Upload bundle to private MinIO
+        id: upload
+        env:
+          MINIO_ACCESS_KEY: ${{ secrets.RECOVERY_MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.RECOVERY_MINIO_SECRET_KEY }}
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -v "$GITHUB_WORKSPACE:/work:ro" -v "$TESTFARM_WORK:/build" \
+            -e MINIO_ACCESS_KEY -e MINIO_SECRET_KEY -e MINIO_BUCKET \
+            -e RECOVERY_VERSION -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT \
+            -e GITHUB_OUTPUT=/build/upload.outputs \
+            "testfarm-recovery-tools:$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            python3 testfarm-recovery/bundle.py upload --platform "$PLATFORM" --mode "$SIGNING_MODE" \
+            --output /build/output/recovery-bundle.tar.gz
+          cat "$TESTFARM_WORK/upload.outputs" >> "$GITHUB_OUTPUT"
+
+      - name: Clean temporary outputs and credentials
+        if: always()
+        run: |
+          if [ -n "${TESTFARM_WORK:-}" ]; then rm -rf -- "$TESTFARM_WORK"; fi
+          # AKV recipe work directories may contain short-lived OIDC tokens.
+          rm -rf -- testfarm-recovery/build

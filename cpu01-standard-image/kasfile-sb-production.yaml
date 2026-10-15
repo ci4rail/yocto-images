@@ -2,6 +2,7 @@ header:
   version: 11
   includes:
     - ./kasfile-common.yaml
+    - ../kas-includes/kasfile-ota-protection.yaml
 
 repos:
   # ci4rail
@@ -39,6 +40,9 @@ local_conf_header:
       /work/secure-boot-material/production/crts/SRK4_sha256_3072_65537_v3_ca_crt.pem \
     "
 
+
+  ci4rail-ota-keys: |
+    CI4RAIL_OTA_KEY_ENVIRONMENT = "production"
 
 env:
   AZURE_APP_ID: ""

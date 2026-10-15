@@ -151,3 +151,185 @@ configured storage throughput, and LTE loss below 50% with mean RTT below
 1500 ms. Security baseline values remain unchanged, including the existing
 egress CIDR TODO. `max_cvss` is retained but unused by the upstream Nmap
 string-based vulnerability test; this is not a CVSS-scored scanner.
+
+## Application update module tests
+
+`yocto_tests/test_application_module.py` exercises the installed `app` Update
+Module and Docker Compose v2 helper with real containers. It calls Mender v3 states
+with generated payload trees, without modifying the Mender deployment database
+or contacting a deployment server. The target must have the rollback-capable
+module installed. No automatic module installation or rootfs remount occurs in
+the test suite.
+
+```sh
+.venv/bin/python -m pytest yocto_tests/test_application_module.py \
+  --station config/station.yaml --skip-flash
+```
+
+The fixture uses `alpine:latest`, pulling it only if absent. Preload it to run
+without registry access, or set `application_test_image` in station configuration
+to an image with `/bin/sh`, `sleep`, `test`, and `touch`.
+Tests build two small image variants without network access and use unique
+Compose project names, tags and directories under `/data`. Cleanup removes
+only these test resources; existing applications and volumes remain untouched.
+The engine retains its normal build cache. Use the same station lock as other
+hardware runs, and run sequentially.
+
+Coverage includes commit/cleanup, reused image tags, first-install rollback,
+manifest-only updates, corrupt images, malformed manifests, failures and process
+termination during installation and rollback, recovery retry, missing backups,
+ordinary delta payloads (including shared base tags), layer deltas, environment preservation,
+unmanaged projects, and optional readiness checks.
+Fault injection kills only the test module process at helper-call boundaries.
+These checks do not simulate physical power loss or exercise the Mender client's
+server-driven state machine. Output is captured in `<results>/dut.log`; direct
+SSH invocations do not send module output to journald.
+
+`yocto_tests/test_application_mender_update.py` separately exercises the installed
+modules through the target's `mender-update` standalone client. It builds real
+`.mender` Artifacts on the pytest runner, transfers them to the target,
+and invokes `install`, `commit`, and `rollback`. Install/commit failures must
+trigger the client's automatic rollback and cleanup. Coverage includes first
+installation, committed updates, reused image tags, manifest-only updates,
+explicit rollback and subsequent updates, corrupt images, invalid manifests,
+container startup failure, and health rejection at install and commit.
+
+Install `mender-artifact` on the pytest runner (DC or TC), or set
+`mender_artifact_binary` in station YAML to its executable path. The target must
+already contain `mender-update` and both rollback-capable app modules. Run with:
+
+```bash
+cd tests
+.venv/bin/python -m pytest --station config/station.local.yaml --skip-flash \
+  yocto_tests/test_application_mender_update.py
+```
+
+These tests invoke `mender-update` with the installed configuration, database,
+state scripts, module paths, and app store. The updater service remains in its
+existing state and can run alongside the tests. The normal database's artifact
+name/provides change as updates are committed; run
+on a dedicated test target with no update already in progress. Test containers,
+tags, payload directories and their application manifests are removed afterward.
+
+Set `ota_signing_material_dir` in station YAML to the signing directory on the
+pytest runner to enable signing and automatic OTA provisioning. Session setup
+copies `customer-artifact-pub.pem` and `customer-artifact-pub.pem.sig` into the
+os-customization factory layer using `os-customization-set install-factory`,
+preserving existing factory content. It reboots to activate the layer and start `mender-updated`. This also runs with `--skip-flash` and leaves the
+provisioned factory keys installed after the tests.
+
+CoreOS artifacts are signed with `ci4rail-artifact.key.pem`; application and
+os-customization artifacts use `customer-artifact.key.pem`. Private keys stay
+on the runner. The Core API test re-signs a local copy of the supplied CoreOS
+artifact. With this setting absent, generated artifacts are unsigned and no
+keys are provisioned. The target's installed policy must accept those artifacts.
+For staging, point to `ota-signing-material/staging/`; never use these test keys
+for production. See [OTA provisioning](../doc/ota-installation-protection.md).
+
+Health rejection cases require the default `APP_HEALTHCHECK_ENABLED=yes` in the installed
+`/etc/mender/mender-app.conf`; they skip when health checking is disabled. The
+tests do not modify this configuration. This suite exercises client Artifact
+parsing, signature/compatibility policy, state transitions, module execution and
+cleanup. Server deployment/authentication and physical power loss remain outside
+its coverage. Client output is captured in `<results>/dut.log`; the existing
+application-module tests retain detailed fault-injection and delta coverage.
+
+Docker 25's exports can contain current timestamps in tar headers, so repeated
+`docker image save` calls need not produce identical archive bytes. The ordinary
+binary-delta fixtures freeze the base export and verify its live image ID before
+returning it through the helper's `SAVE` call. This tests reconstruction, tag
+ordering and rollback without depending on archive timestamp coincidence. The
+layer-delta case uses actual repeated Docker exports and stable layer bytes.
+Production whole-archive deltas require a reproducible base archive; use full
+image payloads or layer deltas when that condition cannot be met.
+
+Health checking defaults to enabled in `/etc/mender/mender-app.conf`, with
+`APP_HEALTHCHECK_ENABLED=yes`, `APP_HEALTHCHECK_TIMEOUT=60`, and
+`APP_HEALTHCHECK_INTERVAL=2`. Set `APP_HEALTHCHECK_ENABLED=no` to disable readiness
+checks. A service with a
+container healthcheck must become healthy; a service without one must be
+running. Intentional one-shot services must have the Compose label
+`io.ci4rail.mender.oneshot: "true"` and exit successfully. Readiness is checked
+at rollout and commit. The transaction keeps the configured settings across
+separate module calls.
+
+Rollback snapshots preserve resolved Compose configuration, image archives,
+image IDs and tag mappings until `Cleanup`, including through `ArtifactCommit`.
+Each service in the previous composition must still have a container (running
+or stopped) so its exact deployed image can be saved. Missing containers or
+mixed image versions within a scaled service cause installation to fail before
+changing the running application. Inactive profiles and services scaled to zero
+therefore need to be excluded from the managed composition. Persistent volume
+contents and external bind-mount data are not rolled back; schema migrations
+must remain compatible or supply their own recovery strategy. Reserve space for
+image backups, incoming archives and delta working files. Images are not pruned
+automatically because other applications may share them.
+
+An unsuccessful rollback retains its transaction directory and per-application
+lock under `/data/mender-app/.transactions`, preventing a later update from
+destroying recovery data. Inspect the error and repair the underlying cause
+before retrying `ArtifactRollback` with the original module file tree. If Mender
+has already removed that tree, create a temporary file tree with `tmp/` and put
+the retained transaction's absolute path in `tmp/app-transaction`; invoke the
+installed module with `ArtifactRollback <tree>` and then `Cleanup <tree>` using
+the same configuration. Do not remove the lock or backup to bypass a failed
+recovery.
+
+## Core API staging update smoke test
+
+`yocto_tests/test_core_api_server.py` uploads signed artifacts through the installed
+`moducop-core-api-server` HTTP API. It installs two application versions, installs
+an empty site customization with a successful health check, then installs a new
+CoreOS version. Each deployment must report success and the expected installed
+`current.name` and `current.version` through GET requests. Application and
+customization versions are checked again after the CoreOS reboot. The API owns
+Mender install/reboot/commit; the smoke test never invokes those client commands.
+The HTTP requests run on the DUT via SSH, using its loopback API on port 8090.
+
+Use a dedicated **staging** target. The test leaves the new CoreOS and site
+customization installed; the empty customization replaces the previous site
+layer. Successful runs remove their application resources. Failed runs preserve
+application/update resources for diagnosis rather than forcing a rollback of an
+asynchronous API job. Reflash before repeating the same CoreOS artifact.
+
+The API derives CoreOS version from `/etc/issue`, so renaming an artifact with
+unchanged FIT/rootfs bytes cannot test a new installed version. Build the same
+staging image with only its version changed; Yocto regenerates the matching
+verity rootfs and staging-signed FIT. From the repository root, for example:
+
+```sh
+bash tests/scripts/build-core-api-smoke-image.sh cpu01 v3.0.0.smoke.1
+# Choose a version different from the installed one.
+```
+
+This uses the existing Makefile/configuration/cache and `kasfile-sb-staging.yaml`,
+with the developer artifact suffix disabled so Artifact and `/etc/issue` versions
+match.
+
+Set `core_api_core_os_artifact` in station YAML to the resulting `.mender` file
+under `<platform>-standard-image/install/images/` on the pytest runner. The test
+skips when this setting is absent, fails for a missing/invalid artifact, and
+verifies its staging signature and distinct version before changing the target.
+Both the initial image and update must include an API server that supports
+`bootfit-rootfs`, `/software/core-os-customization`, and the staging image
+version banner in `/etc/issue`. Upstream main currently parses `-Image` and
+`-Image-Non-Secure-Boot` banners but not `-Image-Staging`; a server with that
+limitation will fail the initial API version check. The smoke test intentionally
+uses the reported version rather than substituting artifact metadata.
+
+```sh
+cd tests
+.venv/bin/python -m pytest -s yocto_tests/test_core_api_server.py \
+  --station config/station.yaml --skip-flash
+```
+
+Set `ota_signing_material_dir` to enable factory provisioning and artifact signing
+as described above. The package includes dummy staging material under
+`staging-ota-keys/`; set the configuration to that directory to use it.
+Production signing material and station credentials are excluded.
+Install `mender-artifact` and OpenSSL on the runner;
+`mender_artifact_binary` can specify its path. `core_api_update_timeout` defaults
+to 900 seconds per deployment, including automatic reboot and commit.
+
+The HTTP flow follows the upstream
+[Core API update examples](https://github.com/ci4rail/moducop-core-api-server/tree/main/tests/testcases).

@@ -29,6 +29,8 @@ def station(request):
         cfg["image_file"] = request.config.getoption("--image")
     s = Station(cfg, request.config.getoption("--results"))
     with prepare(s, skip_flash=request.config.getoption("--skip-flash")):
+        from yocto_tests.ota import provision_factory
+        provision_factory(s)
         yield s
 
 

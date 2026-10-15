@@ -22,14 +22,18 @@
 [ ] ci: add staging build
 [ ] ci: add integration test for staging
 
-[ ] test moducop-core-api-server
-  
+[x] test moducop-core-api-server
+[ ] app-signing: support production images in ci
+ 
 [ ] support CPU01plus
 
 [ ] oss clearing
 [ ] cvs scanning
 
 [ ] update yocto.sh
+
+
+----
 
 [ ] os-customization mender: fix: /usr/share/mender/inventory/os-customization' doesn't have the 'mender-inventory-' prefix, skipping"
 

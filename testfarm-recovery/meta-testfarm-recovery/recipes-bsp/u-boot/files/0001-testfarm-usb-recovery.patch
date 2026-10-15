@@ -13,14 +13,14 @@ Upstream-Status: Inappropriate [testfarm-only boot policy]
  #include <efi_loader.h>
  #include <tdx-harden.h>
  
-@@ -50,6 +51,7 @@
- 	if (IS_ENABLED(CONFIG_VERSION_VARIABLE))
+@@ -51,6 +52,7 @@
  		env_set("ver", version_string);  /* set version variable */
  
  	cli_init();
 +	testfarm_recovery(); /* Never returns; no environment boot policy or CLI. */
  
  	if (IS_ENABLED(CONFIG_USE_PREBOOT))
+ 		run_preboot_environment_command();
 --- a/common/Makefile
 +++ b/common/Makefile
 @@ -7,6 +7,7 @@
@@ -33,7 +33,7 @@ Upstream-Status: Inappropriate [testfarm-only boot policy]
  obj-$(CONFIG_HUSH_OLD_PARSER) += cli_hush.o
 --- a/drivers/fastboot/fb_command.c
 +++ b/drivers/fastboot/fb_command.c
-@@ -141,11 +141,25 @@
+@@ -166,11 +166,25 @@
  	int i;
  	char *cmd_parameter;
  

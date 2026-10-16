@@ -36,7 +36,7 @@ SDPV: jump
         rom = 'SDPS: boot -f ../imx-boot-recovery\n'
     else:
         raise ValueError('Unsupported platform')
-    return ('uuu_version 1.5.165\n\n' + rom +
+    return ('uuu_version 1.4.127\n\n' + rom +
             'CFG: FB: -vid 0x1b67 -pid 0x4000\n'
             'FB: download -f ../recovery.itb\n'
             'FB: continue\nFB: done\n')
@@ -108,7 +108,7 @@ def package(args):
             'hab_verification': 'CSF presence checked; ROM authentication requires target qualification',
             'hardware_qualified': False,
             'bootloader_layers': json.loads(args.revisions.read_text()),
-            'uuu_min_version': '1.5.165',
+            'uuu_min_version': '1.4.127',
             'files': {str(p.relative_to(bundle)): digest(p)
                       for p in sorted(bundle.rglob('*')) if p.is_file()},
         }

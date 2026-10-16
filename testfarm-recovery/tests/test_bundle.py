@@ -95,6 +95,7 @@ class BundleTests(unittest.TestCase):
         self.assertIn('SDPS: boot', bundle.uuu_script('cpu01plus'))
         for platform in ('cpu01', 'cpu01plus'):
             script = bundle.uuu_script(platform)
+            self.assertEqual(script.splitlines()[0], 'uuu_version 1.4.127')
             self.assertIn('FB: continue', script)
             for forbidden in ('ucmd', 'acmd', 'flash ', 'erase ', 'boot.scr', 'fuse '):
                 self.assertNotIn(forbidden, script.lower())
@@ -111,6 +112,7 @@ class BundleTests(unittest.TestCase):
             bundle.package(args)
         with tarfile.open(output) as tar:
             names = tar.getnames()
+            self.assertEqual(json.load(tar.extractfile('build.json'))['uuu_min_version'], '1.4.127')
             self.assertEqual(set(names), {'imx-boot-recovery', 'recovery.itb', 'recovery/uuu.auto',
                 'u-boot.config', 'u-boot.dtb', 'srk-fuse.bin', 'runtime-build.json', 'build.json', 'SHA256SUMS'})
             for line in tar.extractfile('SHA256SUMS').read().decode().splitlines():

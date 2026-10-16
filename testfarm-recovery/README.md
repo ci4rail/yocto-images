@@ -92,7 +92,7 @@ The manifest explicitly records `hardware_qualified: false`.
 
 ## Boot protocol
 
-After putting the device into USB ROM recovery, run UUU >= 1.5.165 from the
+After putting the device into USB ROM recovery, run UUU 1.4.127 from the
 extracted bundle root:
 
 ```sh

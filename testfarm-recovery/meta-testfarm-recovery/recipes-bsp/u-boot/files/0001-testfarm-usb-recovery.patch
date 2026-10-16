@@ -33,14 +33,18 @@ Upstream-Status: Inappropriate [testfarm-only boot policy]
  obj-$(CONFIG_HUSH_OLD_PARSER) += cli_hush.o
 --- a/drivers/fastboot/fb_command.c
 +++ b/drivers/fastboot/fb_command.c
-@@ -166,11 +166,25 @@
+@@ -166,11 +166,26 @@
  	int i;
  	char *cmd_parameter;
  
++	/* UUU may send "continue:"; check the parsed command in every guard. */
+ 	cmd_parameter = cmd_string;
+ 	strsep(&cmd_parameter, ":");
+ 
 +	/* Dedicated recovery transport: no flash, erase, UCmd, ACmd or OEM. */
 +	if (strcmp(cmd_string, "continue") &&
-+	    strncmp(cmd_string, "getvar:", 7) &&
-+	    strncmp(cmd_string, "download:", 9)) {
++	    strcmp(cmd_string, "getvar") &&
++	    strcmp(cmd_string, "download")) {
 +		fastboot_fail("Recovery command denied", response);
 +		return -1;
 +	}
@@ -48,12 +52,9 @@ Upstream-Status: Inappropriate [testfarm-only boot policy]
 +		fastboot_fail("No completed recovery download", response);
 +		return -1;
 +	}
-+	if (!strncmp(cmd_string, "download:", 9))
++	if (!strcmp(cmd_string, "download"))
 +		image_size = 0;
 +
- 	cmd_parameter = cmd_string;
- 	strsep(&cmd_parameter, ":");
- 
  	for (i = 0; i < FASTBOOT_COMMAND_COUNT; i++) {
 -		if (!strcmp(commands[i].command, cmd_string)) {
 +		if (commands[i].command && !strcmp(commands[i].command, cmd_string)) {

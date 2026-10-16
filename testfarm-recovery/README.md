@@ -99,8 +99,16 @@ extracted bundle root:
 uuu recovery
 ```
 
-CPU01 uses SDP followed by SPL's SDPV transfer; CPU01Plus uses SDPS. The dedicated
-bootloader enters Fastboot before environment boot policy, SD discovery or the
+CPU01 uses SDP followed by SPL's SDPV transfer; CPU01Plus uses SDPS. The CPU01
+recovery SPL advertises only the interrupt IN endpoint at both USB speeds;
+UUU 1.4.127 sends commands and data through HID `SET_REPORT` on control endpoint
+EP0. This restores the older SPL's transport selection after interrupt OUT
+transfers timed out on the testfarm. The patch is limited to CPU01 recovery SPL:
+CPU01Plus, U-Boot proper's SDP, Fastboot and HAB authentication are unchanged.
+The suspected ChipIdea endpoint-type mismatch is a separate, unconfirmed issue.
+Rebuild and sign the bundle before testing the new SPL with stock UUU 1.4.127.
+
+The dedicated bootloader enters Fastboot before environment boot policy, SD discovery or the
 U-Boot CLI. It resets environment values to compiled defaults, downloads into a
 fixed 256 MiB buffer at `0x60000000`, and accepts only `getvar`, `download` and
 `continue`. `continue` requires a completed download, exits Fastboot, then boots
@@ -117,6 +125,17 @@ loader; do not install it as the normal eMMC bootloader.
 ```sh
 python3 -m unittest discover -s testfarm-recovery/tests -v
 ```
+
+To also exercise the patched SDP descriptors and endpoint lifecycle at both USB
+speeds (SPL and U-Boot proper), point the host test at the patched U-Boot source:
+
+```sh
+UBOOT_SDP_SOURCE=/path/to/patched/u-boot/drivers/usb/gadget/f_sdp.c \
+  python3 -m unittest discover -s testfarm-recovery/tests -v
+```
+
+This requires a host C compiler and uses a USB stub; it does not test the hardware
+controller. Without `UBOOT_SDP_SOURCE`, this additional test is skipped.
 
 Before connecting this workflow to unattended testfarm flashing, qualify CPU01
 and CPU01Plus separately: closed device with matching keys, mismatched keys,

@@ -2,6 +2,8 @@ FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 # This layer is included only by the dedicated testfarm kas configuration.
 SRC_URI:remove = "file://0001-moducop-boot-sd-recovery-before-environment.patch file://0002-mmc-retry-recovery-sd-cmd8.patch"
 SRC_URI:append = " file://0001-testfarm-usb-recovery.patch file://testfarm-recovery.cfg"
+# Restore UUU 1.4.127's EP0 write transport for CPU01 recovery SPL only.
+SRC_URI:append:moducop-cpu01 = " file://0002-cpu01-spl-sdp-control-only.patch"
 
 do_configure[postfuncs] += "testfarm_check_config"
 python testfarm_check_config() {

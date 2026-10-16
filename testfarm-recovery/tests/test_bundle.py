@@ -96,6 +96,8 @@ class BundleTests(unittest.TestCase):
         for platform in ('cpu01', 'cpu01plus'):
             script = bundle.uuu_script(platform)
             self.assertEqual(script.splitlines()[0], 'uuu_version 1.4.127')
+            self.assertIn('CFG: FB: -vid 0x1b67 -pid 0x4000\n', script)
+            self.assertIn('CFG: FB: -vid 0x1b67 -pid 0x4037\n', script)
             self.assertIn('FB: continue', script)
             for forbidden in ('ucmd', 'acmd', 'flash ', 'erase ', 'boot.scr', 'fuse '):
                 self.assertNotIn(forbidden, script.lower())
@@ -112,13 +114,20 @@ class BundleTests(unittest.TestCase):
             bundle.package(args)
         with tarfile.open(output) as tar:
             names = tar.getnames()
+            self.assertIn(b'CFG: FB: -vid 0x1b67 -pid 0x4037\n',
+                          tar.extractfile('recovery/uuu.auto').read())
             self.assertEqual(json.load(tar.extractfile('build.json'))['uuu_min_version'], '1.4.127')
             self.assertEqual(set(names), {'imx-boot-recovery', 'recovery.itb', 'recovery/uuu.auto',
                 'u-boot.config', 'u-boot.dtb', 'srk-fuse.bin', 'runtime-build.json', 'build.json', 'SHA256SUMS'})
             for line in tar.extractfile('SHA256SUMS').read().decode().splitlines():
                 checksum, name = line.split('  ')
                 self.assertEqual(checksum, bundle.hashlib.sha256(tar.extractfile(name).read()).hexdigest())
+            manifest = json.load(tar.extractfile('build.json'))
+            for name, checksum in manifest['files'].items():
+                self.assertEqual(checksum, bundle.hashlib.sha256(tar.extractfile(name).read()).hexdigest())
         self.assertTrue(output.with_suffix('.gz.sha256').exists())
+        self.assertEqual(output.with_suffix('.gz.sha256').read_text(),
+                         f'{bundle.digest(output)}  {output.name}\n')
 
 
 if __name__ == '__main__':

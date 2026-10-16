@@ -38,6 +38,7 @@ SDPV: jump
         raise ValueError('Unsupported platform')
     return ('uuu_version 1.4.127\n\n' + rom +
             'CFG: FB: -vid 0x1b67 -pid 0x4000\n'
+            'CFG: FB: -vid 0x1b67 -pid 0x4037\n'
             'FB: download -f ../recovery.itb\n'
             'FB: continue\nFB: done\n')
 

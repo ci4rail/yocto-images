@@ -173,3 +173,44 @@ def test_reflashed_target_host_key_policy(tmp_path, monkeypatch, accept_changed)
     monkeypatch.setattr(station.paramiko, 'SSHClient', Client)
     Host({'host': '192.0.2.1', 'allow_unknown_host_key': accept_changed}, tmp_path, 'dut').connect()
     assert calls == (['accept-new'] if accept_changed else ['load-known-hosts'])
+
+
+def test_target_connection_runs_through_jump_host(monkeypatch, tmp_path):
+    from yocto_tests import station as st
+    events = []
+
+    class Transport:
+        def open_channel(self, kind, dest, source):
+            events.append(("channel", kind, dest))
+            return "channel"
+
+    class Jump:
+        local = False
+
+        def connect(self):
+            client = SimpleNamespace(get_transport=lambda: Transport(),
+                                     close=lambda: events.append("jump closed"))
+            return client
+
+    class FakeClient:
+        def set_missing_host_key_policy(self, policy):
+            pass
+
+        def connect(self, hostname, **kwargs):
+            events.append(("connect", hostname, kwargs["sock"]))
+
+        def close(self):
+            events.append("client closed")
+
+    monkeypatch.setattr(st.paramiko, "SSHClient", FakeClient)
+    monkeypatch.setattr(st.Path, "home", lambda: tmp_path)
+    host = st.Host({"host": "192.0.2.5", "password": "x", "allow_unknown_host_key": True}, tmp_path, "dut", jump=Jump())
+    client = host.connect()
+    assert events == [("channel", "direct-tcpip", ("192.0.2.5", 22)), ("connect", "192.0.2.5", "channel")]
+    client.close()
+    assert events[-2:] == ["client closed", "jump closed"]
+
+
+def test_local_jump_host_is_ignored(tmp_path):
+    from yocto_tests.station import Host
+    assert Host({"host": "x"}, tmp_path, "dut", jump=Host({"local": True}, tmp_path, "tc")).jump is None

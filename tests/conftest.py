@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from yocto_tests.profiles import effective_baseline, ensure_profile, load_profile
 from yocto_tests.station import Station, load_config
 
 
@@ -10,6 +11,8 @@ def pytest_addoption(parser):
     parser.addoption("--station", help="Station YAML configuration")
     parser.addoption("--image", help="Local TEZI tar path, overrides configuration")
     parser.addoption("--skip-flash", action="store_true", help="Reuse the installed target image")
+    parser.addoption("--profile", help="Customer profile (config/profiles): install its os-customization "
+                     "before the tests and apply its security baseline")
     parser.addoption("--results", default="results", help="Directory for station logs")
 
 
@@ -43,6 +46,23 @@ def feature(station):
 
 
 @pytest.fixture(scope="session")
-def baseline():
+def profile(request):
+    """The profile selected with --profile, or None."""
+    name = request.config.getoption("--profile")
+    return load_profile(name) if name else None
+
+
+@pytest.fixture(scope="session", autouse=True)
+def active_profile(request, tmp_path_factory):
+    """Install the selected profile's customization once; a no-op without --profile."""
+    selected = request.getfixturevalue("profile")
+    if selected is not None:
+        ensure_profile(request.getfixturevalue("station"), selected, tmp_path_factory.mktemp("profile"))
+    return selected
+
+
+@pytest.fixture(scope="session")
+def baseline(profile):
     import yaml
-    return yaml.safe_load((Path(__file__).parent / "config/security_baseline.yaml").read_text())["security_baseline"]
+    common = yaml.safe_load((Path(__file__).parent / "config/security_baseline.yaml").read_text())["security_baseline"]
+    return effective_baseline(common, profile)

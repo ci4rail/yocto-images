@@ -48,6 +48,8 @@ def test_service_privileges(station, baseline):
 
 def test_egress(station, baseline):
     cfg = baseline["egress_monitor"]
+    if cfg is None:
+        pytest.skip("Profile does not restrict egress")
     table = "yocto_" + uuid.uuid4().hex[:12]
     rules = [f"add table inet {table}",
              f"add chain inet {table} output {{ type filter hook output priority filter; policy accept; }}"]

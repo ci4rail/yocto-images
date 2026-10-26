@@ -10,7 +10,7 @@
 [x] merge changes from scarthgap branch
 
 [x] disable kernel messages on console
-[ ] nftables
+[x] nftables
 [x] persistent logging
 [ ] watchdog support (via systemd)
 [ ] initially LEDs off

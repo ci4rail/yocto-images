@@ -55,6 +55,58 @@ throughput in bytes/s, and LTE packet loss and mean RTT when measured.
 Sensitive command output is excluded from command logs. Do not enable pytest
 local-variable dumps on runs containing credentials.
 
+## CI pipeline and customer profiles
+
+`.github/workflows/image-workflow.yaml` builds the secure-boot **staging** image
+on every image build, then runs `ci-run.sh` on the self-hosted `testfarm` runner
+against the closed target of the platform's station (`config/station-ci-<platform>.yaml`;
+CPU01 192.168.24.11 via TC 192.168.24.10, CPU01Plus 192.168.24.13 via TC
+192.168.24.12). The production build only starts after the tests passed. The runner
+acts as development computer: it converts the image (needs `sudo -n`, loop and
+mount tools), reaches the TC over SSH and needs `mender-artifact` and `openssl`.
+The TC needs `curl` and, on first use, registry access: the SNMP client is a small
+local image (`yocto-tests/snmp-tools:1`, alpine + net-snmp-tools) built by the test.
+Required runner configuration: secrets `TESTFARM_TARGET_PASSWORD`, `DOCKER_PASSWORD`;
+repository variable `RELAY_UID_<machine>` (Tinkerforge relay UID).
+
+`ci-run.sh` flashes once, then runs these steps on the same target:
+
+| Step | Target state | Tests |
+|---|---|---|
+| 0-flash-secureboot | closed staging image | `-m secureboot` |
+| 1-default | no customization | all non-security hardware tests |
+| 2-internet-connected | customization installed | `-m "profile or security"` |
+| 3-standalone | customization replaced | `-m "profile or security"` |
+| 4-default-profile | customization removed | `-m profile` (no leftovers) |
+
+Profiles pair an os-customization payload (`../os-customizations/<name>/etc`) with the
+expected behaviour (`config/profiles/<name>.yaml`). `--profile <name>` builds the
+payload into an `os-customization` Mender artifact during the run, signs it with
+`customer-artifact.key.pem` and installs it through the core API
+(`/software/core-os-customization`, which reboots the target). Installing is skipped
+when the payload version (content hash) is already installed, so reruns are cheap.
+`standalone` additionally deploys a stand-in customer container (nginx, TLS, host
+network) as an application update before the firewall closes egress. The profile's
+`security_baseline` overrides `config/security_baseline.yaml` (dicts merge, lists
+and `null` replace); without `--profile` the common baseline applies unchanged.
+
+| Profile | Ingress | Egress |
+|---|---|---|
+| internet-connected | ssh from `tailscale0` and 192.168.24.0/24, ICMP | open (mender, tailscale, internet) |
+| standalone | ssh, https 443, snmpv3 (udp 161), ICMP | DHCP client, NTP client, replies |
+
+Both disable avahi/mDNS; standalone also disables tailscaled and snmptrapd. The SNMPv3
+user and passphrases in `os-customizations/standalone/etc/snmp/snmpd.conf` are
+examples. Adapt the LAN prefix in the nftables files per site.
+
+Run one step locally:
+
+```sh
+.venv/bin/python -m pytest --station config/station-ci-cpu01.yaml --skip-flash \
+    --profile standalone -m "profile or security"
+SKIP_FLASH=1 ./ci-run.sh --station config/station-ci-cpu01.yaml --image x.tar  # whole sequence
+```
+
 ## Run from the development computer
 
 Set `tc.local: false` and configure `tc.host`. By default SSH uses the current

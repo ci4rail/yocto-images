@@ -103,7 +103,7 @@ exec {COMPOSE} "$@"
         write(self.dut, f"{self.root}/fault", f"{mode} {state}\n")
 
     def payload(self, version="old", health=None, command=None, oneshot=False,
-                corrupt=False, empty=False, invalid=False):
+                corrupt=False, empty=False, invalid=False, service_extra=None):
         self.index += 1
         files = f"{self.root}/payload{self.index}"
         self.dut.run(f"mkdir -p {files}/header {files}/files {files}/tmp "
@@ -117,6 +117,7 @@ exec {COMPOSE} "$@"
         }
         service = dict(image=self.tag, command=command or ["sh", "-c", "while :; do sleep 1; done"],
                        network_mode="none", stop_grace_period="1s")
+        service.update(service_extra or {})
         if health is not None:
             service["healthcheck"] = dict(test=["CMD-SHELL", health], interval="1s", timeout="1s", retries=1)
         if oneshot:

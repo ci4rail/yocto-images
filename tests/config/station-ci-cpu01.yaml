@@ -1,0 +1,44 @@
+# Test farm station for the CI pipeline (staging images, secure boot closed device).
+# Environment references are resolved on the CI runner (see .github/workflows/image-workflow.yaml).
+platform: cpu01
+closed: true
+image_file: null # CI passes --image
+target:
+  host: 192.168.24.11
+  username: root
+  password: ${TARGET_PASSWORD}
+  allow_unknown_host_key: true # reflashed on every run
+  # Customer firewall profiles only allow ssh from the LAN. The runner is outside the
+  # LAN (VPN), so reach the target through the TC.
+  via_tc: true
+tc:
+  local: false # the CI runner is not the test computer
+  host: 192.168.24.10
+  work_dir: /var/tmp/yocto-tests
+serial_port: /dev/ttyUSB0
+serial_baudrate: 115200
+relay:
+  host: 192.168.24.10
+  port: 4223
+  uid: Nqy
+  power_channel: 0
+  recovery_channel: 1
+# Staging-signed installer bundle (uuu) for closed devices.
+installer_image: ci4rail/tdx-installer:30b90a13
+security_image: ci4rail/security-test-tools:latest
+testing_image: ghcr.io/ci4rail/linux-testing-container:latest
+docker_username: ci4rail
+docker_password: $DOCKER_PASSWORD
+flash_timeout: 1200
+boot_timeout: 300
+# The repository's staging OTA keys (bundled in the pytest package).
+ota_signing_material_dir: staging
+# Hardware attached to this station (see station.example.yaml).
+features: [ethernet2, gnss]
+eth2_path: /sys/devices/platform/soc@0/33800000.pcie/pci0000:00/0000:00:00.0/0000:01:00.0/0000:02:03.0/0000:05:00.0
+eth2_mbps: 80
+emmc_read_bps: 1000000
+emmc_write_bps: 1000000
+gpsdclient: /root/bin/gpsdclient_v0.1.0/gpsdclient
+# Optional: an NTP server reachable from the target, enables the NTP client test.
+# ntp_server: 192.168.24.10

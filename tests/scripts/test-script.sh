@@ -8,7 +8,7 @@
 #   <IMAGE_FILE>                  staging TEZI image to flash
 #
 # Credentials are not part of the bundle: provide TARGET_PASSWORD, DOCKER_PASSWORD and
-# RELAY_UID (CPU01Plus) in the env file of the TC, default /etc/test-scheduler/yocto-tests.env.
+# RELAY_UID (CPU01Plus) in the env file of the TC, default /etc/yocto-tests.env.
 set -euo pipefail
 test_id=${1:?testId}
 results_dir=$(realpath -m "${2:?results folder}")
@@ -16,7 +16,7 @@ bundle=${TEST_SCHEDULER_TEST_BUNDLE:-$(cd "$(dirname "$0")" && pwd)}
 
 # shellcheck disable=SC1091
 source "${bundle}/bundle.env"
-env_file=${YOCTO_TESTS_ENV_FILE:-/etc/test-scheduler/yocto-tests.env}
+env_file=${YOCTO_TESTS_ENV_FILE:-/etc/yocto-tests.env}
 if [[ -f "${env_file}" ]]; then
     set -a
     # shellcheck disable=SC1090

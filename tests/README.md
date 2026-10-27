@@ -80,7 +80,7 @@ TC prerequisites: test-scheduler configured with `github-artifacts` (GitHub App 
 **Actions: read** on this repository), sudo/loop/mount tools, `mender-artifact`, `openssl`,
 `curl`, registry access (the SNMP client image is built on first use). Credentials are no
 longer GitHub secrets: put `TARGET_PASSWORD`, `DOCKER_PASSWORD` and, for CPU01Plus,
-`RELAY_UID` into `/etc/test-scheduler/yocto-tests.env` (override with `YOCTO_TESTS_ENV_FILE`).
+`RELAY_UID` into `/etc/yocto-tests.env` (override with `YOCTO_TESTS_ENV_FILE`).
 The CI station configs use `tc.local: true`; the target is reached directly from the TC.
 Workflow secrets used: `private_token` (fetch test-requester), `tailscale_auth_key`.
 

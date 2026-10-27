@@ -35,6 +35,7 @@ jobs:
       image_start: "Moducop-CPU01_Standard-Image"
       test_name: "cpu01-standard-image test"
       station_config: "config/station-ci-cpu01.yaml"
+      test_station: "croco-rpi:1883"
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}
       mender_tenant_token: ${{ secrets.MENDER_TENANT_TOKEN }}

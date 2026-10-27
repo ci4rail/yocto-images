@@ -19,8 +19,9 @@
 [x] migration image SDCard production
 
 [ ] ci: add non-secure build
-[ ] ci: add staging build
+[x] ci: add staging build
 [ ] ci: add integration test for staging
+[ ] ci: staging test passes on closed device
 
 [x] test moducop-core-api-server
 [ ] app-signing: support production images in ci

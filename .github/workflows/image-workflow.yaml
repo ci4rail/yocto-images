@@ -416,6 +416,7 @@ jobs:
           path: |
             ~/${{ needs.calculate-version.outputs.image_folder }}/*.mender
             ~/${{ needs.calculate-version.outputs.image_folder }}/*.tar
+            !~/${{ needs.calculate-version.outputs.image_folder }}/Standard-Image-*
           if-no-files-found: error
 
   test-staging:
@@ -440,7 +441,8 @@ jobs:
 
       - name: Assemble test bundle
         run: |
-          images=("${RUNNER_TEMP}"/staging-image/*tezi*.tar)
+          # The build emits the versioned TEZI tar plus an unversioned "Standard-Image-Staging-*" duplicate; use the versioned one.
+          images=("${RUNNER_TEMP}"/staging-image/${{ inputs.image_start }}*tezi*.tar)
           test "${#images[@]}" -eq 1 || { echo "Expected exactly one TEZI tar, found: ${images[*]}"; exit 1; }
           bundle="${RUNNER_TEMP}/test-bundle"
           mkdir -p "${bundle}"

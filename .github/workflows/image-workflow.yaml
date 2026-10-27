@@ -474,7 +474,7 @@ jobs:
           token: ${{ secrets.private_token }}
 
       - name: Connect to test station via tailscale
-        uses: tailscale/github-action@v1
+        uses: tailscale/github-action@v4
         with:
           authkey: ${{ secrets.tailscale_auth_key }}
 

@@ -138,6 +138,41 @@ def test_installer_machine_and_timeout_cleanup(tmp_path, monkeypatch, platform, 
     assert commands[-1].startswith('docker rm -f yocto-installer-')
 
 
+def test_local_flash_moves_gadget_image_into_work_dir(tmp_path, monkeypatch):
+    from yocto_tests import setup
+    image = tmp_path / 'image.tar'
+    image.touch()
+    work = tmp_path / 'work'
+    work.mkdir()
+    seen = {}
+    class TC:
+        local = True
+        def put(self, source, destination):
+            raise AssertionError('local TC must not copy the image')
+        def run(self, command, **kwargs):
+            if command.startswith('test -c'):
+                return 'ready'
+            if command.startswith('docker run'):
+                seen['image_in_work'] = (work / 'yocto.img').is_file()
+                raise TimeoutError('installer timeout')
+            return ''
+    def convert(args, **kwargs):
+        seen['scratch'] = Path(args[-1]).parent
+        seen['tmpdir'] = next(a for a in args if a.startswith('TMPDIR='))
+        Path(args[-1]).write_text('img')
+    monkeypatch.setattr(setup.subprocess, 'run', convert)
+    monkeypatch.setattr(setup, 'power_on', lambda cfg: None)
+    cfg = dict(image_file=str(image), platform='cpu01', tc={'local': True},
+               relay={'host': 'tc', 'port': 4223, 'uid': 'TeL', 'power_channel': 0, 'recovery_channel': 1},
+               installer_image='ci4rail/tdx-installer-dev:v3', serial_port='/dev/ttyMODUCOP')
+    station = SimpleNamespace(cfg=cfg, tc=TC(), results=tmp_path)
+    with pytest.raises(TimeoutError):
+        setup.flash(station, str(work))
+    assert seen['scratch'].parent == work
+    assert seen['tmpdir'] == f"TMPDIR={seen['scratch']}"
+    assert seen['image_in_work']
+
+
 def test_power_cycle_releases_recovery_and_restores_power(monkeypatch):
     from yocto_tests import setup
     calls = []

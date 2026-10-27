@@ -92,14 +92,18 @@ def flash(s, work):
                             str(ROOT / "scripts/make-gadget-image.sh"),
                             str(image), str(disk)], check=True, stdout=log,
                            stderr=subprocess.STDOUT, timeout=cfg.get("flash_timeout", 1200))
-        available = int(s.tc.run(f"df -B1 --output=avail {quote(work)} | tail -1").strip())
-        required = disk.stat().st_size + 256 * 1024 * 1024
-        if available < required:
-            raise RuntimeError(
-                f"TC work filesystem needs {required / 1024**3:.2f} GiB free "
-                f"for the gadget image and reserve; only {available / 1024**3:.2f} GiB available"
-            )
-        s.tc.put(disk, f"{work}/yocto.img")
+        if s.tc.local:
+            # Built inside the work dir: rename instead of a second copy of the image.
+            disk.replace(f"{work}/yocto.img")
+        else:
+            available = int(s.tc.run(f"df -B1 --output=avail {quote(work)} | tail -1").strip())
+            required = disk.stat().st_size + 256 * 1024 * 1024
+            if available < required:
+                raise RuntimeError(
+                    f"TC work filesystem needs {required / 1024**3:.2f} GiB free "
+                    f"for the gadget image and reserve; only {available / 1024**3:.2f} GiB available"
+                )
+            s.tc.put(disk, f"{work}/yocto.img")
     power_on(cfg)
     serial = quote(cfg["serial_port"])
     for _ in range(30):

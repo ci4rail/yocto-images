@@ -81,11 +81,15 @@ def flash(s, work):
     relay = cfg["relay"]
     if relay["power_channel"] != 0 or relay["recovery_channel"] != 1:
         raise ValueError("Installer configuration requires relay channels 0/1")
-    with tempfile.TemporaryDirectory(prefix="yocto-gadget-") as temporary:
+    # The conversion extracts the TEZI tar and builds an image 1.5x its size: far more than a
+    # RAM-backed /tmp (1.9 GiB on the TC) holds. On the TC use its work dir, which is disk-backed.
+    scratch = work if s.tc.local else None
+    with tempfile.TemporaryDirectory(prefix="yocto-gadget-", dir=scratch) as temporary:
         disk = Path(temporary) / "yocto.img"
         # Conversion happens on the runner, which is either DC or TC.
         with (s.results / "gadget.log").open("w") as log:
-            subprocess.run(["sudo", "-n", "bash", str(ROOT / "scripts/make-gadget-image.sh"),
+            subprocess.run(["sudo", "-n", "env", f"TMPDIR={temporary}", "bash",
+                            str(ROOT / "scripts/make-gadget-image.sh"),
                             str(image), str(disk)], check=True, stdout=log,
                            stderr=subprocess.STDOUT, timeout=cfg.get("flash_timeout", 1200))
         available = int(s.tc.run(f"df -B1 --output=avail {quote(work)} | tail -1").strip())

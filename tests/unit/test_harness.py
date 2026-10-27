@@ -109,6 +109,7 @@ def test_installer_machine_and_timeout_cleanup(tmp_path, monkeypatch, platform, 
     image.touch()
     commands = []
     class TC:
+        local = False
         def put(self, source, destination):
             assert Path(source).is_file()
         def run(self, command, **kwargs):

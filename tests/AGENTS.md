@@ -2,7 +2,7 @@ Pytest suite for ModuCop target integration tests and local harness unit tests.
 
 All tests shall use pytest.
 
-Hardware tests execute against CPU01 and CPU01Plus targets. CI uses closed devices with staging keys and `ci4rail/tdx-installer:30b90a13`; the development installer `tdx-installer-dev:v3` is rejected for closed devices.
+Hardware tests execute against CPU01 and CPU01Plus targets. CI uses closed devices with staging keys and `ci4rail/tdx-installer:cb15177b`; the development installer `tdx-installer-dev:v3` is rejected for closed devices.
 
 # Test environment
 

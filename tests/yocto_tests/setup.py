@@ -1,6 +1,7 @@
 """Exclusive station setup and once-per-session flashing."""
 from contextlib import contextmanager
 from pathlib import Path
+import json
 import subprocess
 import tempfile
 import time
@@ -45,6 +46,33 @@ def power_cycle(cfg):
         connection.disconnect()
 
 
+def recovery_config(cfg):
+    """recovery.yaml for the signed-recovery tdx-installer (selects one exact bundle)."""
+    rec = cfg["recovery"]
+    lines = [
+        "recovery:",
+        f"  endpoint: {json.dumps(rec['endpoint'])}",
+        f"  bucket: {json.dumps(rec['bucket'])}",
+        f"  platform: {json.dumps(cfg['platform'])}",
+        f"  mode: {json.dumps(rec['mode'])}",
+        f"  version: {json.dumps(rec['version'])}",
+        f"  run-attempt: {json.dumps(rec['run_attempt'])}",
+        "  cache-folder: /mnt/recovery",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def write_recovery_files(s, work):
+    """Create recovery.yaml and the secret files in the TC work dir (removed after the run)."""
+    rec = s.cfg["recovery"]
+    s.tc.run(f"cat > {quote(work + '/recovery.yaml')}", input=recovery_config(s.cfg))
+    # Secrets are written on stdin: never on a command line and not in tc.log.
+    s.tc.run(f"umask 077 && cat > {quote(work + '/recovery.env')}", secret=True, input=(
+        f"AWS_ACCESS_KEY_ID={rec['access_key']}\nAWS_SECRET_ACCESS_KEY={rec['secret_key']}\n"))
+    s.tc.run(f"umask 077 && cat > {quote(work + '/recovery-password')}", secret=True,
+             input=str(rec["root_password"]))
+
+
 def flash(s, work):
     cfg = s.cfg
     image = Path(cfg.get("image_file") or "").expanduser().resolve()
@@ -76,16 +104,32 @@ def flash(s, work):
         time.sleep(1)
     else:
         raise RuntimeError("Target serial console did not appear after power-on")
-    machine = {"cpu01": "verdin-imx8mm", "cpu01plus": "verdin-imx8mp"}[cfg["platform"]]
     timeout = cfg.get("flash_timeout", 1200)
     name = f"yocto-installer-{uuid.uuid4().hex}"
+    if "recovery" in cfg:
+        # Signed-recovery installer: downloads the exact recovery bundle from MinIO.
+        write_recovery_files(s, work)
+        recovery = (
+            f"--env-file {quote(work + '/recovery.env')} "
+            "-e TEZI_ROOT_PASSWORD_FILE=/run/secrets/tezi-root-password "
+            f"--mount type=bind,src={quote(work + '/recovery-password')},"
+            "dst=/run/secrets/tezi-root-password,readonly "
+            f"-v {quote(work + '/recovery.yaml:/config/recovery.yaml:ro')} "
+            f"-v {quote(cfg['recovery'].get('cache_volume', 'recovery-cache'))}:/mnt/recovery "
+        )
+        installer_args = f"-v -t {int(timeout)}"
+    else:
+        machine = {"cpu01": "verdin-imx8mm", "cpu01plus": "verdin-imx8mp"}[cfg["platform"]]
+        recovery = ""
+        installer_args = f"-v -t {int(timeout)} -m {machine}"
     command = (
         f"docker run -t --rm --privileged --network=host --name {name} "
         f"-e BRICKD_UID={quote(relay['uid'])} "
         f"-e BRICKD_IP={quote(relay['host'])} -e BRICKD_PORT={int(relay['port'])} "
+        f"{recovery}"
         f"-v {quote(work + '/yocto.img:/mnt/yocto_image/yocto.img')} "
         f"-v {quote(cfg['serial_port'] + ':/dev/ttyTEZI')} -v /sys:/sys -v /dev:/dev "
-        f"{quote(cfg['installer_image'])} -v -t {int(timeout)} -m {machine}"
+        f"{quote(cfg['installer_image'])} {installer_args}"
     )
     try:
         output = s.tc.run(command, timeout=timeout + 60)

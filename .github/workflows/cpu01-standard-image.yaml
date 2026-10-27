@@ -44,4 +44,3 @@ jobs:
       mender_password: ${{ secrets.MENDER_PASSWORD }}
       private_token: ${{ secrets.FW_CI_TOKEN }}
       tailscale_auth_key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}
-      target_password: ${{ secrets.TESTFARM_TARGET_PASSWORD }}

@@ -56,6 +56,21 @@ on:
         required: false
         type: string
         default: "lizard-rpi:1883"
+      test_station_topic:
+        description: "MQTT master topic of the test-scheduler (requests go to <topic>/request)"
+        required: false
+        type: string
+        default: "teststation"
+      test_station_request_timeout:
+        description: "Seconds to wait for a busy test station to become available"
+        required: false
+        type: string
+        default: "3600"
+      requester_version:
+        description: "Release tag of ci4rail/test-scheduler providing test-requester"
+        required: false
+        type: string
+        default: "v4.7.0"
       simulate_build:
         description: "Simulate build for testing purposes"
         required: false
@@ -89,9 +104,6 @@ on:
         required: true
       tailscale_auth_key:
         required: true
-      target_password:
-        description: "root password of the testfarm targets"
-        required: false
 
 permissions:
   contents: read
@@ -106,20 +118,6 @@ env:
   IMAGE_DIR: ${{ inputs.machine }}-${{ inputs.image_type }}-image
 
 jobs:
-  package-pytest:
-    if: inputs.image_type == 'standard'
-    name: Package target integration tests
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v6
-      - name: Package pytest suite for the test computer
-        run: tests/scripts/package.sh yocto-pytest-package.tar.gz
-      - uses: actions/upload-artifact@v7
-        with:
-          name: pytest-package-${{ inputs.machine }}-${{ github.run_id }}
-          path: yocto-pytest-package.tar.gz
-          if-no-files-found: error
-
   calculate-version:
     name: Calculate Version
     runs-on: ubuntu-22.04
@@ -420,71 +418,102 @@ jobs:
           if-no-files-found: error
 
   test-staging:
-    # Runs on the testfarm runner (same network as the test computers and targets).
-    # The sequence is in tests/ci-run.sh. Fork PRs never get access to the hardware.
+    # Runs on a GitHub-hosted runner. The test bundle (pytest suite + staging image) is uploaded
+    # as an artifact; the test-scheduler on the test computer (TC) downloads and runs it
+    # (tests/scripts/test-script.sh). The runner reaches the test station's MQTT broker via tailscale.
+    # Fork PRs never get access to the hardware.
     if: >-
       inputs.station_config != '' && inputs.simulate_build == 'false' &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    needs: [build-staging-image, package-pytest]
+    needs: [build-staging-image]
     name: Test staging image on testfarm (${{ inputs.machine }})
-    runs-on: [self-hosted, linux, testfarm, "${{ inputs.machine }}"]
+    runs-on: ubuntu-22.04
     timeout-minutes: 180
-    concurrency:
-      group: testfarm-${{ inputs.machine }}
-      cancel-in-progress: false
     steps:
-      - uses: actions/download-artifact@v8
-        with:
-          name: pytest-package-${{ inputs.machine }}-${{ github.run_id }}
-          path: ${{ runner.temp }}/package
+      - uses: actions/checkout@v6
+
       - uses: actions/download-artifact@v8
         with:
           name: staging-build-artifacts-${{ inputs.machine }}-${{ github.run_id }}
           path: ${{ runner.temp }}/staging-image
 
-      - name: Unpack tests and select the flashable image
+      - name: Assemble test bundle
         run: |
-          TESTS_DIR="${RUNNER_TEMP}/yocto-tests-${{ inputs.machine }}"
-          echo "TESTS_DIR=${TESTS_DIR}" >> "$GITHUB_ENV"
-          rm -rf "${TESTS_DIR}"
-          mkdir -p "${TESTS_DIR}"
-          tar -xzf "${{ runner.temp }}/package/yocto-pytest-package.tar.gz" -C "${TESTS_DIR}"
-          images=("${{ runner.temp }}"/staging-image/*tezi*.tar)
+          images=("${RUNNER_TEMP}"/staging-image/*tezi*.tar)
           test "${#images[@]}" -eq 1 || { echo "Expected exactly one TEZI tar, found: ${images[*]}"; exit 1; }
-          echo "TEZI_IMAGE=${images[0]}" >> "$GITHUB_ENV"
+          bundle="${RUNNER_TEMP}/test-bundle"
+          mkdir -p "${bundle}"
+          tests/scripts/package.sh "${bundle}/yocto-pytest-package.tar.gz"
+          cp "${images[0]}" "${bundle}/image.tezi.tar"
+          cp tests/scripts/test-script.sh "${bundle}/test-script.sh"
+          chmod +x "${bundle}/test-script.sh"
+          {
+            echo "STATION_CONFIG=${{ inputs.station_config }}"
+            echo "IMAGE_FILE=image.tezi.tar"
+          } > "${bundle}/bundle.env"
 
-      - name: Run test sequence
-        working-directory: ${{ env.TESTS_DIR }}
-        env:
-          TARGET_PASSWORD: ${{ secrets.target_password }}
-          DOCKER_PASSWORD: ${{ secrets.docker_password }}
-          RELAY_UID: ${{ vars[format('RELAY_UID_{0}', inputs.machine)] }}
-        run: ./ci-run.sh --station "${{ inputs.station_config }}" --image "${TEZI_IMAGE}"
-
-      - name: Summarize results
-        if: always()
-        working-directory: ${{ env.TESTS_DIR }}
-        run: |
-          python3 - >> "$GITHUB_STEP_SUMMARY" <<'PY'
-          import glob, xml.etree.ElementTree as ET
-          print("| step | tests | failures | errors | skipped |\n|---|---|---|---|---|")
-          for f in sorted(glob.glob("results/*.xml")):
-              s = ET.parse(f).getroot()
-              s = s if s.tag == "testsuite" else s[0]
-              print(f"| {f[8:-4]} | {s.get('tests')} | {s.get('failures')} | {s.get('errors')} | {s.get('skipped')} |")
-          PY
-
-      - name: Upload test results
-        if: always()
+      - name: Upload test bundle
+        id: bundle
         uses: actions/upload-artifact@v7
         with:
-          name: testfarm-results-${{ inputs.machine }}-${{ github.run_id }}
-          path: ${{ env.TESTS_DIR }}/results
-          if-no-files-found: warn
+          name: test-bundle-${{ inputs.machine }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/test-bundle
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
 
-      - name: Remove image and test directory
-        if: always()
-        run: rm -rf "${TESTS_DIR}" "${{ runner.temp }}/staging-image" "${{ runner.temp }}/package"
+      - name: Fetch test requester
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          repo: "ci4rail/test-scheduler"
+          version: "tags/${{ inputs.requester_version }}"
+          file: "test-requester-${{ inputs.requester_version }}-linux-amd64.tar.gz"
+          token: ${{ secrets.private_token }}
+
+      - name: Connect to test station via tailscale
+        uses: tailscale/github-action@v1
+        with:
+          authkey: ${{ secrets.tailscale_auth_key }}
+
+      - name: Request test on test station
+        env:
+          ARTIFACT_ID: ${{ steps.bundle.outputs.artifact-id }}
+          ARTIFACT_NAME: test-bundle-${{ inputs.machine }}-${{ github.run_id }}
+        run: |
+          tar xzf "test-requester-${{ inputs.requester_version }}-linux-amd64.tar.gz" test-requester
+          chmod +x test-requester
+          jq -n \
+            --arg user "github-${{ github.repository }}-${{ github.run_id }}" \
+            --arg owner "${{ github.repository_owner }}" \
+            --arg repo "${{ github.event.repository.name }}" \
+            --argjson id "${ARTIFACT_ID}" \
+            --arg name "${ARTIFACT_NAME}" \
+            --arg rev "${{ github.sha }}" \
+            '{type: "Run Test", user: $user, github_artifact: {owner: $owner, repo: $repo, artifact_id: $id, name: $name, revision: $rev}}' \
+            > request.json
+          cat request.json
+
+          set +e
+          set -o pipefail
+          ./test-requester -busytimeout "${{ inputs.test_station_request_timeout }}" \
+            "${TESTSTATION_MQTT_URL}" "${{ inputs.test_station_topic }}" request.json | tee output.txt
+          rc=$?
+          set -e
+
+          case $rc in
+            0) echo "Test PASS" ;;
+            1) echo "ERROR Test Failed" ;;
+            2) echo "ERROR Test Station Busy" ;;
+            3) echo "ERROR Request Invalid" ;;
+            *) echo "ERROR requester exit code $rc" ;;
+          esac
+          {
+            echo "### Testfarm result (${{ inputs.machine }}): exit code $rc"
+            echo '```'
+            cat output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
 
   build-secure-production-image:
     # Blocked by failing hardware tests; runs when tests are not configured (skipped).

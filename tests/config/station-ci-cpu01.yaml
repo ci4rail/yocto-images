@@ -1,5 +1,6 @@
 # Test farm station for the CI pipeline (staging images, secure boot closed device).
-# Environment references are resolved on the CI runner (see .github/workflows/image-workflow.yaml).
+# Runs on the TC itself, started by the test-scheduler (tests/scripts/test-script.sh).
+# Environment references come from the TC's env file (/etc/test-scheduler/yocto-tests.env).
 platform: cpu01
 closed: true
 image_file: null # CI passes --image
@@ -8,11 +9,8 @@ target:
   username: root
   password: ${TARGET_PASSWORD}
   allow_unknown_host_key: true # reflashed on every run
-  # Customer firewall profiles only allow ssh from the LAN. The runner is outside the
-  # LAN (VPN), so reach the target through the TC.
-  via_tc: true
 tc:
-  local: false # the CI runner is not the test computer
+  local: true # tests run on the test computer
   host: 192.168.24.10
   work_dir: /var/tmp/yocto-tests
 serial_port: /dev/ttyUSB0
@@ -24,7 +22,18 @@ relay:
   power_channel: 0
   recovery_channel: 1
 # Staging-signed installer bundle (uuu) for closed devices.
-installer_image: ci4rail/tdx-installer:30b90a13
+installer_image: ci4rail/tdx-installer:cb15177b
+# Signed recovery bundle (built by testfarm-recovery.yaml) that the installer downloads from MinIO.
+# The installer's recovery.yaml is generated from this block and the platform above.
+recovery:
+  endpoint: https://minio.ci4rail.com
+  bucket: moducop-recovery-images
+  mode: staging
+  version: "v3.0.0-alpha.1+17.3e54a3c.20261016.0737"
+  run_attempt: "38868385915-1"
+  access_key: ${RECOVERY_MINIO_ACCESS_KEY}
+  secret_key: ${RECOVERY_MINIO_SECRET_KEY}
+  root_password: ${RECOVERY_ROOT_PASSWORD} # root password of the recovery runtime
 security_image: ci4rail/security-test-tools:latest
 testing_image: ghcr.io/ci4rail/linux-testing-container:latest
 docker_username: ci4rail

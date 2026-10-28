@@ -20,11 +20,11 @@
 
 [ ] ci: add non-secure build
 [x] ci: add staging build
-[ ] ci: add integration test for staging
+[x] ci: add integration test for staging
 [ ] ci: staging test passes on closed device
 
 [x] test moducop-core-api-server
-[ ] app-signing: support production images in ci
+[x] app-signing: support production images in ci
  
 [ ] support CPU01plus
 

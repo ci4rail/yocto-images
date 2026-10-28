@@ -5,6 +5,7 @@ on:
       - scarthgap-secure-boot
     paths:
       - "cpu01-standard-image/kasfile-common.yaml"
+      - "cpu01-standard-image/kasfile-nonsecure.yaml"
       - "cpu01-standard-image/kasfile-sb-production.yaml"
       - "cpu01-standard-image/kasfile-sb-staging.yaml"
       - "kas-includes/kasfile-ota-protection.yaml"
@@ -18,6 +19,8 @@ on:
       - "kas-includes/kasfile-general.yaml"
       - ".github/workflows/cpu01-standard-image.yaml"
       - ".github/workflows/image-workflow.yaml"
+      - ".github/actions/**"
+      - "scripts/ci-*.sh"
   release:
     types: [published]
 
@@ -40,8 +43,6 @@ jobs:
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}
       mender_tenant_token: ${{ secrets.MENDER_TENANT_TOKEN }}
-      minio_access_key: ${{ secrets.MINIO_ACCESS_KEY }}
-      minio_secret_key: ${{ secrets.MINIO_SECRET_KEY }}
       mender_user_email: ${{ secrets.MENDER_USER_EMAIL }}
       mender_password: ${{ secrets.MENDER_PASSWORD }}
       private_token: ${{ secrets.FW_CI_TOKEN }}

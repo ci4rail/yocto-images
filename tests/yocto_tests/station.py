@@ -10,6 +10,8 @@ import time
 import paramiko
 import yaml
 
+ERROR_TAIL_LINES = 50
+
 
 def quote(value):
     return shlex.quote(str(value))
@@ -131,7 +133,15 @@ class Host:
             with self.log.open("a") as f:
                 f.write(f"$ {command}\n{out}{err}\nexit={status}\n")
         if check and status:
-            detail = "sensitive command failed" if secret else f"{command}\n{out}{err}"
+            if secret:
+                detail = "sensitive command failed"
+            else:
+                # The full output is in the log; a long error floods the CI result channel.
+                lines = f"{out}{err}".splitlines()
+                tail = "\n".join(lines[-ERROR_TAIL_LINES:])
+                if len(lines) > ERROR_TAIL_LINES:
+                    tail = f"[{len(lines) - ERROR_TAIL_LINES} earlier lines in {self.log}]\n{tail}"
+                detail = f"{command}\n{tail}"
             raise RuntimeError(f"{self.name}: exit {status}: {detail}")
         return out
 

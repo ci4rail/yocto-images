@@ -22,7 +22,7 @@ relay:
   power_channel: 0
   recovery_channel: 1
 # Staging-signed installer bundle (uuu) for closed devices.
-installer_image: ci4rail/tdx-installer:cb15177b
+installer_image: ci4rail/tdx-installer:14e89c2c
 # Signed recovery bundle (built by testfarm-recovery.yaml) that the installer downloads from MinIO.
 # The installer's recovery.yaml is generated from this block and the platform above.
 recovery:

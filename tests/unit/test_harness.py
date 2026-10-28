@@ -44,6 +44,17 @@ def test_shell_quoting_and_sensitive_output(tmp_path):
     assert 'secret-value' not in host.log.read_text()
 
 
+def test_failed_command_error_keeps_only_output_tail(tmp_path):
+    host = Host({'local': True}, tmp_path, 'local')
+    with pytest.raises(RuntimeError) as error:
+        host.run('seq 1 200; exit 3')
+    message = str(error.value)
+    assert message.startswith('local: exit 3: seq 1 200; exit 3\n[150 earlier lines in ')
+    assert message.endswith('\n'.join(str(n) for n in range(151, 201)))
+    assert '\n150\n' not in message
+    assert '\n1\n' in host.log.read_text()
+
+
 def test_prepare_releases_lock_after_failed_boot(tmp_path):
     tc = Host({'local': True}, tmp_path, 'tc')
     # Exercise real directory locking/cleanup without Docker or hardware.

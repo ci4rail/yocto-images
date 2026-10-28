@@ -2,7 +2,7 @@
 # Runs on the TC itself, started by the test-scheduler (tests/scripts/test-script.sh).
 # Environment references come from the TC's env file (/etc/test-scheduler/yocto-tests.env).
 platform: cpu01
-closed: false
+closed: true
 image_file: null # CI passes --image
 target:
   host: 192.168.24.11

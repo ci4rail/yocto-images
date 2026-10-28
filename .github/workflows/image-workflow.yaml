@@ -447,12 +447,13 @@ jobs:
           bundle="${RUNNER_TEMP}/test-bundle"
           mkdir -p "${bundle}"
           tests/scripts/package.sh "${bundle}/yocto-pytest-package.tar.gz"
-          cp "${images[0]}" "${bundle}/image.tezi.tar"
+          # The rootfs inside is uncompressed (~1.4 GB): zstd shrinks the bundle ~5x, speeding up the TC download.
+          zstd -T0 -10 -q -o "${bundle}/image.tezi.tar.zst" "${images[0]}"
           cp tests/scripts/test-script.sh "${bundle}/test-script.sh"
           chmod +x "${bundle}/test-script.sh"
           {
             echo "STATION_CONFIG=${{ inputs.station_config }}"
-            echo "IMAGE_FILE=image.tezi.tar"
+            echo "IMAGE_FILE=image.tezi.tar.zst"
           } > "${bundle}/bundle.env"
 
       - name: Upload test bundle

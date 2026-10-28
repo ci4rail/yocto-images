@@ -5,7 +5,7 @@
 # The bundle (extracted by the scheduler, also the working directory) contains:
 #   bundle.env                    STATION_CONFIG (inside the pytest package), IMAGE_FILE
 #   yocto-pytest-package.tar.gz   output of tests/scripts/package.sh
-#   <IMAGE_FILE>                  staging TEZI image to flash
+#   <IMAGE_FILE>                  staging TEZI image to flash (zstd-compressed if *.zst; needs zstd on the TC)
 #
 # Credentials are not part of the bundle: provide TARGET_PASSWORD, DOCKER_PASSWORD and
 # RELAY_UID (CPU01Plus) in the env file of the TC, default /etc/yocto-tests.env.
@@ -28,9 +28,15 @@ suite="${bundle}/suite"
 mkdir -p "${suite}" "${results_dir}"
 tar -xzf "${bundle}/yocto-pytest-package.tar.gz" -C "${suite}"
 
+image="${bundle}/${IMAGE_FILE}"
+if [[ "${IMAGE_FILE}" == *.zst ]]; then
+    image="${bundle}/${IMAGE_FILE%.zst}"
+    zstd -d -f -q -o "${image}" "${bundle}/${IMAGE_FILE}"
+fi
+
 echo "test ${test_id}: station ${STATION_CONFIG}, image ${IMAGE_FILE}"
 rc=0
-(cd "${suite}" && ./ci-run.sh --station "${STATION_CONFIG}" --image "${bundle}/${IMAGE_FILE}") || rc=$?
+(cd "${suite}" && ./ci-run.sh --station "${STATION_CONFIG}" --image "${image}") || rc=$?
 
 # The scheduler removes the workspace after the test: keep the results.
 [[ -d "${suite}/results" ]] && cp -r "${suite}/results/." "${results_dir}/"

@@ -114,6 +114,8 @@ def flash(s, work):
         raise RuntimeError("Target serial console did not appear after power-on")
     timeout = cfg.get("flash_timeout", 1200)
     name = f"yocto-installer-{uuid.uuid4().hex}"
+    # No TTY (-t): uuu would draw progress bars and overwrite its own error message with
+    # cursor-up redraws. Unbuffered Python keeps console echo and uuu output in order.
     if "recovery" in cfg:
         # Signed-recovery installer: downloads the exact recovery bundle from MinIO.
         write_recovery_files(s, work)
@@ -131,7 +133,7 @@ def flash(s, work):
         recovery = ""
         installer_args = f"-v -t {int(timeout)} -m {machine}"
     command = (
-        f"docker run -t --rm --privileged --network=host --name {name} "
+        f"docker run --rm --privileged --network=host --name {name} -e PYTHONUNBUFFERED=1 "
         f"-e BRICKD_UID={quote(relay['uid'])} "
         f"-e BRICKD_IP={quote(relay['host'])} -e BRICKD_PORT={int(relay['port'])} "
         f"{recovery}"

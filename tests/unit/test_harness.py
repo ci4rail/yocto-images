@@ -132,7 +132,8 @@ def test_installer_machine_and_timeout_cleanup(tmp_path, monkeypatch, platform, 
     with pytest.raises(TimeoutError):
         setup.flash(station, '/tmp/work')
     run = next(c for c in commands if c.startswith('docker run'))
-    assert 'docker run -t ' in run
+    assert ' -t ' not in run.split(' ci4rail/')[0]  # no TTY: keeps uuu errors readable
+    assert '-e PYTHONUNBUFFERED=1' in run
     assert f'-m {machine}' in run
     assert '-e BRICKD_UID=TeL' in run
     assert commands[-1].startswith('docker rm -f yocto-installer-')

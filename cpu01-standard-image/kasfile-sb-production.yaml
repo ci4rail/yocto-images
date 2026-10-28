@@ -43,6 +43,9 @@ local_conf_header:
 
   ci4rail-ota-keys: |
     CI4RAIL_OTA_KEY_ENVIRONMENT = "production"
+    # Must match /ota-signing-material/production/ci4rail-artifact-pub.pem.
+    # The delegation key (moducop-ota-delegation) only signs customer keys; the build needs just its public key.
+    CI4RAIL_OTA_AZURE_KEY_ID = "https://vault-firmware-signing.vault.azure.net/keys/moducop-cpu01-ota-artifact"
 
 env:
   AZURE_APP_ID: ""

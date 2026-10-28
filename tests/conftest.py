@@ -1,10 +1,13 @@
 import sys
+import time
 from pathlib import Path
 
 import pytest
 
 from yocto_tests.profiles import effective_baseline, ensure_profile, load_profile
 from yocto_tests.station import Station, load_config
+
+_config = None
 
 
 def pytest_addoption(parser):
@@ -19,6 +22,17 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     if sys.prefix == sys.base_prefix:
         raise pytest.UsageError("Run pytest inside a virtual environment, e.g. tests/run.sh")
+    global _config
+    _config = config
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_logstart(nodeid, location):
+    # With -v, announce each test on a full line so remote logs show the running test.
+    if _config is not None and _config.option.verbose > 0:
+        reporter = _config.pluginmanager.get_plugin("terminalreporter")
+        if reporter is not None:
+            reporter.write_line(f"[{time.strftime('%H:%M:%S')}] start {nodeid}")
 
 
 @pytest.fixture(scope="session")

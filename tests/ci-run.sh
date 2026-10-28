@@ -21,7 +21,8 @@ step() {
     local name=$1 marker=$2
     shift 2
     echo "::group::${name}"
-    ./run.sh "$@" -m "$marker" --results "results/${name}" --junitxml "results/${name}.xml"
+    # -v: one line per test. The scheduler forwards complete lines only.
+    PYTHONUNBUFFERED=1 ./run.sh -v "$@" -m "$marker" --results "results/${name}" --junitxml "results/${name}.xml"
     local rc=$?
     echo "::endgroup::"
     echo "step ${name}: exit ${rc}"

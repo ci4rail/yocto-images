@@ -272,9 +272,8 @@ jobs:
     # as an artifact; the test-scheduler on the test computer (TC) downloads and runs it
     # (tests/scripts/test-script.sh). The runner reaches the test station's MQTT broker via tailscale.
     # Fork PRs never get access to the hardware.
-    # TODO: temporarily disabled until the production build succeeds; remove 'false &&'.
     if: >-
-      false && inputs.station_config != '' && inputs.simulate_build == 'false' &&
+      inputs.station_config != '' && inputs.simulate_build == 'false' &&
       (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     needs: [build-staging-image]
     name: Test staging image on testfarm (${{ inputs.machine }})

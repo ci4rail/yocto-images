@@ -1,6 +1,8 @@
 #!/bin/sh
 # Sourced by TEZI init: return promptly so PID 1 opens the authenticated serial console.
 umask 077
+# Boot-time kernel messages split the sulogin prompt on the serial console; dmesg keeps them.
+echo 1 > /proc/sys/kernel/printk
 mkdir -p /run/migration /run/lock /run/media /var/volatile/log /var/run/dbus
 /etc/init.d/udev start
 /sbin/ifup lo

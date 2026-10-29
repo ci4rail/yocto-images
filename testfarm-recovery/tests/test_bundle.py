@@ -96,11 +96,12 @@ class BundleTests(unittest.TestCase):
         self.assertIn('SDP: boot', bundle.uuu_script('cpu01'))
         self.assertIn('SDPV: write', bundle.uuu_script('cpu01'))
         self.assertIn('SDPS: boot', bundle.uuu_script('cpu01plus'))
+        self.assertIn('CFG: FB: -vid 0x1b67 -pid 0x4037\n', bundle.uuu_script('cpu01'))
+        self.assertIn('CFG: FB: -vid 0x1b67 -pid 0x403a\n', bundle.uuu_script('cpu01plus'))
         for platform in ('cpu01', 'cpu01plus'):
             script = bundle.uuu_script(platform)
             self.assertEqual(script.splitlines()[0], 'uuu_version 1.4.127')
             self.assertIn('CFG: FB: -vid 0x1b67 -pid 0x4000\n', script)
-            self.assertIn('CFG: FB: -vid 0x1b67 -pid 0x4037\n', script)
             self.assertIn('FB: continue', script)
             for forbidden in ('ucmd', 'acmd', 'flash ', 'erase ', 'boot.scr', 'fuse '):
                 self.assertNotIn(forbidden, script.lower())

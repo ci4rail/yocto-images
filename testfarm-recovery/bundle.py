@@ -24,6 +24,11 @@ def digest(path):
     return result.hexdigest()
 
 
+# Toradex U-Boot advertises Fastboot as 0x4000 + config-block product ID
+# (0x4000 without a config block): Verdin iMX8MM 0055, Verdin iMX8MP 0058.
+FASTBOOT_PIDS = {'cpu01': ('0x4000', '0x4037'), 'cpu01plus': ('0x4000', '0x403a')}
+
+
 def uuu_script(platform):
     if platform == 'cpu01':
         rom = '''SDP: boot -f ../imx-boot-recovery
@@ -36,9 +41,8 @@ SDPV: jump
         rom = 'SDPS: boot -f ../imx-boot-recovery\n'
     else:
         raise ValueError('Unsupported platform')
-    return ('uuu_version 1.4.127\n\n' + rom +
-            'CFG: FB: -vid 0x1b67 -pid 0x4000\n'
-            'CFG: FB: -vid 0x1b67 -pid 0x4037\n'
+    fastboot = ''.join(f'CFG: FB: -vid 0x1b67 -pid {pid}\n' for pid in FASTBOOT_PIDS[platform])
+    return ('uuu_version 1.4.127\n\n' + rom + fastboot +
             'FB: download -f ../recovery.itb\n'
             'FB: continue\nFB: done\n')
 

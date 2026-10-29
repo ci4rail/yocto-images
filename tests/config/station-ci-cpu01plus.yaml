@@ -29,8 +29,8 @@ recovery:
   endpoint: https://minio.ci4rail.com
   bucket: moducop-recovery-images
   mode: staging
-  version: "v3.0.0-alpha.1+39.c15c5ad.20261029.0922"
-  run_attempt: "40849134690-1"
+  version: "v3.0.0-alpha.1+43.1715c3c.20261029.1544"
+  run_attempt: "40904611446-1"
   access_key: ${RECOVERY_MINIO_ACCESS_KEY}
   secret_key: ${RECOVERY_MINIO_SECRET_KEY}
   root_password: ${RECOVERY_ROOT_PASSWORD} # root password of the recovery runtime

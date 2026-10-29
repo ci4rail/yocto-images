@@ -1,7 +1,15 @@
 {
   "tezi_version": "7.7.0+build.13",
-  "kernel_revision": "d1cfde2d5d15be14123bdd1689162bd27f995a90",
-  "bsp_revision": "0fa5efea03f13fe36fdedab229ff6a176a4b971d",
+  "kernels": {
+    "upstream": {
+      "kernel_revision": "d1cfde2d5d15be14123bdd1689162bd27f995a90",
+      "layer_revision": "0fa5efea03f13fe36fdedab229ff6a176a4b971d"
+    },
+    "downstream": {
+      "kernel_revision": "a6a11f65797afd68af9084a3bbf82e015597af20",
+      "layer_revision": "be776fb39f2c325161821d470c231d48dc7a159d"
+    }
+  },
   "platforms": {
     "cpu01": {
       "tezi_url": "https://artifacts.toradex.com/artifactory/tezi-oe-prod-frankfurt/scarthgap-7.x.y/release/13/verdin-imx8mm/tezi/tezi-run/teziimage",
@@ -10,6 +18,7 @@
         "image.json": "96559109a4f5124d38d909fc7864a1edc6389abc72e81fad6677423144af49ef"
       },
       "dts": "imx8mm-verdin-wifi-moducop-cpu01",
+      "kernel": "upstream",
       "signing": {
         "staging": {
           "keydir": "secure-boot-material/staging/keys/fit",
@@ -30,6 +39,7 @@
         "image.json": "92eb18916c79c1fe450e6576391448dad437a7a97bc7503c884e04c50f546d3d"
       },
       "dts": "imx8mp-verdin-wifi-moducop-cpu01",
+      "kernel": "downstream",
       "signing": {
         "staging": {
           "keydir": "secure-boot-material/staging/keys/fit",

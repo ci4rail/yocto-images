@@ -20,6 +20,21 @@ REPO = Path(__file__).resolve().parents[2]
 CONFIG = Path(__file__).with_name('platforms.json')
 BSP_PATCH = Path('recipes-kernel/linux/linux-toradex/0001-moducop-specific-dts.patch')
 AKV = Path('/opt/meta-akv-signing/scripts')
+# Kernel trees whose DT sources match a TEZI kernel; revisions are pinned in platforms.json.
+KERNEL_SOURCES = {
+    'upstream': {
+        'url': 'https://github.com/gregkh/linux.git',
+        'layer_url': 'https://git.toradex.com/meta-toradex-bsp-common.git',
+        'recipe': 'linux-toradex-upstream_6.6.bb',
+        'patch_dirs': ('linux-toradex-upstream-6.6', 'linux-toradex-upstream'),
+    },
+    'downstream': {
+        'url': 'https://git.toradex.com/linux-toradex.git',
+        'layer_url': 'https://git.toradex.com/meta-toradex-nxp.git',
+        'recipe': 'linux-toradex_6.6-2.2.x.bb',
+        'patch_dirs': ('linux-toradex-6.6-2.2.x', 'linux-toradex'),
+    },
+}
 
 
 def run(*args, **kwargs):
@@ -90,18 +105,20 @@ def prepare(config, profile, work):
         fetch(f"{profile['tezi_url']}/{name}", checksum, tezi / name)
     if json.loads((tezi / 'image.json').read_text())['version'] != config['tezi_version']:
         raise ValueError('Unexpected TEZI version')
+    # The DTB must match the kernel inside tezi.itb: bindings differ between kernels.
+    source = KERNEL_SOURCES[profile['kernel']]
+    pinned = config['kernels'][profile['kernel']]
     kernel, bsp = work / 'linux', work / 'bsp'
-    checkout('https://github.com/gregkh/linux.git', config['kernel_revision'], kernel,
+    checkout(source['url'], pinned['kernel_revision'], kernel,
              ('arch/arm64/boot/dts', 'include/dt-bindings', 'include/uapi'))
-    checkout('https://git.toradex.com/meta-toradex-bsp-common.git', config['bsp_revision'], bsp)
+    checkout(source['layer_url'], pinned['layer_revision'], bsp)
     recipes = bsp / 'recipes-kernel/linux'
-    recipe = (recipes / 'linux-toradex-upstream_6.6.bb').read_text()
-    if f'SRCREV_machine = "{config["kernel_revision"]}"' not in recipe:
+    recipe = (recipes / source['recipe']).read_text()
+    if f'SRCREV_machine = "{pinned["kernel_revision"]}"' not in recipe:
         raise ValueError('Kernel revision does not match pinned BSP recipe')
     # Preserve the recipe's patch order. Only DT sources are needed for cpp/dtc.
     for name in re.findall(r'file://([^\s]+\.patch)', recipe):
-        candidates = [recipes / directory / name for directory in
-                      ('linux-toradex-upstream-6.6', 'linux-toradex-upstream')]
+        candidates = [recipes / directory / name for directory in source['patch_dirs']]
         patch = next((p for p in candidates if p.is_file()), None)
         if patch is None:
             raise ValueError(f'Missing BSP patch: {name}')
@@ -201,7 +218,9 @@ def package(args, config, profile, signing):
     manifest_path = work / 'output/build.json'
     manifest = json.loads(manifest_path.read_text())
     manifest.update(tezi_version=config['tezi_version'], tezi_url=profile['tezi_url'],
-                    kernel_revision=config['kernel_revision'], bsp_revision=config['bsp_revision'],
+                    kernel_source=profile['kernel'],
+                    kernel_revision=config['kernels'][profile['kernel']]['kernel_revision'],
+                    bsp_revision=config['kernels'][profile['kernel']]['layer_revision'],
                     ci4rail_bsp_revision=config['ci4rail_bsp_revision'],
                     board_patch_sha256=build.digest(work / 'ci4rail-bsp' / BSP_PATCH), signing_mode=args.mode,
                     fit_spki_sha256=fingerprint, signature_verified=True,

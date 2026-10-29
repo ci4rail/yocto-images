@@ -117,10 +117,14 @@ required release files: `tezi.itb` and `image.json`. These are the same files
 inside the vendor release archive; no input bundle is stored in MinIO.
 The kernel and RAM filesystem come from `tezi.itb`.
 
-DTB compilation uses Linux stable commit
+The DTB must come from the same kernel family as the kernel in `tezi.itb`; device-tree
+bindings differ between them (a mainline DTB panics the iMX8MP TEZI kernel).
+CPU01 (`"kernel": "upstream"`) uses Linux stable commit
 `d1cfde2d5d15be14123bdd1689162bd27f995a90` (6.6.143) and Toradex BSP layer commit
-`0fa5efea03f13fe36fdedab229ff6a176a4b971d`, pinned by the Toradex 7.7.0
-manifest. The upstream kernel recipe's ARM64 device-tree patches are applied
+`0fa5efea03f13fe36fdedab229ff6a176a4b971d`. CPU01plus (`"kernel": "downstream"`) uses
+`linux-toradex` commit `a6a11f65797afd68af9084a3bbf82e015597af20` (6.6.142, NXP BSP) and
+`meta-toradex-nxp` commit `be776fb39f2c325161821d470c231d48dc7a159d`. Both are pinned
+by the Toradex 7.7.0 manifest. The kernel recipe's ARM64 device-tree patches are applied
 in recipe order, followed by the ModuCop DTS patch from `meta-ci4rail-bsp`
 commit `cb4d0fa4320b3dda1bd75ad73705361d77de34dc`. All layers are fetched
 explicitly; the workflow does not rely on locally populated `src/` directories. The DTB is

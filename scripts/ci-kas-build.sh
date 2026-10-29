@@ -26,6 +26,7 @@ docker run \
     -v ${GITHUB_WORKSPACE}/${IMAGE_DIR}:/work \
     -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
     -v ${GITHUB_WORKSPACE}/ota-signing-material:/ota-signing-material:ro \
+    -v ${GITHUB_WORKSPACE}/secure-boot-material:/secure-boot-material:ro \
     -u $(id -u):$(id -g) \
     -e MENDER_SERVER_URL \
     -e MENDER_TENANT_TOKEN \

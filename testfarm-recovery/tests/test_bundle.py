@@ -86,7 +86,10 @@ class BundleTests(unittest.TestCase):
             self.validate()
 
     def test_undefined_production_platform_rejected(self):
-        with self.assertRaisesRegex(ValueError, 'no reviewed signing'):
+        config = self.root / 'platforms.json'
+        config.write_text(json.dumps({'platforms': {'cpu01plus': {'signing': {}}}}))
+        with patch.object(bundle.recovery, 'CONFIG', config), \
+                self.assertRaisesRegex(ValueError, 'no reviewed signing'):
             bundle.validate_inputs(self.boot, self.runtime, 'cpu01plus', 'production')
 
     def test_platform_transport_and_no_script_execution(self):

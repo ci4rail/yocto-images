@@ -12,7 +12,7 @@
       "dts": "imx8mm-verdin-wifi-moducop-cpu01",
       "signing": {
         "staging": {
-          "keydir": "cpu01-standard-image/secure-boot-material/staging/keys/fit",
+          "keydir": "secure-boot-material/staging/keys/fit",
           "keyname": "dev",
           "algorithm": "sha256,rsa2048"
         },
@@ -32,9 +32,14 @@
       "dts": "imx8mp-verdin-wifi-moducop-cpu01",
       "signing": {
         "staging": {
-          "keydir": "cpu01-standard-image/secure-boot-material/staging/keys/fit",
+          "keydir": "secure-boot-material/staging/keys/fit",
           "keyname": "dev",
           "algorithm": "sha256,rsa2048"
+        },
+        "production": {
+          "key_id": "https://vault-firmware-signing.vault.azure.net/keys/moducop-cpu01-fit",
+          "keyname": "moducop-cpu01-fit",
+          "algorithm": "sha256,rsa3072"
         }
       }
     }

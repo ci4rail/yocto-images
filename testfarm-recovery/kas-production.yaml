@@ -18,10 +18,10 @@ local_conf_header:
     AKV_HAB_CSF_KEY_ID = "https://vault-firmware-signing.vault.azure.net/keys/moducop-cpu01-csf-1-1"
     AKV_HAB_IMG_KEY_ID = "https://vault-firmware-signing.vault.azure.net/keys/moducop-cpu01-img-1-1"
     AKV_HAB_SRK_CERT_FILES = "\
-      /work/cpu01-standard-image/secure-boot-material/production/crts/SRK1_sha256_3072_65537_v3_ca_crt.pem \
-      /work/cpu01-standard-image/secure-boot-material/production/crts/SRK2_sha256_3072_65537_v3_ca_crt.pem \
-      /work/cpu01-standard-image/secure-boot-material/production/crts/SRK3_sha256_3072_65537_v3_ca_crt.pem \
-      /work/cpu01-standard-image/secure-boot-material/production/crts/SRK4_sha256_3072_65537_v3_ca_crt.pem \
+      /work/secure-boot-material/production/crts/SRK1_sha256_3072_65537_v3_ca_crt.pem \
+      /work/secure-boot-material/production/crts/SRK2_sha256_3072_65537_v3_ca_crt.pem \
+      /work/secure-boot-material/production/crts/SRK3_sha256_3072_65537_v3_ca_crt.pem \
+      /work/secure-boot-material/production/crts/SRK4_sha256_3072_65537_v3_ca_crt.pem \
     "
 env:
   AZURE_APP_ID: ""

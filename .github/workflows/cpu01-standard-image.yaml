@@ -12,6 +12,7 @@ on:
       - "os-customizations/**"
       - "ota-signing-material/staging/**"
       - "ota-signing-material/production/**"
+      - "secure-boot-material/**"
       - "tests/**"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-mender.yaml"

@@ -20,8 +20,12 @@ class DestinationTests(unittest.TestCase):
     def test_missing_configuration_fails_before_build(self):
         with patch.dict(os.environ, {}, clear=True), self.assertRaisesRegex(ValueError, 'secret'):
             recovery.validate_environment('staging')
-        with self.assertRaisesRegex(ValueError, 'no reviewed signing configuration'):
-            recovery.settings('cpu01plus', 'production')
+        with tempfile.TemporaryDirectory() as tmp:
+            config = Path(tmp) / 'platforms.json'
+            config.write_text(json.dumps({'platforms': {'cpu01plus': {'signing': {}}}}))
+            with patch.object(recovery, 'CONFIG', config), \
+                    self.assertRaisesRegex(ValueError, 'no reviewed signing configuration'):
+                recovery.settings('cpu01plus', 'production')
 
     def test_production_uses_azure_identity_without_fingerprint_variable(self):
         with patch.dict(os.environ, {

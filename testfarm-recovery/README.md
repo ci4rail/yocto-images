@@ -30,12 +30,11 @@ Supported combinations:
 | Platform | Staging | Production |
 |---|---|---|
 | CPU01 | Existing dummy HAB and FIT keys | Existing CPU01 Azure HAB and FIT keys |
-| CPU01Plus | Same dummy HAB and FIT keys | Rejected: no reviewed production key configuration |
+| CPU01Plus | Same dummy HAB and FIT keys | Same CPU01 Azure HAB and FIT keys |
 
 A closed staging device must have the matching dummy HAB trust anchor fused.
-Staging bundles cannot boot on production-fused devices. CPU01Plus production
-requires its own reviewed HAB certificates/key IDs and FIT signing configuration;
-do not reuse CPU01 production keys implicitly.
+Staging bundles cannot boot on production-fused devices. CPU01Plus deliberately
+shares the CPU01 production HAB certificates/key IDs and FIT signing key.
 
 Uses the existing `staging` and `production` GitHub environments. Configure:
 

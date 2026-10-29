@@ -73,9 +73,8 @@ The certificate's public-key fingerprint is recorded in `build.json`.
 
 CPU01 staging uses the checked-in `dev` RSA-2048 dummy key; production uses
 `moducop-cpu01-fit` RSA-3072 from Azure. CPU01plus staging uses the same dummy
-FIT key, so its U-Boot must trust that key. CPU01plus production is intentionally
-unconfigured: add its reviewed key ID/name/algorithm to `platforms.json` once that
-platform's signing key is defined.
+FIT key, so its U-Boot must trust that key. CPU01plus production deliberately
+shares the `moducop-cpu01-fit` key with CPU01.
 The workflow rejects unconfigured platform/mode combinations before building.
 
 ## MinIO configuration

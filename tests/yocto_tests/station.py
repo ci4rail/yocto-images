@@ -105,7 +105,9 @@ class Host:
 
     def run(self, command, timeout=60, check=True, input=None, secret=False):
         if self.local:
+            # Serial console noise in installer output is not valid UTF-8.
             p = subprocess.run(["bash", "-c", command], input=input, text=True,
+                               encoding="utf-8", errors="replace",
                                capture_output=True, timeout=timeout)
             status, out, err = p.returncode, p.stdout, p.stderr
         else:

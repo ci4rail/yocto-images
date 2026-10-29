@@ -55,6 +55,13 @@ def test_failed_command_error_keeps_only_output_tail(tmp_path):
     assert '\n1\n' in host.log.read_text()
 
 
+def test_local_output_tolerates_invalid_utf8(tmp_path):
+    host = Host({'local': True}, tmp_path, 'local')
+    with pytest.raises(RuntimeError, match='console�noise') as error:
+        host.run(r"printf 'console\377noise\n'; exit 1")
+    assert 'console�noise' in host.log.read_text()
+
+
 def test_prepare_releases_lock_after_failed_boot(tmp_path):
     tc = Host({'local': True}, tmp_path, 'tc')
     # Exercise real directory locking/cleanup without Docker or hardware.

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-"""Package a platform-specific SD recovery installer from TEZI and a released Mender image.
+"""Package a platform-specific recovery installer from TEZI and a released Mender image.
 
+The SD variant discovers the payload on SD; the data variant embeds it in
+recovery.itb, which legacy U-Boot loads from the old /data partition.
 No target devices are accessed. Input archives must come from trusted builds.
 The deliberately narrow payload format is this repository's four-partition
 mender_tezi format; this is not a general-purpose TEZI image converter.
@@ -17,6 +19,16 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent
 MIB = 1024 * 1024
+# U-Boot memory contract of the boot scripts. With initrd_high unset, U-Boot
+# copies the ramdisk to the top of the bootm region without reserving the
+# loaded FIT, so both must fit between FIT_LOAD and BOOTM_LOW + BOOTM_SIZE.
+FIT_LOAD = 0x60000000
+BOOTM_LOW = 0x40000000
+BOOTM_SIZE = 0x58000000
+BOOTM_SLACK = 16 * MIB  # FDT and alignment of the relocated images
+# Pinned by moducop-recovery.c for the SD recovery path.
+SD_RAMDISK_KIB = 393216
+DATA_SCRIPT_LOAD = 0x5ff00000
 
 
 def run(*args, **kwargs):
@@ -169,14 +181,14 @@ def fit_component(fit, kind, work):
     return target, node, compression
 
 
-def recovery_bootargs(console):
-    # Must match moducop-recovery.c, independently of the FIT size limit.
-    return f'console={console},115200 root=/dev/ram0 rootfstype=squashfs ro ramdisk_size=393216'
+def recovery_bootargs(console, ramdisk_kib=SD_RAMDISK_KIB):
+    # The SD default must match moducop-recovery.c, independently of the FIT size limit.
+    return f'console={console},115200 root=/dev/ram0 rootfstype=squashfs ro ramdisk_size={ramdisk_kib}'
 
 
-def prepare_recovery_dtb(dtb, console):
-    run('fdtput', '-p', '-t', 's', dtb,
-        '/chosen/toradex,secure-boot', 'required-bootargs', recovery_bootargs(console))
+def prepare_recovery_dtb(dtb, console, ramdisk_kib=SD_RAMDISK_KIB):
+    run('fdtput', '-p', '-t', 's', dtb, '/chosen/toradex,secure-boot', 'required-bootargs',
+        recovery_bootargs(console, ramdisk_kib))
 
 
 def make_fit(kernel, ramdisk, dtb, load, compression, dest,
@@ -232,31 +244,46 @@ def make_fit(kernel, ramdisk, dtb, load, compression, dest,
     its.unlink()
 
 
-def boot_scripts(dest, console):
-    boot = f'''# The recovery FIT is loaded before Linux starts; the payload stays on SD.
-# No saveenv, eMMC writes, or fuse commands are performed here.
-setenv bootargs {recovery_bootargs(console)}
+def fit_boot(console, load, ramdisk_kib=SD_RAMDISK_KIB):
+    """U-Boot commands booting recovery.itb, which the given command loads to FIT_LOAD."""
+    return f'''# No saveenv, eMMC writes, or fuse commands are performed here.
+setenv bootargs {recovery_bootargs(console, ramdisk_kib)}
 setenv fdt_high
 setenv initrd_high
-setenv bootm_low 0x40000000
-setenv bootm_size 0x58000000
-if load ${{devtype}} ${{devnum}}:${{distro_bootpart}} 0x60000000 ${{prefix}}recovery.itb; then
-    bootm 0x60000000#recovery
+setenv bootm_low 0x{BOOTM_LOW:x}
+setenv bootm_size 0x{BOOTM_SIZE:x}
+if {load}; then
+    bootm 0x{FIT_LOAD:x}#recovery
 fi
 '''
-    (dest / 'sd.cmd').write_text(boot.replace(
-        'load ${devtype} ${devnum}:${distro_bootpart} 0x60000000 ${prefix}recovery.itb',
-        'load mmc 1:1 0x60000000 /recovery.itb'))
-    (dest / 'boot.cmd').write_text(boot)
+
+
+def script_image(source, dest, name):
     run('mkimage', '-A', 'arm64', '-O', 'linux', '-T', 'script', '-C', 'none',
-        '-n', 'Ci4Rail migration', '-d', dest / 'boot.cmd', dest / 'boot.scr',
-        stdout=subprocess.DEVNULL)
-    (dest / 'tftp.cmd').write_text(boot.replace(
-        'load ${devtype} ${devnum}:${distro_bootpart} 0x60000000 ${prefix}recovery.itb',
-        'tftpboot 0x60000000 recovery.itb'))
-    run('mkimage', '-A', 'arm64', '-O', 'linux', '-T', 'script', '-C', 'none',
-        '-n', 'Ci4Rail migration TFTP', '-d', dest / 'tftp.cmd', dest / 'tftp.scr',
-        stdout=subprocess.DEVNULL)
+        '-n', name, '-d', source, dest, stdout=subprocess.DEVNULL)
+
+
+def boot_scripts(dest, console):
+    header = '# The recovery FIT is loaded before Linux starts; the payload stays on SD.\n'
+    for name, load in (('sd', 'load mmc 1:1 0x{:x} /recovery.itb'),
+                       ('boot', 'load ${{devtype}} ${{devnum}}:${{distro_bootpart}} 0x{:x} '
+                                '${{prefix}}recovery.itb'),
+                       ('tftp', 'tftpboot 0x{:x} recovery.itb')):
+        (dest / f'{name}.cmd').write_text(header + fit_boot(console, load.format(FIT_LOAD)))
+    script_image(dest / 'boot.cmd', dest / 'boot.scr', 'Ci4Rail migration')
+    script_image(dest / 'tftp.cmd', dest / 'tftp.scr', 'Ci4Rail migration TFTP')
+
+
+def data_boot_script(dest, console, ramdisk_kib):
+    """Legacy U-Boot script; the caller sets migration_part to the old /data mmc dev:part."""
+    (dest / 'data.cmd').write_text(
+        '# Boot the payload-embedding recovery FIT from the legacy /data partition.\n'
+        '# Requires migration_part, e.g. 0:4. Returns to the caller if loading fails.\n'
+        f'# Run: load mmc ${{migration_part}} 0x{DATA_SCRIPT_LOAD:x} /migration/data.scr'
+        f' && source 0x{DATA_SCRIPT_LOAD:x}\n'
+        + fit_boot(console, f'load mmc ${{migration_part}} 0x{FIT_LOAD:x} /migration/recovery.itb',
+                   ramdisk_kib))
+    script_image(dest / 'data.cmd', dest / 'data.scr', 'Ci4Rail data migration')
 
 
 def load_profile(platform):
@@ -378,15 +405,20 @@ def configure_console_auth(rootfs, password_hash):
     init.write_text(startup.replace(shell, '\tsetsid cttyhack /sbin/sulogin.util-linux\n'))
 
 
-def configure_runtime(rootfs, profile):
-    """Install manual data tools and minimal shell/network/TEZI startup."""
+def configure_runtime(rootfs, profile, embedded_payload=False):
+    """Install minimal shell/network/TEZI startup plus either the manual SD data
+    tools or the unattended installer for an embedded payload."""
     embedded = rootfs / 'migration'
     embedded.mkdir(exist_ok=True)
-    for name in ('common.sh', 'backup-data.sh', 'restore-data.sh', 'mount-sd.sh', 'start-tezi.sh'):
+    if embedded_payload:
+        scripts, tool = ('install-embedded.sh',), 'local-http'
+    else:
+        scripts, tool = ('backup-data.sh', 'restore-data.sh', 'mount-sd.sh'), 'split-backup'
+    for name in ('common.sh', 'start-tezi.sh') + scripts:
         shutil.copyfile(ROOT / 'runtime' / name, embedded / name)
         (embedded / name).chmod(0o755)
     run('aarch64-linux-gnu-gcc', '-static', '-Os', '-Wall', '-Wextra', '-Werror', '-s',
-        ROOT / 'runtime/split-backup.c', '-o', embedded / 'split-backup')
+        ROOT / f'runtime/{tool}.c', '-o', embedded / tool)
     (embedded / 'profile.conf').write_text(f"SOC='{profile['soc']}'\n")
     shutil.copyfile(ROOT / 'runtime/rc.local', rootfs / 'etc/rc.local')
     (rootfs / 'etc/rc.local').chmod(0o755)
@@ -408,33 +440,56 @@ def configure_runtime(rootfs, profile):
         'show_default_feed': False, 'show_3rdparty_feed': False})
 
 
-def package_recovery(args, destination):
-    """Build recovery.itb without reading or embedding an OS payload."""
+def data_ramdisk_kib(squashfs_size):
+    # The kernel copies the whole squashfs into /dev/ram0; round up to 16 MiB.
+    return -(-squashfs_size // (16 * MIB)) * 16 * 1024
+
+
+def check_data_memory(fit_size, squashfs_size):
+    if FIT_LOAD + fit_size + squashfs_size + BOOTM_SLACK > BOOTM_LOW + BOOTM_SIZE:
+        raise ValueError('Recovery FIT and its relocated ramdisk do not fit the U-Boot bootm region')
+
+
+def package_recovery(args, destination, embed_payload=False):
+    """Build recovery.itb; only the data variant reads and embeds the OS payload."""
     profile = load_profile(args.platform)
     password_hash = read_root_password_hash(args.root_password_hash_file)
     tezi, dtb = validate_recovery_inputs(args, profile)
     with tempfile.TemporaryDirectory(prefix='migration-recovery-') as temp:
         work = Path(temp).resolve()
         rootfs, kernel, load, compression = unpack_installer(tezi, work)
-        configure_runtime(rootfs, profile)
+        configure_runtime(rootfs, profile, embed_payload)
+        if embed_payload:
+            # Squashfs compresses the raw images; TEZI reads them uncompressed.
+            package_payload(args, rootfs / 'migration/image')
         configure_console_auth(rootfs, password_hash)
         squashfs = work / 'migration.squashfs'
         run('mksquashfs', rootfs, squashfs, '-noappend', '-all-root', '-comp', 'gzip',
             '-no-progress', '-processors', '2', stdout=subprocess.DEVNULL)
+        squashfs_size = squashfs.stat().st_size
+        ramdisk_kib = data_ramdisk_kib(squashfs_size) if embed_payload else SD_RAMDISK_KIB
         destination.mkdir()
         shutil.copyfile(dtb, work / 'board.dtb')
-        prepare_recovery_dtb(work / 'board.dtb', profile['console'])
+        prepare_recovery_dtb(work / 'board.dtb', profile['console'], ramdisk_kib)
         make_fit(kernel, squashfs, work / 'board.dtb', load, compression,
                  destination / 'recovery.itb', args.fit_keydir, args.fit_keyname, args.fit_engine,
                  args.fit_algorithm)
         size = (destination / 'recovery.itb').stat().st_size
-        if size > profile['maximum_fit_mib'] * MIB:
-            raise ValueError(f"Recovery FIT exceeds {profile['maximum_fit_mib']} MiB loader limit")
-        boot_scripts(destination, profile['console'])
+        if embed_payload:
+            # Legacy U-Boot loads this through data.scr, not the size-pinned recovery patch.
+            check_data_memory(size, squashfs_size)
+            data_boot_script(destination, profile['console'], ramdisk_kib)
+        else:
+            if size > profile['maximum_fit_mib'] * MIB:
+                raise ValueError(f"Recovery FIT exceeds {profile['maximum_fit_mib']} MiB loader limit")
+            boot_scripts(destination, profile['console'])
         write_json(destination / 'build.json', {
             'platform': args.platform, 'profile': profile,
+            'variant': 'data' if embed_payload else 'sd',
             'tezi_fit_sha256': digest(tezi / 'tezi.itb'), 'dtb_sha256': digest(dtb),
             'fw_env_config_sha256': digest(ROOT / 'runtime/fw_env.config'), 'fit_size_bytes': size,
+            'ramdisk_kib': ramdisk_kib,
+            'payload_sha256': digest(args.payload) if embed_payload else None,
             'fit_signed': bool(args.fit_keydir),
             'fit_keyname': args.fit_keyname if args.fit_keydir else None,
             'fit_algorithm': args.fit_algorithm if args.fit_keydir else None,
@@ -452,7 +507,7 @@ def build(args, mode='bundle'):
         if mode == 'payload':
             package_payload(args, destination)
         else:
-            package_recovery(args, destination)
+            package_recovery(args, destination, embed_payload=mode == 'data')
             if mode == 'bundle':
                 package_payload(args, destination / 'image')
                 write_checksums(destination)
@@ -465,6 +520,8 @@ def argument_parser(mode):
         'bundle': 'Build recovery and payload together.',
         'recovery': 'Build recovery.itb and boot scripts independently of the payload.',
         'payload': 'Build a manual-install TEZI payload folder for SD discovery.',
+        'data': 'Build recovery.itb with an embedded, automatically installed payload '
+                'for booting from the legacy /data partition.',
     }[mode])
     parser.add_argument('--output', type=Path, required=True, help='New output directory')
     if mode != 'recovery':

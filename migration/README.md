@@ -6,6 +6,10 @@ The RAM-resident `recovery.itb` supports CPU01 (i.MX8MM) and CPU01plus
 Boot opens a password-protected root serial console, requests DHCP on eth0, mounts SD read/write, and
 starts the TEZI UI. All migration operations are manual.
 
+Devices whose legacy U-Boot cannot read the SD card can instead boot a
+payload-embedding recovery from their old `/data` partition and install
+unattended; see [Boot from the legacy /data partition](#boot-from-the-legacy-data-partition-no-sd-card).
+
 ## Build recovery
 
 For CI builds, choose the platform’s **Recovery Staging** or **Recovery Production**
@@ -166,6 +170,120 @@ device requires a matching HAB-signed bootloader whether loaded from SD or eMMC.
 The DTB is given the exact `required-bootargs` expected by the recovery patch;
 the FIT configuration is named `recovery`. Rootfs A/B signing and dm-verity
 inside the installed OS payload remain properties of that supplied payload.
+
+## Boot from the legacy /data partition (no SD card)
+
+Many SD cards do not work with the legacy bootloader. This variant needs no
+removable media: `recovery.itb` embeds the payload and is loaded by the legacy
+U-Boot from the old `/data` partition. After boot, the installation runs
+**without operator interaction** and erases the complete eMMC, including `/data`.
+
+**The customer backs up `/data` before migration and restores what is needed
+afterwards.** This variant has no backup, restore or SD tools. The new system
+starts with the payload's empty data partition.
+
+### Build
+
+```sh
+python3 migration/build-data-recovery.py \
+  --platform cpu01 \
+  --tezi migration/tezi/Verdin-iMX8MM_ToradexEasyInstaller_7.7.0+build.13 \
+  --dtb /path/to/imx8mm-verdin-wifi-moducop-cpu01.dtb \
+  --root-password-hash-file /path/to/recovery-root.hash \
+  --payload /path/to/standard-image.mender_tezi.tar \
+  --fit-keydir /path/to/staging-keys --fit-keyname dev \
+  --output gen/cpu01-data-recovery
+```
+
+Inputs and signing options match the recovery build. The legacy devices are
+open, so `--allow-unsigned` boots too. The payload is validated as in
+`build-payload.py` and embedded in the gzip squashfs RAM root at
+`/migration/image`. Squashfs compresses the raw images, and TEZI reads them
+uncompressed. The FIT hashes (and signature, if signed) therefore cover the
+payload. `build.json` records the payload archive's SHA-256.
+
+Output: `recovery.itb`, `data.scr` (source in `data.cmd`), `build.json` and
+`SHA256SUMS`. A staging CPU01 payload gives a ~360 MiB FIT. `ramdisk_size` is
+derived from the squashfs size and written to both `data.scr` and the DTB's
+`required-bootargs`. It is not the value pinned for the SD recovery patch.
+The 256 MiB SD FIT limit does not apply. Instead, the build checks that the FIT
+loaded at `0x60000000` and the ramdisk U-Boot relocates below `0x98000000` do
+not overlap. That allows roughly 430 MiB of squashfs.
+
+### Stage on the legacy device
+
+Requires ~370 MiB free on `/data`. As root on the legacy OS:
+
+```sh
+findmnt -no SOURCE /data          # e.g. /dev/mmcblk2p4 -> partition 4
+mkdir -p /data/migration
+cp recovery.itb data.scr SHA256SUMS /data/migration/
+cd /data/migration && grep -E ' (recovery\.itb|data\.scr)$' SHA256SUMS | sha256sum -c
+sync
+```
+
+The files must be at `/migration/` on the `/data` filesystem, which is
+`/data/migration/` in Linux. Set `migration_part` to `<emmc>:<partition>`.
+Legacy U-Boot numbers eMMC as mmc `0` (SD is `1`), and the partition number is
+the Linux `p<N>` suffix. If unsure, check `mmc list` and
+`ls mmc 0:4 /migration` on the U-Boot console.
+
+Do not stage while a Mender deployment is pending.
+
+### Boot recovery
+
+From the U-Boot serial console (one-shot, nothing is saved):
+
+```
+setenv migration_part 0:4
+load mmc ${migration_part} 0x5ff00000 /migration/data.scr && source 0x5ff00000
+```
+
+Without a console, prepend the loader to the legacy `bootcmd` from Linux and reboot:
+
+```sh
+fw_printenv -n bootcmd > /data/migration/bootcmd.orig
+fw_setenv migration_part 0:4
+fw_setenv bootcmd "load mmc \${migration_part} 0x5ff00000 /migration/data.scr && source 0x5ff00000; $(cat /data/migration/bootcmd.orig)"
+reboot
+```
+
+If loading or booting fails, U-Boot continues with the original `bootcmd`, and
+the legacy OS boots unchanged. To cancel before rebooting, run
+`fw_setenv bootcmd "$(cat /data/migration/bootcmd.orig)"` and
+`fw_setenv migration_part`. A successful installation replaces the complete
+U-Boot environment, so there is nothing to revert afterwards.
+
+### Unattended installation
+
+Recovery boots into RAM, opens the password-protected serial console, and starts
+DHCP and the TEZI UI (VNC port 5900, useful for watching progress). Then
+`/migration/install-embedded.sh`:
+
+1. Verifies the embedded payload checksums.
+2. Serves `/migration/image` read-only on TEZI's USB NCM address
+   `192.168.11.1:8765`. A connected USB host can read the payload.
+3. Waits for TEZI to be idle, then runs
+   `tezictl image-install http://192.168.11.1:8765/image.json`.
+4. Reboots with `reboot -f` only after TEZI reports `installed`.
+
+TEZI still checks the payload's product IDs. On failure the device stays in
+recovery and does not reboot. The eMMC may already be erased, and recovery
+would not survive a power cycle. Keep the device powered and inspect
+`/run/migration/install.log`, `tezictl.log`, `http.log` and
+`/var/volatile/tezi.log` from the serial shell. Rerun
+`/migration/install-embedded.sh` once the cause is fixed. A device whose eMMC
+was erased and which was then powered off needs the module's USB recovery mode.
+
+### Not yet validated on hardware
+
+- Legacy U-Boot reading a ~360 MiB file from the old ext3/ext4 `/data`. Older
+  U-Boot versions do not support every ext4 feature, and a failed load falls
+  back to the legacy OS.
+- `bootm` relocation of the ramdisk with the legacy environment.
+- TEZI 7.7 creating `usb0` and accepting `tezictl image-install` with an explicit
+  URL, without a UI confirmation.
+- `reboot -f` into the newly installed system.
 
 ## Validation
 

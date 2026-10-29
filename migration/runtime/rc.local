@@ -12,4 +12,8 @@ avahi-daemon --daemonize
     # TEZI mounts local media itself; a writable SD mount prevents its probe.
     # Mount SD manually only for backup/restore, then unmount before installing.
     /migration/start-tezi.sh
+    # Data-partition recovery only: install the embedded payload unattended.
+    if [ -x /migration/install-embedded.sh ]; then
+        /migration/install-embedded.sh >/run/migration/install.log 2>&1
+    fi
 ) </dev/null >/run/migration/startup.log 2>&1 &

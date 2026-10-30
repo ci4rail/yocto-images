@@ -44,6 +44,24 @@ def test_shell_quoting_and_sensitive_output(tmp_path):
     assert 'secret-value' not in host.log.read_text()
 
 
+def test_failed_command_error_keeps_only_output_tail(tmp_path):
+    host = Host({'local': True}, tmp_path, 'local')
+    with pytest.raises(RuntimeError) as error:
+        host.run('seq 1 200; exit 3')
+    message = str(error.value)
+    assert message.startswith('local: exit 3: seq 1 200; exit 3\n[150 earlier lines in ')
+    assert message.endswith('\n'.join(str(n) for n in range(151, 201)))
+    assert '\n150\n' not in message
+    assert '\n1\n' in host.log.read_text()
+
+
+def test_local_output_tolerates_invalid_utf8(tmp_path):
+    host = Host({'local': True}, tmp_path, 'local')
+    with pytest.raises(RuntimeError, match='console�noise') as error:
+        host.run(r"printf 'console\377noise\n'; exit 1")
+    assert 'console�noise' in host.log.read_text()
+
+
 def test_prepare_releases_lock_after_failed_boot(tmp_path):
     tc = Host({'local': True}, tmp_path, 'tc')
     # Exercise real directory locking/cleanup without Docker or hardware.
@@ -109,6 +127,7 @@ def test_installer_machine_and_timeout_cleanup(tmp_path, monkeypatch, platform, 
     image.touch()
     commands = []
     class TC:
+        local = False
         def put(self, source, destination):
             assert Path(source).is_file()
         def run(self, command, **kwargs):
@@ -131,10 +150,46 @@ def test_installer_machine_and_timeout_cleanup(tmp_path, monkeypatch, platform, 
     with pytest.raises(TimeoutError):
         setup.flash(station, '/tmp/work')
     run = next(c for c in commands if c.startswith('docker run'))
-    assert 'docker run -t ' in run
+    assert ' -t ' not in run.split(' ci4rail/')[0]  # no TTY: keeps uuu errors readable
+    assert '-e PYTHONUNBUFFERED=1' in run
     assert f'-m {machine}' in run
     assert '-e BRICKD_UID=TeL' in run
     assert commands[-1].startswith('docker rm -f yocto-installer-')
+
+
+def test_local_flash_moves_gadget_image_into_work_dir(tmp_path, monkeypatch):
+    from yocto_tests import setup
+    image = tmp_path / 'image.tar'
+    image.touch()
+    work = tmp_path / 'work'
+    work.mkdir()
+    seen = {}
+    class TC:
+        local = True
+        def put(self, source, destination):
+            raise AssertionError('local TC must not copy the image')
+        def run(self, command, **kwargs):
+            if command.startswith('test -c'):
+                return 'ready'
+            if command.startswith('docker run'):
+                seen['image_in_work'] = (work / 'yocto.img').is_file()
+                raise TimeoutError('installer timeout')
+            return ''
+    def convert(args, **kwargs):
+        seen['scratch'] = Path(args[-1]).parent
+        seen['tmpdir'] = next(a for a in args if a.startswith('TMPDIR='))
+        Path(args[-1]).write_text('img')
+    monkeypatch.setattr(setup.subprocess, 'run', convert)
+    monkeypatch.setattr(setup, 'power_on', lambda cfg: None)
+    cfg = dict(image_file=str(image), platform='cpu01', tc={'local': True},
+               relay={'host': 'tc', 'port': 4223, 'uid': 'TeL', 'power_channel': 0, 'recovery_channel': 1},
+               installer_image='ci4rail/tdx-installer-dev:v3', serial_port='/dev/ttyMODUCOP')
+    station = SimpleNamespace(cfg=cfg, tc=TC(), results=tmp_path)
+    with pytest.raises(TimeoutError):
+        setup.flash(station, str(work))
+    assert seen['scratch'].parent == work
+    assert seen['tmpdir'] == f"TMPDIR={seen['scratch']}"
+    assert seen['image_in_work']
 
 
 def test_power_cycle_releases_recovery_and_restores_power(monkeypatch):
@@ -173,3 +228,44 @@ def test_reflashed_target_host_key_policy(tmp_path, monkeypatch, accept_changed)
     monkeypatch.setattr(station.paramiko, 'SSHClient', Client)
     Host({'host': '192.0.2.1', 'allow_unknown_host_key': accept_changed}, tmp_path, 'dut').connect()
     assert calls == (['accept-new'] if accept_changed else ['load-known-hosts'])
+
+
+def test_target_connection_runs_through_jump_host(monkeypatch, tmp_path):
+    from yocto_tests import station as st
+    events = []
+
+    class Transport:
+        def open_channel(self, kind, dest, source):
+            events.append(("channel", kind, dest))
+            return "channel"
+
+    class Jump:
+        local = False
+
+        def connect(self):
+            client = SimpleNamespace(get_transport=lambda: Transport(),
+                                     close=lambda: events.append("jump closed"))
+            return client
+
+    class FakeClient:
+        def set_missing_host_key_policy(self, policy):
+            pass
+
+        def connect(self, hostname, **kwargs):
+            events.append(("connect", hostname, kwargs["sock"]))
+
+        def close(self):
+            events.append("client closed")
+
+    monkeypatch.setattr(st.paramiko, "SSHClient", FakeClient)
+    monkeypatch.setattr(st.Path, "home", lambda: tmp_path)
+    host = st.Host({"host": "192.0.2.5", "password": "x", "allow_unknown_host_key": True}, tmp_path, "dut", jump=Jump())
+    client = host.connect()
+    assert events == [("channel", "direct-tcpip", ("192.0.2.5", 22)), ("connect", "192.0.2.5", "channel")]
+    client.close()
+    assert events[-2:] == ["client closed", "jump closed"]
+
+
+def test_local_jump_host_is_ignored(tmp_path):
+    from yocto_tests.station import Host
+    assert Host({"host": "x"}, tmp_path, "dut", jump=Host({"local": True}, tmp_path, "tc")).jump is None

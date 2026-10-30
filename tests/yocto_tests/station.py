@@ -10,6 +10,8 @@ import time
 import paramiko
 import yaml
 
+ERROR_TAIL_LINES = 50
+
 
 def quote(value):
     return shlex.quote(str(value))
@@ -46,13 +48,17 @@ def load_config(path):
 
 
 class Host:
-    def __init__(self, config, log_dir, name):
+    def __init__(self, config, log_dir, name, jump=None):
         self.config, self.name = config, name
+        # Reach this host through another one (the TC is inside the LAN that
+        # customer firewall profiles allow; the CI runner usually is not).
+        self.jump = jump if jump is not None and not jump.local else None
         self.local = config.get("local", False)
         self.log = Path(log_dir) / f"{name}.log"
 
     def connect(self):
         c = paramiko.SSHClient()
+        jump_client = None
         if self.config.get("allow_unknown_host_key", False):
             # Dedicated reflashed target: do not compare against stale saved keys.
             # This policy is opt-in and must not alter the TC trust policy.
@@ -67,10 +73,14 @@ class Host:
                 ssh_cfg.parse(f)
         entry = ssh_cfg.lookup(opts["host"])
         proxy = paramiko.ProxyCommand(entry["proxycommand"]) if "proxycommand" in entry else None
+        hostname, port = entry.get("hostname", opts["host"]), int(opts.get("port", entry.get("port", 22)))
         try:
+            if self.jump is not None:
+                jump_client = self.jump.connect()
+                proxy = jump_client.get_transport().open_channel("direct-tcpip", (hostname, port), ("127.0.0.1", 0))
             c.connect(
-                entry.get("hostname", opts["host"]),
-                port=int(opts.get("port", entry.get("port", 22))),
+                hostname,
+                port=port,
                 username=opts.get("username", entry.get("user", getpass.getuser())),
                 password=opts.get("password"),
                 key_filename=str(Path(opts["key_file"]).expanduser()) if opts.get("key_file") else entry.get("identityfile"),
@@ -81,12 +91,23 @@ class Host:
             c.close()
             if proxy:
                 proxy.close()
+            if jump_client is not None:
+                jump_client.close()
             raise
+        if jump_client is not None:
+            close = c.close  # closing the connection also closes the jump host connection
+
+            def close_both():
+                close()
+                jump_client.close()
+            c.close = close_both
         return c
 
     def run(self, command, timeout=60, check=True, input=None, secret=False):
         if self.local:
+            # Serial console noise in installer output is not valid UTF-8.
             p = subprocess.run(["bash", "-c", command], input=input, text=True,
+                               encoding="utf-8", errors="replace",
                                capture_output=True, timeout=timeout)
             status, out, err = p.returncode, p.stdout, p.stderr
         else:
@@ -114,7 +135,15 @@ class Host:
             with self.log.open("a") as f:
                 f.write(f"$ {command}\n{out}{err}\nexit={status}\n")
         if check and status:
-            detail = "sensitive command failed" if secret else f"{command}\n{out}{err}"
+            if secret:
+                detail = "sensitive command failed"
+            else:
+                # The full output is in the log; a long error floods the CI result channel.
+                lines = f"{out}{err}".splitlines()
+                tail = "\n".join(lines[-ERROR_TAIL_LINES:])
+                if len(lines) > ERROR_TAIL_LINES:
+                    tail = f"[{len(lines) - ERROR_TAIL_LINES} earlier lines in {self.log}]\n{tail}"
+                detail = f"{command}\n{tail}"
             raise RuntimeError(f"{self.name}: exit {status}: {detail}")
         return out
 
@@ -141,7 +170,7 @@ class Station:
         self.results = Path(results).resolve()
         self.results.mkdir(parents=True, exist_ok=True)
         self.tc = Host(cfg["tc"], self.results, "tc")
-        self.dut = Host(cfg["target"], self.results, "dut")
+        self.dut = Host(cfg["target"], self.results, "dut", jump=self.tc if cfg["target"].get("via_tc") else None)
 
     def security(self, command, timeout=600):
         return self.tc.run(

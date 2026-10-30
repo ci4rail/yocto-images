@@ -2,7 +2,7 @@ Pytest suite for ModuCop target integration tests and local harness unit tests.
 
 All tests shall use pytest.
 
-Hardware tests currently execute against open CPU01 and CPU01Plus standard-image targets. Closed devices require a suitable signed installer; the default development installer is rejected for them.
+Hardware tests execute against CPU01 and CPU01Plus targets. CI uses closed devices with staging keys and `ci4rail/tdx-installer:14e89c2c`; the development installer `tdx-installer-dev:v3` is rejected for closed devices.
 
 # Test environment
 
@@ -30,6 +30,8 @@ Hardware tests in `yocto_tests/test_functional.py` cover SSH password authentica
 
 Hardware security tests in `yocto_tests/test_security.py` cover TCP and UDP attack surface against the baseline, Nmap vulnerability-script output, privileged network services, nftables egress counters, and malformed TCP/UDP traffic followed by an availability check. The checks use `config/security_baseline.yaml`; the Nmap test checks vulnerability strings rather than CVSS scores.
 
+`yocto_tests/test_secure_boot.py` checks the closed staging state (dm-verity, read-only root). `yocto_tests/test_profiles.py` verifies an installed profile (`--profile`): services, firewall, HTTPS, SNMPv3, internet reachability. `unit/test_profiles.py` covers profile merging, payloads and versioning.
+
 `unit/test_harness.py` covers configuration and closed-device guards, shell quoting and sensitive output, station lock cleanup, network inventory parsing, nftables counters, package allowlisting, installer machine selection and timeout cleanup, power-cycle relay behavior, and reflashed SSH host-key policy. Unit tests do not require target hardware.
 
 # Test setup configuration
@@ -42,12 +44,17 @@ Run through `run.sh` or a Python virtual environment. Hardware runs need `--stat
 
 - Always run pytest in a Python virtual environment.
 - Cover CPU01 and CPU01Plus standard images only.
-- Devices are currently open. Start with ci4rail/tdx-installer-dev:v3;
-  replace it with a suitable signed installer before testing closed devices.
+- Open devices may use ci4rail/tdx-installer-dev:v3; closed devices need the
+  signed installer bundle.
 - On the development computer, use the current user's SSH configuration/key
   to access the TC. On the TC, run commands locally.
-- CI publishes a pytest package as a GitHub artifact. Hardware tests execute
-  on the TC after download, never on the CI runner.
+- CI publishes a pytest package as a GitHub artifact. The testfarm CI runner
+  downloads it and acts as development computer (`tc.local: false`), driving the
+  TC over SSH (`ci-run.sh`, `config/station-ci-*.yaml`).
+- CI tests only run against closed devices with the staging signing material.
+- Customer profiles (`config/profiles/*.yaml`, payloads in `../os-customizations/`)
+  are installed with `--profile` through the core API during the test; the
+  profile's `security_baseline` overrides the common baseline.
 - TC system utilities are managed separately through Ansible. The TC user
   has Docker access without sudo and noninteractive sudo access.
 - Keep the existing security baseline, performance thresholds and password

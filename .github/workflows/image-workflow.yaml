@@ -56,20 +56,41 @@ on:
         required: false
         type: string
         default: "lizard-rpi:1883"
+      test_station_topic:
+        description: "MQTT master topic of the test-scheduler (requests go to <topic>/request)"
+        required: false
+        type: string
+        default: "teststation"
+      test_station_request_timeout:
+        description: "Seconds to wait for a busy test station to become available"
+        required: false
+        type: string
+        default: "3600"
+      requester_version:
+        description: "Release tag of ci4rail/test-scheduler providing test-requester"
+        required: false
+        type: string
+        default: "v4.7.0"
       simulate_build:
         description: "Simulate build for testing purposes"
         required: false
         type: string
         default: "false"
+      staging_kasfile:
+        description: "kas file for the secure boot staging image tested on the testfarm"
+        required: false
+        type: string
+        default: "kasfile-sb-staging.yaml"
+      station_config:
+        description: "Testfarm station config inside the pytest package (e.g. config/station-ci-cpu01.yaml). Empty: no hardware tests"
+        required: false
+        type: string
+        default: ""
 
     secrets:
       docker_password:
         required: true
       mender_tenant_token:
-        required: true
-      minio_access_key:
-        required: true
-      minio_secret_key:
         required: true
       mender_user_email:
         required: true
@@ -79,6 +100,13 @@ on:
         required: true
       tailscale_auth_key:
         required: true
+      # Data migration package upload (private MinIO) and recovery root password.
+      recovery_minio_access_key:
+        required: false
+      recovery_minio_secret_key:
+        required: false
+      recovery_root_password_hash:
+        required: false
 
 permissions:
   contents: read
@@ -89,24 +117,9 @@ env:
   MENDER_CLI_IMAGE: ci4rail/mender-cli:master-2021-03-08
   MENDER_SERVER_URL: https://hosted.mender.io
   TESTSTATION_MQTT_URL: ${{ inputs.test_station }}
-  CACHE_LOCKFILE: /yocto-cache/lock
   IMAGE_DIR: ${{ inputs.machine }}-${{ inputs.image_type }}-image
 
 jobs:
-  package-pytest:
-    if: inputs.image_type == 'standard'
-    name: Package target integration tests
-    runs-on: ubuntu-22.04
-    steps:
-      - uses: actions/checkout@v6
-      - name: Package pytest suite for the test computer
-        run: tests/scripts/package.sh yocto-pytest-package.tar.gz
-      - uses: actions/upload-artifact@v7
-        with:
-          name: pytest-package-${{ inputs.machine }}-${{ github.run_id }}
-          path: yocto-pytest-package.tar.gz
-          if-no-files-found: error
-
   calculate-version:
     name: Calculate Version
     runs-on: ubuntu-22.04
@@ -138,9 +151,11 @@ jobs:
             name_suffix="-pr"
           fi
           echo "name_suffix=$name_suffix" >> $GITHUB_OUTPUT
-          echo "mender_tezi_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}${{ inputs.tar_ending }}.tar" >> $GITHUB_OUTPUT
-          echo "mender_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}.mender" >> $GITHUB_OUTPUT
-          echo "sbom_file_name=${{ inputs.image_start }}_${{ steps.getversion.outputs.version }}${name_suffix}.spdx.tar.zst" >> $GITHUB_OUTPUT
+          # File names of the non-secure image (kasfile-nonsecure.yaml: BASENAME = "Standard-Image-Non-Secure-Boot")
+          image_base="${{ inputs.image_start }}-Non-Secure-Boot"
+          echo "mender_tezi_file_name=${image_base}_${{ steps.getversion.outputs.version }}${name_suffix}${{ inputs.tar_ending }}.tar" >> $GITHUB_OUTPUT
+          echo "mender_file_name=${image_base}_${{ steps.getversion.outputs.version }}${name_suffix}.mender" >> $GITHUB_OUTPUT
+          echo "sbom_file_name=${image_base}_${{ steps.getversion.outputs.version }}${name_suffix}.spdx.tar.zst" >> $GITHUB_OUTPUT
           echo "image_folder=install/images/${{ inputs.machine_dir }}" >> $GITHUB_OUTPUT
 
   dumpversions:
@@ -158,206 +173,225 @@ jobs:
           echo "sbom file name is ${{ needs.calculate-version.outputs.sbom_file_name }}"
           echo "image folder is ${{ needs.calculate-version.outputs.image_folder }}"
 
-  # build-and-push-image:
-  #   needs: calculate-version
-  #   name: Build and Push Image
-  #   #
-  #   # yocto-runner runs a docker container within the docker:dind image
-  #   # /yocto-cache is bound to the hosts /yocto-cache directory.
-  #   # ~/downloads ~/sstate-cache and ~/install are temporary mounts local for that container. They
-  #   # survive steps, but are cleared with each new job
-  #   # For details see: https://github.com/ci4rail/public-infrastructure/blob/master/deployment-self-hosted-runners/templates/runnerdeployment.yaml
-  #   #
-  #   runs-on: [self-hosted, linux, x64, yocto-runner]
-  #   outputs:
-  #     bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
-  #   steps:
-  #     - uses: actions/checkout@v4
+  build-nonsecure-image:
+    needs: calculate-version
+    name: Build Non-Secure Image
+    #
+    # yocto-runner runs a docker container within the docker:dind image
+    # /yocto-cache is bound to the hosts /yocto-cache directory.
+    # ~/downloads ~/sstate-cache and ~/install are temporary mounts local for that container. They
+    # survive steps, but are cleared with each new job. The same applies to the other yocto-runner jobs.
+    # For details see: https://github.com/ci4rail/public-infrastructure/blob/master/deployment-self-hosted-runners/templates/runnerdeployment.yaml
+    #
+    runs-on: [self-hosted, linux, x64, yocto-runner]
+    steps:
+      - uses: actions/checkout@v6
 
-  #     - name: Log into Docker
-  #       env:
-  #         DOCKER_PASSWORD: ${{ secrets.docker_password }}
-  #       run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
+      - uses: ./.github/actions/yocto-build-setup
+        with:
+          docker_registry: ${{ inputs.docker_registry }}
+          docker_username: ${{ inputs.docker_username }}
+          docker_password: ${{ secrets.docker_password }}
+          restore_cache: ${{ github.event_name == 'pull_request' && inputs.simulate_build == 'false' }}
 
-  #     - name: Create Folders for Yocto Build
-  #       run: |
-  #         mkdir -p ~/install ~/sstate-cache ~/downloads
-  #         rm -rf ~/install/*
+      - name: Build Yocto
+        if: inputs.simulate_build == 'false'
+        env:
+          MENDER_TENANT_TOKEN: ${{ secrets.mender_tenant_token }}
+          IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
+          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.version }}
+          MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
+        run: scripts/ci-kas-build.sh kasfile-nonsecure.yaml
 
-  #     - name: Install Rsync for Yocto-Cache Handling
-  #       if: github.event_name == 'pull_request'
-  #       run: sudo apt-get update -y && sudo apt-get install -y rsync
+      - name: Simulate Build
+        if: inputs.simulate_build == 'true'
+        run: |
+          echo "Simulating build for testing purposes"
+          image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
+          mkdir -p ${image_folder}
+          echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
+          echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
 
-  #     - name: Get Cache for Yocto Builds
-  #       if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
-  #       # Use a lock for the cache to prevent reading the cache while another job is writing to it
-  #       run: |
-  #         while true; do
-  #           if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
+      - name: Store Cache for Yocto Builds
+        if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
+        run: scripts/ci-yocto-cache.sh store
 
-  #             trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: nonsecure-build-artifacts
+          path: |
+            ~/${{ needs.calculate-version.outputs.image_folder }}/${{ inputs.image_start }}-Non-Secure-Boot_*.mender
+            ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+            ~/${{ needs.calculate-version.outputs.image_folder }}/${{ inputs.image_start }}-Non-Secure-Boot_*.spdx.tar.zst
+          if-no-files-found: error
 
-  #             echo "cache lock obtained by $$. get cache"
-  #             rsync -rht --ignore-missing-args /yocto-cache/downloads/* ~/downloads/
-  #             rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* ~/sstate-cache/
+  build-staging-image:
+    # Secure boot image with dummy (staging) signatures: the only image the closed
+    # testfarm targets boot. Built on every run that has hardware tests.
+    if: inputs.station_config != '' && inputs.simulate_build == 'false'
+    needs: calculate-version
+    name: Build Secure Staging Image
+    runs-on: [self-hosted, linux, x64, yocto-runner]
+    steps:
+      - uses: actions/checkout@v6
 
-  #             # clean up after yourself, and release your trap
-  #             rm -f "${{ env.CACHE_LOCKFILE }}"
-  #             echo cache lock cleared
-  #             trap - INT TERM EXIT
-  #             break
-  #           else
-  #             echo "Cache is locked. Wait"
-  #             sleep 60
-  #           fi
-  #         done
+      - uses: ./.github/actions/yocto-build-setup
+        with:
+          docker_registry: ${{ inputs.docker_registry }}
+          docker_username: ${{ inputs.docker_username }}
+          docker_password: ${{ secrets.docker_password }}
+          restore_cache: ${{ github.event_name == 'pull_request' }}
 
-  #     - name: Build Yocto
-  #       if: inputs.simulate_build == 'false'
-  #       env:
-  #         MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}
-  #       run: |
-  #         docker run \
-  #               -v ~/install:/install \
-  #               -v ~/sstate-cache:/sstate-cache \
-  #               -v ~/downloads:/downloads \
-  #               -v ${GITHUB_WORKSPACE}/${IMAGE_DIR}:/work \
-  #               -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
-  #               -u $(id -u):$(id -g) \
-  #               -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
-  #               -e MENDER_TENANT_TOKEN=${{ secrets.mender_tenant_token }} \
-  #               -e IMAGE_NAME_SUFFIX=${{ needs.calculate-version.outputs.name_suffix }} \
-  #               -e IMAGE_GIT_VERSION=${{ needs.calculate-version.outputs.version }} \
-  #               -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
-  #               -w /work \
-  #               ${BUILDER_IMAGE} \
-  #               build kasfile-nonsecure.yaml
+      - name: Build Secure Staging Yocto
+        env:
+          MENDER_TENANT_TOKEN: ${{ secrets.mender_tenant_token }}
+          IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
+          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.version }}
+          MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-staging
+        run: scripts/ci-kas-build.sh ${{ inputs.staging_kasfile }}
 
-  #     - name: Simulate Build
-  #       if: inputs.simulate_build == 'true'
-  #       run: |
-  #         echo "Simulating build for testing purposes"
-  #         image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
-  #         mkdir -p ${image_folder}
-  #         echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
-  #         echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+      - name: Generate Close Device Commands
+        run: |
+          image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
+          name=${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-staging
+          scripts/gen-close-device-cmds.sh ${image_folder}/imx-config.fuse "${name} (staging keys: test devices only)" \
+            > ${image_folder}/${name}-fuse-cmds.txt
+          cat ${image_folder}/${name}-fuse-cmds.txt
 
-  #     - name: Store Cache for Yocto Builds
-  #       if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
-  #       # Use a lock for the cache
-  #       run: |
-  #         while true; do
-  #           if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
+      - name: Store Cache for Yocto Builds
+        if: github.event_name == 'pull_request'
+        run: scripts/ci-yocto-cache.sh store
 
-  #             trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
+      - name: Upload staging build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-build-artifacts-${{ inputs.machine }}-${{ github.run_id }}
+          path: |
+            ~/${{ needs.calculate-version.outputs.image_folder }}/*.mender
+            ~/${{ needs.calculate-version.outputs.image_folder }}/*.tar
+            ~/${{ needs.calculate-version.outputs.image_folder }}/*-secure-staging-fuse-cmds.txt
+            !~/${{ needs.calculate-version.outputs.image_folder }}/Standard-Image-*
+          if-no-files-found: error
 
-  #             echo "cache lock obtained. write back cache"
-  #             rsync -rht ~/downloads/* /yocto-cache/downloads/
-  #             rsync -rht ~/sstate-cache/* /yocto-cache/sstate-cache/
+  test-staging:
+    # Runs on a GitHub-hosted runner. The test bundle (pytest suite + staging image) is uploaded
+    # as an artifact; the test-scheduler on the test computer (TC) downloads and runs it
+    # (tests/scripts/test-script.sh). The runner reaches the test station's MQTT broker via tailscale.
+    # Fork PRs never get access to the hardware.
+    if: >-
+      inputs.station_config != '' && inputs.simulate_build == 'false' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    needs: [build-staging-image]
+    name: Test staging image on testfarm (${{ inputs.machine }})
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v6
 
-  #             # clean up after yourself, and release your trap
-  #             rm -f "${{ env.CACHE_LOCKFILE }}"
-  #             trap - INT TERM EXIT
-  #             break
-  #           else
-  #             echo "Cache is locked. Wait"
-  #             sleep 60
-  #           fi
-  #         done
+      - uses: actions/download-artifact@v8
+        with:
+          name: staging-build-artifacts-${{ inputs.machine }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/staging-image
 
-  #     - name: Copy TAR artifacts for mender and minio deployment
-  #       if: inputs.output_type == 'tar' && inputs.simulate_build == 'false'
-  #       run: |
-  #         image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
-  #         TAR_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
-  #         MENDER_IMAGE_PATH=${image_folder}/${{ needs.calculate-version.outputs.mender_file_name }}
+      - name: Assemble test bundle
+        run: |
+          # The build emits the versioned TEZI tar plus an unversioned "Standard-Image-Staging-*" duplicate; use the versioned one.
+          images=("${RUNNER_TEMP}"/staging-image/${{ inputs.image_start }}*tezi*.tar)
+          test "${#images[@]}" -eq 1 || { echo "Expected exactly one TEZI tar, found: ${images[*]}"; exit 1; }
+          bundle="${RUNNER_TEMP}/test-bundle"
+          mkdir -p "${bundle}"
+          tests/scripts/package.sh "${bundle}/yocto-pytest-package.tar.gz"
+          # The rootfs inside is uncompressed (~1.4 GB): zstd shrinks the bundle ~5x, speeding up the TC download.
+          zstd -T0 -10 -q -o "${bundle}/image.tezi.tar.zst" "${images[0]}"
+          cp tests/scripts/test-script.sh "${bundle}/test-script.sh"
+          chmod +x "${bundle}/test-script.sh"
+          {
+            echo "STATION_CONFIG=${{ inputs.station_config }}"
+            echo "IMAGE_FILE=image.tezi.tar.zst"
+          } > "${bundle}/bundle.env"
 
-  #         mkdir ${GITHUB_WORKSPACE}/minio
-  #         ls -t ${TAR_IMAGE_PATH}
-  #         cp ${TAR_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
+      - name: Upload test bundle
+        id: bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-bundle-${{ inputs.machine }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/test-bundle
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
 
-  #         if [ "${{ inputs.have_mender}}" = "true" ]; then
-  #           ls -t ${MENDER_IMAGE_PATH}
-  #           cp ${MENDER_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio
-  #         fi
+      - name: Fetch test requester
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          repo: "ci4rail/test-scheduler"
+          version: "tags/${{ inputs.requester_version }}"
+          file: "test-requester-${{ inputs.requester_version }}-linux-amd64.tar.gz"
+          token: ${{ secrets.private_token }}
 
-  #     # Currently not used
-  #     # - name: Copy SDIMG artifacts for mender and minio deployment
-  #     #   if: inputs.output_type == 'sdimg'
-  #     #   run: |
-  #     #     SDIMG_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.sdimg
-  #     #     MENDER_IMAGE_PATH=~/install/images/${{ inputs.machine_dir }}/${{ inputs.image_start }}*.mender
-  #     #     VERSION=${{ needs.calculate-version.outputs.version }}
-  #     #     SUFFIX=${{ needs.calculate-version.outputs.name_suffix }}
-  #     #     mkdir ${GITHUB_WORKSPACE}/minio
-  #     #     ls -t ${SDIMG_IMAGE_PATH}
-  #     #     cp ${SDIMG_IMAGE_PATH} ${GITHUB_WORKSPACE}/minio/${{ inputs.image_start }}_${VERSION}${SUFFIX}.sdimg
-  #     #     if [ "${{ inputs.have_mender}}" = "true" ]; then
-  #     #       ls -t ${MENDER_IMAGE_PATH}
-  #     #     fi
+      - name: Connect to test station via tailscale
+        uses: tailscale/github-action@v4
+        with:
+          authkey: ${{ secrets.tailscale_auth_key }}
 
-  #     - name: Push Images to Minio
-  #       if: inputs.simulate_build == 'false'
-  #       uses: hkdobrev/minio-deploy-action@v1.1
-  #       with:
-  #         endpoint: https://minio.ci4rail.com
-  #         access_key: ${{ secrets.minio_access_key }}
-  #         secret_key: ${{ secrets.minio_secret_key }}
-  #         bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
-  #         source_dir: minio
-  #         target_dir: "/"
+      - name: Request test on test station
+        env:
+          ARTIFACT_ID: ${{ steps.bundle.outputs.artifact-id }}
+          ARTIFACT_NAME: test-bundle-${{ inputs.machine }}-${{ github.run_id }}
+        run: |
+          tar xzf "test-requester-${{ inputs.requester_version }}-linux-amd64.tar.gz" test-requester
+          chmod +x test-requester
+          jq -n \
+            --arg user "github-${{ github.repository }}-${{ github.run_id }}" \
+            --arg owner "${{ github.repository_owner }}" \
+            --arg repo "${{ github.event.repository.name }}" \
+            --argjson id "${ARTIFACT_ID}" \
+            --arg name "${ARTIFACT_NAME}" \
+            --arg rev "${{ github.sha }}" \
+            '{type: "Run Test", user: $user, github_artifact: {owner: $owner, repo: $repo, artifact_id: $id, name: $name, revision: $rev}}' \
+            > request.json
+          cat request.json
 
-  #     - name: Upload build artifacts
-  #       uses: actions/upload-artifact@v7
-  #       with:
-  #         name: build-artifacts
-  #         path: |
-  #           ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_file_name }}
-  #           ~/${{ needs.calculate-version.outputs.image_folder }}/${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+          set +e
+          set -o pipefail
+          ./test-requester -busytimeout "${{ inputs.test_station_request_timeout }}" \
+            "${TESTSTATION_MQTT_URL}" "${{ inputs.test_station_topic }}" request.json | tee output.txt
+          rc=$?
+          set -e
+
+          case $rc in
+            0) echo "Test PASS" ;;
+            1) echo "ERROR Test Failed" ;;
+            2) echo "ERROR Test Station Busy" ;;
+            3) echo "ERROR Request Invalid" ;;
+            *) echo "ERROR requester exit code $rc" ;;
+          esac
+          {
+            echo "### Testfarm result (${{ inputs.machine }}): exit code $rc"
+            echo '```'
+            cat output.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit $rc
 
   build-secure-production-image:
-    needs: calculate-version
+    # TODO: temporarily not gated on test-staging (slow); restore it in needs and the condition below.
+    needs: [calculate-version, build-staging-image]
+    if: >-
+      ${{ !cancelled() && needs.calculate-version.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.build-staging-image.result) }}
     name: Build Secure Production Image
     runs-on: [self-hosted, linux, x64, yocto-runner]
     environment: production
     steps:
       - uses: actions/checkout@v6
 
-      - name: Log into Docker
-        env:
-          DOCKER_PASSWORD: ${{ secrets.docker_password }}
-        run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
-
-      - name: Create Folders for Yocto Build
-        run: |
-          mkdir -p ~/install ~/sstate-cache ~/downloads
-          rm -rf ~/install/*
-
-      - name: Install Rsync for Yocto-Cache Handling
-        if: github.event_name == 'pull_request'
-        run: sudo apt-get update -y && sudo apt-get install -y rsync
-
-      - name: Get Cache for Yocto Builds
-        if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
-        run: |
-          while true; do
-            if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
-
-              trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
-
-              echo "cache lock obtained by $$. get cache"
-              rsync -rht --ignore-missing-args /yocto-cache/downloads/* ~/downloads/
-              rsync -rht --ignore-missing-args /yocto-cache/sstate-cache/* ~/sstate-cache/
-
-              rm -f "${{ env.CACHE_LOCKFILE }}"
-              echo cache lock cleared
-              trap - INT TERM EXIT
-              break
-            else
-              echo "Cache is locked. Wait"
-              sleep 60
-            fi
-          done
+      - uses: ./.github/actions/yocto-build-setup
+        with:
+          docker_registry: ${{ inputs.docker_registry }}
+          docker_username: ${{ inputs.docker_username }}
+          docker_password: ${{ secrets.docker_password }}
+          restore_cache: ${{ github.event_name == 'pull_request' && inputs.simulate_build == 'false' }}
 
       - name: Create Azure Federated Token
         if: inputs.simulate_build == 'false'
@@ -428,6 +462,9 @@ jobs:
       - name: Build Secure Production Yocto
         if: inputs.simulate_build == 'false'
         env:
+          MENDER_TENANT_TOKEN: ${{ secrets.mender_tenant_token }}
+          IMAGE_NAME_SUFFIX: ${{ needs.calculate-version.outputs.name_suffix }}
+          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.version }}
           MENDER_ARTIFACT_NAME: ${{ inputs.machine }}-${{ inputs.image_type }}-${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-production
           AZURE_APP_ID: ${{ vars.AZURE_CLIENT_ID }}
           AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
@@ -440,19 +477,8 @@ jobs:
           test -n "${AZURE_TENANT_ID}" || { echo "Missing production environment variable AZURE_TENANT_ID"; exit 1; }
           test -n "${AZURE_SUBSCRIPTION_ID}" || { echo "Missing production environment variable AZURE_SUBSCRIPTION_ID"; exit 1; }
 
-          docker run \
-                -v ~/install:/install \
-                -v ~/sstate-cache:/sstate-cache \
-                -v ~/downloads:/downloads \
+          scripts/ci-kas-build.sh kasfile-sb-production.yaml \
                 -v ${RUNNER_TEMP}:/runner-temp \
-                -v ${GITHUB_WORKSPACE}/${IMAGE_DIR}:/work \
-                -v ${GITHUB_WORKSPACE}/kas-includes:/kas-includes \
-                -u $(id -u):$(id -g) \
-                -e MENDER_SERVER_URL=${MENDER_SERVER_URL} \
-                -e MENDER_TENANT_TOKEN=${{ secrets.mender_tenant_token }} \
-                -e IMAGE_NAME_SUFFIX=${{ needs.calculate-version.outputs.name_suffix }} \
-                -e IMAGE_GIT_VERSION=${{ needs.calculate-version.outputs.version }} \
-                -e MENDER_ARTIFACT_NAME=${MENDER_ARTIFACT_NAME} \
                 -e AZURE_APP_ID \
                 -e AZURE_CLIENT_ID \
                 -e AZURE_TENANT_ID \
@@ -460,11 +486,7 @@ jobs:
                 -e AZURE_FEDERATED_TOKEN_FILE \
                 -e AZURE_AUTHORITY_HOST \
                 -e ACTIONS_ID_TOKEN_REQUEST_URL \
-                -e ACTIONS_ID_TOKEN_REQUEST_TOKEN \
-                -e GITCONFIG_FILE=/kas-includes/gitconfig \
-                -w /work \
-                ${BUILDER_IMAGE} \
-                build kasfile-sb-production.yaml
+                -e ACTIONS_ID_TOKEN_REQUEST_TOKEN
 
       - name: Simulate Secure Production Build
         if: inputs.simulate_build == 'true'
@@ -474,28 +496,20 @@ jobs:
           mkdir -p ${image_folder}
           echo "something" > ${image_folder}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-production.mender
           echo "something" > ${image_folder}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-production${{ inputs.tar_ending }}.tar
-          echo "something" > ${image_folder}/${{ needs.calculate-version.outputs.sbom_file_name }}
+          echo "something" > ${image_folder}/${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-production.spdx.tar.zst
+
+      - name: Generate Close Device Commands
+        if: inputs.simulate_build == 'false'
+        run: |
+          image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
+          name=${{ inputs.image_start }}_${{ needs.calculate-version.outputs.version }}${{ needs.calculate-version.outputs.name_suffix }}-secure-production
+          scripts/gen-close-device-cmds.sh ${image_folder}/imx-config.fuse "${name} (production keys)" \
+            > ${image_folder}/${name}-fuse-cmds.txt
+          cat ${image_folder}/${name}-fuse-cmds.txt
 
       - name: Store Cache for Yocto Builds
         if: github.event_name == 'pull_request' && inputs.simulate_build == 'false'
-        run: |
-          while true; do
-            if ( set -o noclobber; echo "$$" > "${{ env.CACHE_LOCKFILE }}") 2> /dev/null; then
-
-              trap 'rm -f "${{ env.CACHE_LOCKFILE }}"; exit $?' INT TERM EXIT
-
-              echo "cache lock obtained. write back cache"
-              rsync -rht ~/downloads/* /yocto-cache/downloads/
-              rsync -rht ~/sstate-cache/* /yocto-cache/sstate-cache/
-
-              rm -f "${{ env.CACHE_LOCKFILE }}"
-              trap - INT TERM EXIT
-              break
-            else
-              echo "Cache is locked. Wait"
-              sleep 60
-            fi
-          done
+        run: scripts/ci-yocto-cache.sh store
 
       - name: Upload secure production build artifacts
         uses: actions/upload-artifact@v7
@@ -505,10 +519,67 @@ jobs:
             ~/${{ needs.calculate-version.outputs.image_folder }}/*.mender
             ~/${{ needs.calculate-version.outputs.image_folder }}/*.tar
             ~/${{ needs.calculate-version.outputs.image_folder }}/*.spdx.tar.zst
+            ~/${{ needs.calculate-version.outputs.image_folder }}/*-secure-production-fuse-cmds.txt
+
+  # Data migration packages (recovery booted from the legacy /data partition, payload embedded).
+  # Non-secure and production packages are also attached to GitHub releases; staging (dummy
+  # FIT key) only goes to MinIO.
+  data-recovery-nonsecure:
+    needs: [calculate-version, build-nonsecure-image]
+    if: ${{ vars.RECOVERY_MINIO_BUCKET != '' }}
+    name: Data migration package (non-secure)
+    uses: ./.github/workflows/data-recovery-workflow.yaml
+    with:
+      platform: ${{ inputs.machine }}
+      signing_mode: nonsecure
+      version: ${{ needs.calculate-version.outputs.version }}
+      artifact_name: nonsecure-build-artifacts
+      image_glob: ${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+      minio_bucket: ${{ vars.RECOVERY_MINIO_BUCKET }}
+      release_bundle: ${{ github.event_name == 'release' && format('{0}-Non-Secure-Boot_{1}-data-migration.tar', inputs.image_start, needs.calculate-version.outputs.version) || '' }}
+    secrets:
+      RECOVERY_MINIO_ACCESS_KEY: ${{ secrets.recovery_minio_access_key }}
+      RECOVERY_MINIO_SECRET_KEY: ${{ secrets.recovery_minio_secret_key }}
+      RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.recovery_root_password_hash }}
+
+  data-recovery-staging:
+    needs: [calculate-version, build-staging-image]
+    if: ${{ vars.RECOVERY_MINIO_BUCKET != '' }}
+    name: Data migration package (staging)
+    uses: ./.github/workflows/data-recovery-workflow.yaml
+    with:
+      platform: ${{ inputs.machine }}
+      signing_mode: staging
+      version: ${{ needs.calculate-version.outputs.version }}
+      artifact_name: staging-build-artifacts-${{ inputs.machine }}-${{ github.run_id }}
+      image_glob: ${{ inputs.image_start }}*tezi*.tar
+      minio_bucket: ${{ vars.RECOVERY_MINIO_BUCKET }}
+    secrets:
+      RECOVERY_MINIO_ACCESS_KEY: ${{ secrets.recovery_minio_access_key }}
+      RECOVERY_MINIO_SECRET_KEY: ${{ secrets.recovery_minio_secret_key }}
+      RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.recovery_root_password_hash }}
+
+  data-recovery-production:
+    needs: [calculate-version, build-secure-production-image]
+    if: ${{ vars.RECOVERY_MINIO_BUCKET != '' }}
+    name: Data migration package (production)
+    uses: ./.github/workflows/data-recovery-workflow.yaml
+    with:
+      platform: ${{ inputs.machine }}
+      signing_mode: production
+      version: ${{ needs.calculate-version.outputs.version }}
+      artifact_name: secure-production-build-artifacts
+      image_glob: ${{ inputs.image_start }}*tezi*.tar
+      minio_bucket: ${{ vars.RECOVERY_MINIO_BUCKET }}
+      release_bundle: ${{ github.event_name == 'release' && format('{0}_{1}-secure-production-data-migration.tar', inputs.image_start, needs.calculate-version.outputs.version) || '' }}
+    secrets:
+      RECOVERY_MINIO_ACCESS_KEY: ${{ secrets.recovery_minio_access_key }}
+      RECOVERY_MINIO_SECRET_KEY: ${{ secrets.recovery_minio_secret_key }}
+      RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.recovery_root_password_hash }}
 
   # test-image:
   #   if: inputs.test_name != ''
-  #   needs: [calculate-version, build-and-push-image]
+  #   needs: [calculate-version, build-nonsecure-image]
   #   name: Test Yocto Image
   #   runs-on: ubuntu-22.04
   #   steps:
@@ -533,21 +604,44 @@ jobs:
   #         minio_access_key: ${{ secrets.minio_access_key }}
   #         minio_secret_key: ${{ secrets.minio_secret_key }}
 
-  # release-image:
-  #   if: github.event_name == 'release'
-  #   needs: [test-image]
-  #   name: Release Image
-  #   runs-on: ubuntu-22.04
-  #   steps:
-  #     - name: Download build artifact
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: build-artifacts
-  #         path: ./artifact
-  #     - name: Create Release
-  #       id: create_release
-  #       uses: softprops/action-gh-release@v2
-  #       with:
-  #         files: ./artifact/*
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.private_token }}
+  release-image:
+    # Staging images (dummy keys) are never released.
+    if: >-
+      ${{ !cancelled() && github.event_name == 'release' &&
+      needs.build-nonsecure-image.result == 'success' &&
+      needs.build-secure-production-image.result == 'success' &&
+      needs.data-recovery-nonsecure.result == 'success' &&
+      needs.data-recovery-production.result == 'success' }}
+    needs: [build-nonsecure-image, build-secure-production-image, data-recovery-nonsecure, data-recovery-production]
+    name: Release Image
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "{nonsecure-build-artifacts,secure-production-build-artifacts,data-migration-*}"
+          path: ${{ runner.temp }}/release
+          merge-multiple: true
+
+      - name: Select release files
+        id: files
+        run: |
+          shopt -s nullglob
+          cd "$RUNNER_TEMP/release"
+          # Only versioned files: the production artifact also holds unversioned symlink copies.
+          files=(${{ inputs.image_start }}*.mender ${{ inputs.image_start }}*.tar \
+                 ${{ inputs.image_start }}*.spdx.tar.zst ${{ inputs.image_start }}*-fuse-cmds.txt)
+          if [ "${#files[@]}" -eq 0 ]; then echo "No release files found"; exit 1; fi
+          printf '%s\n' "${files[@]}"
+          {
+            echo "list<<EOF"
+            printf '%s\n' "${files[@]/#/$RUNNER_TEMP/release/}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.files.outputs.list }}
+          # The input defaults to github.token (contents: read) and overrides env.
+          token: ${{ secrets.private_token }}

@@ -1,0 +1,188 @@
+name: Build data migration package
+
+# Embeds an image built by image-workflow.yaml into the recovery that is booted from the
+# legacy /data partition (see migration/README.md). The result is uploaded to the private MinIO
+# bucket. With release_bundle set, it is also packed into that tar and uploaded as the Actions
+# artifact data-migration-<signing_mode>, which the caller attaches to the GitHub release.
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        description: cpu01 or cpu01plus
+        required: true
+        type: string
+      signing_mode:
+        description: nonsecure, staging or production
+        required: true
+        type: string
+      version:
+        description: Image version (from image-workflow calculate-version)
+        required: true
+        type: string
+      artifact_name:
+        description: Actions artifact holding the image built by the calling workflow
+        required: true
+        type: string
+      image_glob:
+        description: Glob of the .mender_tezi.tar inside the artifact
+        required: true
+        type: string
+      minio_bucket:
+        description: Existing private bucket on minio.ci4rail.com
+        required: true
+        type: string
+      minio_prefix:
+        description: Single top-level directory in the bucket
+        default: data-recovery
+        type: string
+      release_bundle:
+        description: File name of the release tar; empty for no release bundle
+        default: ""
+        type: string
+    secrets:
+      RECOVERY_MINIO_ACCESS_KEY:
+        required: false
+      RECOVERY_MINIO_SECRET_KEY:
+        required: false
+      RECOVERY_ROOT_PASSWORD_HASH:
+        required: false
+    outputs:
+      object_uri:
+        description: Private S3 URI of recovery.itb
+        value: ${{ jobs.data-recovery.outputs.object_uri }}
+      sha256:
+        description: SHA-256 of recovery.itb
+        value: ${{ jobs.data-recovery.outputs.sha256 }}
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  data-recovery:
+    # Never expose signing/upload credentials to pull-request builds.
+    if: github.event_name != 'pull_request' && github.event_name != 'pull_request_target'
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.signing_mode == 'production' && 'production' || 'staging' }}
+    timeout-minutes: 90
+    outputs:
+      object_uri: ${{ steps.upload.outputs.object_uri }}
+      sha256: ${{ steps.upload.outputs.sha256 }}
+    env:
+      PLATFORM: ${{ inputs.platform }}
+      SIGNING_MODE: ${{ inputs.signing_mode }}
+      MINIO_BUCKET: ${{ inputs.minio_bucket }}
+      MINIO_PREFIX: ${{ inputs.minio_prefix }}
+      RECOVERY_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Validate configuration
+        env:
+          MINIO_ACCESS_KEY: ${{ secrets.RECOVERY_MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.RECOVERY_MINIO_SECRET_KEY }}
+          RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.RECOVERY_ROOT_PASSWORD_HASH }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+        run: |
+          export RECOVERY_WORK="$RUNNER_TEMP/recovery"
+          echo "RECOVERY_WORK=$RECOVERY_WORK" >> "$GITHUB_ENV"
+          python3 migration/ci/recovery.py validate --platform "$PLATFORM" --mode "$SIGNING_MODE" --work "$RECOVERY_WORK"
+          python3 - <<'PY'
+          import os, sys
+          sys.path.insert(0, 'migration/ci')
+          from recovery import object_prefix
+          object_prefix(os.environ['MINIO_PREFIX'], os.environ['PLATFORM'], os.environ['SIGNING_MODE'],
+                        os.environ['RECOVERY_VERSION'],
+                        os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT'])
+          PY
+          mkdir -m 700 "$RECOVERY_WORK"
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.artifact_name }}
+          path: ${{ runner.temp }}/image
+
+      - name: Select payload
+        run: |
+          shopt -s nullglob
+          images=("$RUNNER_TEMP"/image/${{ inputs.image_glob }})
+          if [ "${#images[@]}" -ne 1 ]; then
+            echo "Expected exactly one image matching '${{ inputs.image_glob }}', found ${#images[@]}"; exit 1
+          fi
+          mkdir -m 700 "$RECOVERY_WORK/payload"
+          mv "${images[0]}" "$RECOVERY_WORK/payload/image.mender_tezi.tar"
+          rm -rf "$RUNNER_TEMP/image"
+
+      - name: Build host tooling
+        run: |
+          target=tools
+          if [ "$SIGNING_MODE" = production ]; then target=production; fi
+          docker build --target "$target" -t recovery-tools -f migration/ci/Dockerfile migration/ci
+
+      - name: Download TEZI and compile installer DTB
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e GIT_CONFIG_GLOBAL=/dev/null -e GIT_CONFIG_SYSTEM=/dev/null -v "$GITHUB_WORKSPACE:/work:ro" -v "$RECOVERY_WORK:/build" \
+            recovery-tools python3 migration/ci/recovery.py prepare \
+            --platform "$PLATFORM" --mode "$SIGNING_MODE" --work /build
+
+      - name: Build and verify data recovery
+        env:
+          RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.RECOVERY_ROOT_PASSWORD_HASH }}
+          AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e GIT_CONFIG_GLOBAL=/dev/null -e GIT_CONFIG_SYSTEM=/dev/null -v "$GITHUB_WORKSPACE:/work:ro" -v "$RECOVERY_WORK:/build" \
+            -e RECOVERY_ROOT_PASSWORD_HASH \
+            -e AZURE_CLIENT_ID -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \
+            -e ACTIONS_ID_TOKEN_REQUEST_URL -e ACTIONS_ID_TOKEN_REQUEST_TOKEN \
+            -e GITHUB_SHA -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT -e RECOVERY_VERSION \
+            recovery-tools python3 migration/ci/recovery.py package \
+            --platform "$PLATFORM" --mode "$SIGNING_MODE" --work /build \
+            --payload /build/payload/image.mender_tezi.tar
+
+      - name: Upload to private MinIO bucket
+        id: upload
+        env:
+          MINIO_ACCESS_KEY: ${{ secrets.RECOVERY_MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.RECOVERY_MINIO_SECRET_KEY }}
+        run: |
+          docker run --rm --user "$(id -u):$(id -g)" \
+            -e GIT_CONFIG_GLOBAL=/dev/null -e GIT_CONFIG_SYSTEM=/dev/null -v "$GITHUB_WORKSPACE:/work:ro" -v "$RECOVERY_WORK:/build" \
+            -e MINIO_ACCESS_KEY -e MINIO_SECRET_KEY -e MINIO_BUCKET -e MINIO_PREFIX \
+            -e RECOVERY_VERSION -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT \
+            -e GITHUB_OUTPUT=/build/upload.outputs \
+            recovery-tools python3 migration/ci/recovery.py upload \
+            --platform "$PLATFORM" --mode "$SIGNING_MODE" --work /build \
+            --payload /build/payload/image.mender_tezi.tar
+          cat "$RECOVERY_WORK/upload.outputs" >> "$GITHUB_OUTPUT"
+
+      - name: Pack release bundle
+        if: inputs.release_bundle != ''
+        env:
+          BUNDLE: ${{ inputs.release_bundle }}
+        run: |
+          mkdir "$RUNNER_TEMP/bundle"
+          # data.scr loads /migration/recovery.itb: keep the published file names.
+          tar -C "$RECOVERY_WORK/output" -cf "$RUNNER_TEMP/bundle/$BUNDLE" \
+            recovery.itb data.scr build.json SHA256SUMS
+
+      - name: Upload release bundle
+        if: inputs.release_bundle != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: data-migration-${{ inputs.signing_mode }}
+          path: ${{ runner.temp }}/bundle/${{ inputs.release_bundle }}
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Remove recovery, payload and credential files
+        if: always()
+        run: rm -rf -- "$RECOVERY_WORK"

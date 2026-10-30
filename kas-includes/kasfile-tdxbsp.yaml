@@ -4,8 +4,8 @@ repos:
   # ci4rail
   src/meta-ci4rail-bsp:
     url: https://github.com/ci4rail/meta-ci4rail-bsp.git
-    #commit: e10ba136b43d0b00b374f4e1a67281f5eed8473c
-    branch: scarthgap-secure-boot
+    commit: d6272fb9a788f74fe6bd08bed5cd482f27b80238
+    branch: scarthgap-secure-boot-ota-azure-sign
 
   # from tdx: https://git.toradex.com/cgit/toradex-manifest.git/tree/bsp/pinned-nxp.xml?h=7.6.0
   src/meta-freescale-3rdparty.git:

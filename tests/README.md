@@ -55,6 +55,73 @@ throughput in bytes/s, and LTE packet loss and mean RTT when measured.
 Sensitive command output is excluded from command logs. Do not enable pytest
 local-variable dumps on runs containing credentials.
 
+## CI pipeline and customer profiles
+
+`.github/workflows/image-workflow.yaml` builds the secure-boot **staging** image
+on every image build, then tests it on the platform's test station
+(`config/station-ci-<platform>.yaml`; CPU01 target 192.168.24.11 via TC 192.168.24.10,
+CPU01Plus target 192.168.24.13 via TC 192.168.24.12). The production build only starts
+after the tests passed.
+
+The tests run **on the TC**, not on the CI runner (a GitHub-hosted runner):
+
+1. The `test-staging` job assembles a test bundle (`tests/scripts/test-script.sh`,
+   `bundle.env`, the pytest package and the staging TEZI image) and uploads it as the
+   artifact `test-bundle-<machine>-<run id>`.
+2. The runner joins the tailscale VPN and sends a `Run Test` request with a `github_artifact`
+   to the [test-scheduler](https://github.com/ci4rail/test-scheduler) on the TC via the MQTT
+   broker (`test_station` input, topic `test_station_topic`), using `test-requester`. It waits
+   up to `test_station_request_timeout` s for a busy station.
+3. The scheduler downloads the artifact (GitHub App), runs `test-script.sh`, which unpacks the
+   suite and calls `ci-run.sh`. The requester's exit code (0 pass, 1 fail, 2 busy, 3 invalid)
+   decides the job result. JUnit XML and logs end up in the scheduler's results folder on the TC.
+
+TC prerequisites: test-scheduler configured with `github-artifacts` (GitHub App with
+**Actions: read** on this repository), sudo/loop/mount tools, `mender-artifact`, `openssl`,
+`curl`, registry access (the SNMP client image is built on first use). Credentials are no
+longer GitHub secrets: put `TARGET_PASSWORD`, `DOCKER_PASSWORD` and, for CPU01Plus,
+`RELAY_UID` into `/etc/yocto-tests.env` (override with `YOCTO_TESTS_ENV_FILE`).
+The CI station configs use `tc.local: true`; the target is reached directly from the TC.
+Workflow secrets used: `private_token` (fetch test-requester), `tailscale_auth_key`.
+
+`ci-run.sh` flashes once, then runs these steps on the same target:
+
+| Step | Target state | Tests |
+|---|---|---|
+| 0-flash-secureboot | closed staging image | `-m secureboot` |
+| 1-default | no customization | all non-security hardware tests |
+| 2-internet-connected | customization installed | `-m "profile or security"` |
+| 3-standalone | customization replaced | `-m "profile or security"` |
+| 4-default-profile | customization removed | `-m profile` (no leftovers) |
+
+Profiles pair an os-customization payload (`../os-customizations/<name>/etc`) with the
+expected behaviour (`config/profiles/<name>.yaml`). `--profile <name>` builds the
+payload into an `os-customization` Mender artifact during the run, signs it with
+`customer-artifact.key.pem` and installs it through the core API
+(`/software/core-os-customization`, which reboots the target). Installing is skipped
+when the payload version (content hash) is already installed, so reruns are cheap.
+`standalone` additionally deploys a stand-in customer container (nginx, TLS, host
+network) as an application update before the firewall closes egress. The profile's
+`security_baseline` overrides `config/security_baseline.yaml` (dicts merge, lists
+and `null` replace); without `--profile` the common baseline applies unchanged.
+
+| Profile | Ingress | Egress |
+|---|---|---|
+| internet-connected | ssh from `tailscale0` and 192.168.24.0/24, ICMP | open (mender, tailscale, internet) |
+| standalone | ssh, https 443, snmpv3 (udp 161), ICMP | DHCP client, NTP client, replies |
+
+Both disable avahi/mDNS; standalone also disables tailscaled and snmptrapd. The SNMPv3
+user and passphrases in `os-customizations/standalone/etc/snmp/snmpd.conf` are
+examples. Adapt the LAN prefix in the nftables files per site.
+
+Run one step locally:
+
+```sh
+.venv/bin/python -m pytest --station config/station-ci-cpu01.yaml --skip-flash \
+    --profile standalone -m "profile or security"
+SKIP_FLASH=1 ./ci-run.sh --station config/station-ci-cpu01.yaml --image x.tar  # whole sequence
+```
+
 ## Run from the development computer
 
 Set `tc.local: false` and configure `tc.host`. By default SSH uses the current
@@ -120,7 +187,8 @@ sharing a physical station must use the same work directory.
 The reusable image workflow uploads `pytest-package-<machine>-<run id>` for
 standard images. It contains source, requirements, scripts and example
 configuration, never a virtual environment, credentials, or test results.
-The TEZI image remains a separate build artifact. CI does not execute tests.
+The TEZI image remains a separate build artifact. The CI test bundle (see above) wraps this
+package together with the image.
 
 Download on the TC with an authenticated GitHub CLI, for example:
 

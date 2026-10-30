@@ -1,0 +1,37 @@
+# Customer profile: closed standalone device, no internet.
+# Ingress: ssh, https (customer container), snmpv3. Egress: DHCP and NTP client.
+# The matching customization is os-customizations/standalone.
+name: standalone
+customization: standalone
+customer_container: true
+services_active: [snmpd]
+services_inactive: [tailscaled, avahi-daemon, snmptrapd, mender-updated, mender-authd, mender-connect]
+https:
+  port: 443
+  marker: ci4rail-profile-https-ok
+# Example credentials, must match os-customizations/standalone/etc/snmp/snmpd.conf
+snmpv3:
+  user: ci4rail-example
+  auth_protocol: SHA
+  auth_passphrase: example-auth-passphrase
+  priv_protocol: AES
+  priv_passphrase: example-priv-passphrase
+security_baseline:
+  allowed_tcp_ports: [22, 443]
+  allowed_udp_ports: [161]
+  allowed_root_network_processes: [sshd, dropbear, systemd, snmpd, nginx]
+  egress_monitor:
+    observation_seconds: 15
+    allowed_ipv4_cidrs:
+      - 192.168.24.0/24     # LAN: replies to ssh/https/snmp clients, local NTP server. TODO: adapt
+      - 255.255.255.255/32  # DHCP discover
+      - 224.0.0.0/4
+    allowed_ipv6_cidrs:
+      - fe80::/10
+      - ff00::/8
+    allowed_tcp_dports: []
+    allowed_udp_dports: [67, 123]  # DHCP client, NTP client
+    allowed_udp_sports: []
+  abuse_test:
+    tcp_ports: [22, 443]
+    udp_ports: [161]

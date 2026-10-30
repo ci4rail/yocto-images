@@ -1,0 +1,52 @@
+# Test farm station for the CI pipeline (staging images, secure boot closed device).
+# Runs on the TC itself, started by the test-scheduler (tests/scripts/test-script.sh).
+# Environment references come from the TC's env file (/etc/test-scheduler/yocto-tests.env).
+platform: cpu01plus
+closed: true
+image_file: null # CI passes --image
+target:
+  host: 192.168.24.13
+  username: root
+  password: ${TARGET_PASSWORD}
+  allow_unknown_host_key: true # reflashed on every run
+tc:
+  local: true # tests run on the test computer
+  host: 192.168.24.12
+  work_dir: /var/tmp/yocto-tests
+serial_port: /dev/ttyMODUCOP
+serial_baudrate: 115200
+relay:
+  host: 192.168.24.12
+  port: 4223
+  uid: ${RELAY_UID}
+  power_channel: 0
+  recovery_channel: 1
+# Staging-signed installer bundle (uuu) for closed devices.
+installer_image: ci4rail/tdx-installer:14e89c2c
+# Signed recovery bundle (built by testfarm-recovery.yaml) that the installer downloads from MinIO.
+# The installer's recovery.yaml is generated from this block and the platform above.
+recovery:
+  endpoint: https://minio.ci4rail.com
+  bucket: moducop-recovery-images
+  mode: staging
+  version: "v3.0.0-alpha.1+47.6057c45.20261029.2034"
+  run_attempt: "40949734192-1"
+  access_key: ${RECOVERY_MINIO_ACCESS_KEY}
+  secret_key: ${RECOVERY_MINIO_SECRET_KEY}
+  root_password: ${RECOVERY_ROOT_PASSWORD} # root password of the recovery runtime
+security_image: ci4rail/security-test-tools:latest
+testing_image: ghcr.io/ci4rail/linux-testing-container:latest
+docker_username: ci4rail
+docker_password: $DOCKER_PASSWORD
+flash_timeout: 1200
+boot_timeout: 300
+# The repository's staging OTA keys (bundled in the pytest package).
+ota_signing_material_dir: staging
+# Declare the hardware attached to this station (see station.example.yaml).
+# Hardware attached to this station (see station.example.yaml).
+features: [gnss]
+emmc_read_bps: 1000000
+emmc_write_bps: 1000000
+gpsdclient: /root/bin/gpsdclient_v0.1.0/gpsdclient
+# Optional: an NTP server reachable from the target, enables the NTP client test.
+# ntp_server: 192.168.24.12

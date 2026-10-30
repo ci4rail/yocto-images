@@ -43,6 +43,10 @@ boot_timeout: 300
 # The repository's staging OTA keys (bundled in the pytest package).
 ota_signing_material_dir: staging
 # Declare the hardware attached to this station (see station.example.yaml).
-features: []
+# Hardware attached to this station (see station.example.yaml).
+features: [gnss]
+emmc_read_bps: 1000000
+emmc_write_bps: 1000000
+gpsdclient: /root/bin/gpsdclient_v0.1.0/gpsdclient
 # Optional: an NTP server reachable from the target, enables the NTP client test.
 # ntp_server: 192.168.24.12

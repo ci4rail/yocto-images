@@ -15,7 +15,7 @@ corresponding GitHub action, select the branch to build, and provide a bucket
 through the `minio_bucket` input. The callers pass the existing
 `MINIO_ACCESS_KEY` and `MINIO_SECRET_KEY` repository secrets to the reusable
 workflow; environment-level recovery secrets can override those values.
-No image is attached to a GitHub release or uploaded as a GitHub Actions artifact.
+No recovery image is attached to a GitHub release or uploaded as a GitHub Actions artifact.
 
 ## Inputs and outputs
 
@@ -153,3 +153,35 @@ docker run --rm -v "$PWD:/work:ro" recovery-tools \
 ```
 
 Local tests use ephemeral dummy keys only. Production signing remains CI-only.
+
+## Data migration packages
+
+`data-recovery-workflow.yaml` builds the payload-embedding recovery for the legacy
+`/data` boot (`recovery.itb`, `data.scr`, `build.json`, `SHA256SUMS`; see
+[../README.md](../README.md)). `image-workflow.yaml` calls it once per image flavour,
+after the matching image job and whenever the repository variable
+`RECOVERY_MINIO_BUCKET` is set:
+
+| Flavour | Payload | FIT signature |
+|---|---|---|
+| `nonsecure` | non-secure image | none (`--allow-unsigned`, open devices only) |
+| `staging` | secure staging image | checked-in `dev` key |
+| `production` | secure production image | Azure Key Vault key (`production` environment) |
+
+Objects go to `<bucket>/data-recovery/<platform>/<mode>/<version>/<run-id>-<attempt>/`.
+Pull-request builds are skipped.
+
+On `release: published`, the non-secure and production packages are additionally
+packed into `<image>_<version>-…-data-migration.tar` and attached to the GitHub
+release, together with the non-secure and production images (`.mender`,
+`.mender_tezi.tar`, SBOM) and the production fuse commands. Staging packages and
+images (dummy FIT key) are never released. The release job requires all four
+build and package jobs to succeed, so `RECOVERY_MINIO_BUCKET` must be set for
+releases.
+
+Release assets of this public repository are downloadable by anyone. This is an
+accepted risk for the image content, which includes the Mender tenant token and
+the public default root password that customers must change. The packages also
+embed the `RECOVERY_ROOT_PASSWORD_HASH`. Use a long random recovery password,
+never a known or reused one: the hash is exposed to offline guessing, and
+customers cannot change the recovery password.

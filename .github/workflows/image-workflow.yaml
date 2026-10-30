@@ -100,6 +100,13 @@ on:
         required: true
       tailscale_auth_key:
         required: true
+      # Data migration package upload (private MinIO) and recovery root password.
+      recovery_minio_access_key:
+        required: false
+      recovery_minio_secret_key:
+        required: false
+      recovery_root_password_hash:
+        required: false
 
 permissions:
   contents: read
@@ -514,6 +521,62 @@ jobs:
             ~/${{ needs.calculate-version.outputs.image_folder }}/*.spdx.tar.zst
             ~/${{ needs.calculate-version.outputs.image_folder }}/*-secure-production-fuse-cmds.txt
 
+  # Data migration packages (recovery booted from the legacy /data partition, payload embedded).
+  # Non-secure and production packages are also attached to GitHub releases; staging (dummy
+  # FIT key) only goes to MinIO.
+  data-recovery-nonsecure:
+    needs: [calculate-version, build-nonsecure-image]
+    if: ${{ vars.RECOVERY_MINIO_BUCKET != '' }}
+    name: Data migration package (non-secure)
+    uses: ./.github/workflows/data-recovery-workflow.yaml
+    with:
+      platform: ${{ inputs.machine }}
+      signing_mode: nonsecure
+      version: ${{ needs.calculate-version.outputs.version }}
+      artifact_name: nonsecure-build-artifacts
+      image_glob: ${{ needs.calculate-version.outputs.mender_tezi_file_name }}
+      minio_bucket: ${{ vars.RECOVERY_MINIO_BUCKET }}
+      release_bundle: ${{ github.event_name == 'release' && format('{0}-Non-Secure-Boot_{1}-data-migration.tar', inputs.image_start, needs.calculate-version.outputs.version) || '' }}
+    secrets:
+      RECOVERY_MINIO_ACCESS_KEY: ${{ secrets.recovery_minio_access_key }}
+      RECOVERY_MINIO_SECRET_KEY: ${{ secrets.recovery_minio_secret_key }}
+      RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.recovery_root_password_hash }}
+
+  data-recovery-staging:
+    needs: [calculate-version, build-staging-image]
+    if: ${{ vars.RECOVERY_MINIO_BUCKET != '' }}
+    name: Data migration package (staging)
+    uses: ./.github/workflows/data-recovery-workflow.yaml
+    with:
+      platform: ${{ inputs.machine }}
+      signing_mode: staging
+      version: ${{ needs.calculate-version.outputs.version }}
+      artifact_name: staging-build-artifacts-${{ inputs.machine }}-${{ github.run_id }}
+      image_glob: ${{ inputs.image_start }}*tezi*.tar
+      minio_bucket: ${{ vars.RECOVERY_MINIO_BUCKET }}
+    secrets:
+      RECOVERY_MINIO_ACCESS_KEY: ${{ secrets.recovery_minio_access_key }}
+      RECOVERY_MINIO_SECRET_KEY: ${{ secrets.recovery_minio_secret_key }}
+      RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.recovery_root_password_hash }}
+
+  data-recovery-production:
+    needs: [calculate-version, build-secure-production-image]
+    if: ${{ vars.RECOVERY_MINIO_BUCKET != '' }}
+    name: Data migration package (production)
+    uses: ./.github/workflows/data-recovery-workflow.yaml
+    with:
+      platform: ${{ inputs.machine }}
+      signing_mode: production
+      version: ${{ needs.calculate-version.outputs.version }}
+      artifact_name: secure-production-build-artifacts
+      image_glob: ${{ inputs.image_start }}*tezi*.tar
+      minio_bucket: ${{ vars.RECOVERY_MINIO_BUCKET }}
+      release_bundle: ${{ github.event_name == 'release' && format('{0}_{1}-secure-production-data-migration.tar', inputs.image_start, needs.calculate-version.outputs.version) || '' }}
+    secrets:
+      RECOVERY_MINIO_ACCESS_KEY: ${{ secrets.recovery_minio_access_key }}
+      RECOVERY_MINIO_SECRET_KEY: ${{ secrets.recovery_minio_secret_key }}
+      RECOVERY_ROOT_PASSWORD_HASH: ${{ secrets.recovery_root_password_hash }}
+
   # test-image:
   #   if: inputs.test_name != ''
   #   needs: [calculate-version, build-nonsecure-image]
@@ -541,21 +604,44 @@ jobs:
   #         minio_access_key: ${{ secrets.minio_access_key }}
   #         minio_secret_key: ${{ secrets.minio_secret_key }}
 
-  # release-image:
-  #   if: github.event_name == 'release'
-  #   needs: [test-image]
-  #   name: Release Image
-  #   runs-on: ubuntu-22.04
-  #   steps:
-  #     - name: Download build artifact
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: nonsecure-build-artifacts
-  #         path: ./artifact
-  #     - name: Create Release
-  #       id: create_release
-  #       uses: softprops/action-gh-release@v2
-  #       with:
-  #         files: ./artifact/*
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.private_token }}
+  release-image:
+    # Staging images (dummy keys) are never released.
+    if: >-
+      ${{ !cancelled() && github.event_name == 'release' &&
+      needs.build-nonsecure-image.result == 'success' &&
+      needs.build-secure-production-image.result == 'success' &&
+      needs.data-recovery-nonsecure.result == 'success' &&
+      needs.data-recovery-production.result == 'success' }}
+    needs: [build-nonsecure-image, build-secure-production-image, data-recovery-nonsecure, data-recovery-production]
+    name: Release Image
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "{nonsecure-build-artifacts,secure-production-build-artifacts,data-migration-*}"
+          path: ${{ runner.temp }}/release
+          merge-multiple: true
+
+      - name: Select release files
+        id: files
+        run: |
+          shopt -s nullglob
+          cd "$RUNNER_TEMP/release"
+          # Only versioned files: the production artifact also holds unversioned symlink copies.
+          files=(${{ inputs.image_start }}*.mender ${{ inputs.image_start }}*.tar \
+                 ${{ inputs.image_start }}*.spdx.tar.zst ${{ inputs.image_start }}*-fuse-cmds.txt)
+          if [ "${#files[@]}" -eq 0 ]; then echo "No release files found"; exit 1; fi
+          printf '%s\n' "${files[@]}"
+          {
+            echo "list<<EOF"
+            printf '%s\n' "${files[@]/#/$RUNNER_TEMP/release/}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Attach to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.files.outputs.list }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.private_token }}

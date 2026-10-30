@@ -188,10 +188,10 @@ starts with the payload's empty data partition.
 python3 migration/build-data-recovery.py \
   --platform cpu01 \
   --tezi migration/tezi/Verdin-iMX8MM_ToradexEasyInstaller_7.7.0+build.13 \
-  --dtb /path/to/imx8mm-verdin-wifi-moducop-cpu01.dtb \
+  --dtb cpu01-standard-image/install/images/moducop-cpu01/imx8mm-verdin-wifi-moducop-cpu01.dtb \
   --root-password-hash-file /path/to/recovery-root.hash \
-  --payload /path/to/standard-image.mender_tezi.tar \
-  --fit-keydir /path/to/staging-keys --fit-keyname dev \
+  --payload cpu01-standard-image/install/images/moducop-cpu01/Standard-Image-Staging-moducop-cpu01.mender_tezi.tar \
+  --fit-keydir secure-boot-material/staging/keys/fit --fit-keyname dev \
   --output gen/cpu01-data-recovery
 ```
 
@@ -212,7 +212,9 @@ not overlap. That allows roughly 430 MiB of squashfs.
 
 ### Stage on the legacy device
 
-Requires ~370 MiB free on `/data`. As root on the legacy OS:
+Requires ~370 MiB free on `/data`. A release download
+(`…-data-migration.tar`) holds these files; unpack it first with `tar -xf`.
+As root on the legacy OS:
 
 ```sh
 findmnt -no SOURCE /data          # e.g. /dev/mmcblk2p4 -> partition 4
@@ -275,7 +277,12 @@ would not survive a power cycle. Keep the device powered and inspect
 `/migration/install-embedded.sh` once the cause is fixed. A device whose eMMC
 was erased and which was then powered off needs the module's USB recovery mode.
 
-### Not yet validated on hardware
+### Hardware validation
+
+CPU01 (staging payload, staging FIT key) has been validated end-to-end: the
+unattended installation from the legacy `/data` partition works. CPU01plus
+has not been validated. The following points were open before that run and
+remain unverified on CPU01plus:
 
 - Legacy U-Boot reading a ~360 MiB file from the old ext3/ext4 `/data`. Older
   U-Boot versions do not support every ext4 feature, and a failed load falls

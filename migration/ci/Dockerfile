@@ -8,11 +8,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     device-tree-compiler squashfs-tools gcc-aarch64-linux-gnu libc6-dev-arm64-cross \
     && rm -rf /var/lib/apt/lists/*
 # v2024.07: includes fit_check_sign, which distro u-boot-tools does not ship.
+# The data recovery FIT embeds the OS payload and exceeds the 256 MiB verify default.
+# The symbol has no prompt, so only its Kconfig default can raise it.
 RUN git init /opt/u-boot && cd /opt/u-boot \
     && git remote add origin https://github.com/u-boot/u-boot.git \
     && git fetch --depth 1 origin 3f772959501c99fbe5aa0b22a36efe3478d1ae1c \
     && git checkout --detach FETCH_HEAD \
+    && sed -i '/^config TOOLS_FIT_SIGNATURE_MAX_SIZE$/,/^$/s/default 0x10000000/default 0xffffffff/' tools/Kconfig \
     && make tools-only_defconfig \
+    && grep -qx 'CONFIG_TOOLS_FIT_SIGNATURE_MAX_SIZE=0xffffffff' .config \
     && make -j4 tools-only NO_SDL=1 \
     && install tools/mkimage tools/dumpimage tools/fit_check_sign /usr/local/bin/ \
     && rm -rf /opt/u-boot

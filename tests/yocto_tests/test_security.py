@@ -33,7 +33,8 @@ def test_attack_surface(station, baseline, protocol):
 
 
 def test_vulnerabilities(station):
-    output = station.security(f"nmap -sV --script vuln -Pn --open -p- -oN - -oX - "
+    # Broadcast scripts probe the whole LAN, not the target, and name CVEs even when nothing is vulnerable.
+    output = station.security(f"nmap -sV --script 'vuln and not broadcast' -Pn --open -p- -oN - -oX - "
                               f"{quote(station.cfg['target']['host'])}", timeout=1800)
     assert not re.search(r"State:\s*VULNERABLE|VULNERABLE:|IDs:\s*CVE:|CVE-\d{4}-\d+|Exploit results:",
                          output, re.I | re.M), output

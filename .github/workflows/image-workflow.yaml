@@ -643,5 +643,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.files.outputs.list }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.private_token }}
+          # The input defaults to github.token (contents: read) and overrides env.
+          token: ${{ secrets.private_token }}

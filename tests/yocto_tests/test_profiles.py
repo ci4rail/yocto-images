@@ -3,6 +3,8 @@
 Run with --profile <name>; every test skips without it. The security suite
 (test_security.py) then checks the profile's baseline from the outside.
 """
+import re
+
 import paramiko
 import pytest
 
@@ -189,7 +191,10 @@ def test_no_serial_console_login(station, profile):
     dut = station.dut
     units = dut.run("systemctl list-units --all --plain --no-legend 'serial-getty@*'", check=False)
     assert not [line for line in units.splitlines() if " active " in line], units
-    assert not dut.run("pgrep getty", check=False).strip(), "A getty is running"
+    # getty@tty1 on the (unused) virtual terminal is fine: the device has no graphics output.
+    gettys = dut.run("pgrep -a getty", check=False).strip().splitlines()
+    serial = [line for line in gettys if not re.search(r"\btty\d+\b", line)]
+    assert not serial, f"A serial console getty is running: {serial}"
 
 
 def test_default_has_no_leftovers(station, profile):

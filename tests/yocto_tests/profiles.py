@@ -49,6 +49,16 @@ def ssh_access(profile):
             "key_only": True, "sudo_password": access["sudo_password"]}
 
 
+def key_users(profile):
+    """All SSH key users of the profile as Host logins: ssh_access first, then extra_ssh_users."""
+    main = ssh_access(profile)
+    if not main:
+        return []
+    return [main] + [{"username": u["username"], "key_file": str(PROFILE_DIR / u["key_file"]),
+                      "key_only": True, "sudo_password": u["sudo_password"]}
+                     for u in profile.get("extra_ssh_users", [])]
+
+
 def target_logins():
     """Logins of all profiles: a previous test step may have left any of them installed."""
     return [login for login in (ssh_access(load_profile(name)) for name in profile_names()) if login]

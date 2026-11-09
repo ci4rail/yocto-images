@@ -114,10 +114,12 @@ Both disable avahi/mDNS; standalone also disables tailscaled and snmptrapd. The 
 user and passphrases in `os-customizations/standalone/etc/snmp/snmpd.conf` are
 examples. Adapt the LAN prefix in the nftables files per site.
 
-standalone allows SSH only as `moducop` with a key (no root, no passwords), gives
-`moducop` sudo with its password and disables serial console login. The profile's
-`ssh_access` names the test key (`config/profiles/standalone-moducop-test.key`,
-staging only) and the sudo password. The harness collects the `ssh_access` of all
+standalone allows SSH only as `moducop` or `ci4rail` with a key (no root, no
+passwords), gives both sudo with their password and disables serial console login.
+The profile's `ssh_access` names the test key (`config/profiles/standalone-moducop-test.key`,
+staging only) and the sudo password; `extra_ssh_users` does the same for `ci4rail`
+(`config/profiles/standalone-ci4rail-test.key`), which the tests check but the
+harness does not use as login. The harness collects the `ssh_access` of all
 profiles: when the station's own login is rejected, it logs in with one of them
 and runs every target command through `sudo`. Steps 3 and 4 therefore work while
 standalone is installed.

@@ -10,7 +10,7 @@ import pytest
 
 from .core_api import CoreAPI
 from .customization import ENDPOINT, NAME
-from .profiles import https_ok, payload_version, ssh_access
+from .profiles import https_ok, key_users, payload_version
 from .station import LOGIN_KEYS, Host, quote
 
 pytestmark = [pytest.mark.hardware, pytest.mark.profile]
@@ -163,26 +163,37 @@ def login_accepted(station, login):
     return True
 
 
-def test_ssh_only_key_user(station, profile):
+def test_ssh_only_key_users(station, profile):
     only(profile, "standalone")
-    access = ssh_access(profile)
+    users = key_users(profile)
     station_login = {k: v for k, v in station.cfg["target"].items() if k in LOGIN_KEYS}
-    assert login_accepted(station, access), f"{access['username']} cannot log in with its key"
     assert not login_accepted(station, station_login), "The station's (root) login is still accepted"
-    assert not login_accepted(station, {**access, "username": "root"}), "root accepts the user's key"
-    assert not login_accepted(station, {"username": access["username"], "password": access["sudo_password"]}), \
-        "Password login is accepted"
+    failures = []
+    for access in users:
+        name = access["username"]
+        if not login_accepted(station, access):
+            failures.append(f"{name} cannot log in with its key")
+        if login_accepted(station, {**access, "username": "root"}):
+            failures.append(f"root accepts the key of {name}")
+        if login_accepted(station, {"username": name, "password": access["sudo_password"]}):
+            failures.append(f"Password login is accepted for {name}")
+        for other in users:
+            if other is not access and login_accepted(station, {**access, "key_file": other["key_file"]}):
+                failures.append(f"{name} accepts the key of {other['username']}")
+    assert not failures, "\n".join(failures)
 
 
-def test_sudo_needs_password(station, profile):
+def test_sudo_with_password(station, profile):
     only(profile, "standalone")
-    access = ssh_access(profile)
-    user = target_host(station, {**access, "sudo_password": None}, "dut-user")
-    assert user.run("id -un").strip() == access["username"]
-    with pytest.raises(RuntimeError):
-        user.run("sudo -n true")
-    with pytest.raises(RuntimeError):
-        target_host(station, {**access, "sudo_password": "wrong-password"}, "dut-wrong-sudo").run("true")
+    for access in key_users(profile):
+        name = access["username"]
+        user = target_host(station, {**access, "sudo_password": None}, f"dut-{name}")
+        assert user.run("id -un").strip() == name
+        with pytest.raises(RuntimeError):
+            user.run("sudo -n true")
+        with pytest.raises(RuntimeError):
+            target_host(station, {**access, "sudo_password": "wrong-password"}, f"dut-{name}-wrong-sudo").run("true")
+        assert target_host(station, access, f"dut-{name}-sudo").run("id -un").strip() == "root", name
     assert station.dut.run("id -un").strip() == "root"
 
 
@@ -204,6 +215,8 @@ def test_default_has_no_leftovers(station, profile):
     dut.run("test ! -e /etc/nftables.conf && ! grep -q ci4rail-example /etc/snmp/snmpd.conf")
     dut.run("test ! -e /etc/systemd/system/tailscaled.service.d/10-disable.conf")
     dut.run("test ! -e /etc/systemd/system/avahi-daemon.service.d/10-disable.conf")
-    dut.run("test ! -e /etc/sudoers.d/moducop && test ! -e /etc/ssh/authorized_keys/moducop")
+    for user in ("moducop", "ci4rail"):
+        dut.run(f"test ! -e /etc/sudoers.d/{user} && test ! -e /etc/ssh/authorized_keys/{user}"
+                f" && test ! -e /etc/ci4rail/user-passwords/{user}")
     dut.run("test ! -e /etc/systemd/system/serial-getty@.service.d/10-disable.conf")
     dut.run("grep -qx 'DROPBEAR_EXTRA_ARGS=\"\"' /etc/default/dropbear")

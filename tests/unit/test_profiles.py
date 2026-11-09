@@ -172,20 +172,27 @@ def test_ensure_profile_deploys_when_other_customization_is_installed(tmp_path, 
     assert expected["version"] == profiles.payload_version(profile)
 
 
-def test_standalone_ssh_access_matches_customization():
+def test_standalone_key_users_match_customization():
     import paramiko
     import subprocess
     profile = profiles.load_profile("standalone")
     access = profiles.ssh_access(profile)
+    users = profiles.key_users(profile)
+    assert [u["username"] for u in users] == ["moducop", "ci4rail"]
     etc = profiles.etc_dir(profile)
-    key = paramiko.Ed25519Key.from_private_key_file(access["key_file"])
-    authorized = (etc / "ssh/authorized_keys" / access["username"]).read_text()
-    assert f"{key.get_name()} {key.get_base64()}" in authorized
-    stored = (etc / "ci4rail/user-passwords" / access["username"]).read_text().strip()
-    salt = stored.split("$")[2]
-    computed = subprocess.run(["openssl", "passwd", "-6", "-salt", salt, access["sudo_password"]],
-                              check=True, capture_output=True, text=True).stdout.strip()
-    assert computed == stored
+    for user in users:
+        name = user["username"]
+        key = paramiko.Ed25519Key.from_private_key_file(user["key_file"])
+        authorized = (etc / "ssh/authorized_keys" / name).read_text()
+        assert f"{key.get_name()} {key.get_base64()}" in authorized, name
+        stored = (etc / "ci4rail/user-passwords" / name).read_text().strip()
+        salt = stored.split("$")[2]
+        computed = subprocess.run(["openssl", "passwd", "-6", "-salt", salt, user["sudo_password"]],
+                                  check=True, capture_output=True, text=True).stdout.strip()
+        assert computed == stored, name
+        assert (etc / "sudoers.d" / name).read_text().splitlines()[-1] == f"{name} ALL=(ALL:ALL) ALL"
+    # Each user has its own key.
+    assert len({(etc / "ssh/authorized_keys" / u["username"]).read_text() for u in users}) == len(users)
     assert profiles.target_logins() == [access]
 
 
@@ -209,4 +216,6 @@ def test_payload_modes(tmp_path, monkeypatch):
     assert all(not m.mode & 0o022 for m in members.values() if not m.issym())
     assert members["etc/ci4rail/user-passwords/moducop"].mode == 0o600
     assert members["etc/sudoers.d/moducop"].mode == 0o440
+    assert members["etc/ci4rail/user-passwords/ci4rail"].mode == 0o600
+    assert members["etc/sudoers.d/ci4rail"].mode == 0o440
     assert members["etc/systemd/system/sysinit.target.wants/ci4rail-user-passwords.service"].issym()

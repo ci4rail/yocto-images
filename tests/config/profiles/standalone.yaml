@@ -1,6 +1,6 @@
 # Customer profile: closed standalone device, no internet.
 # Ingress: ssh, https (customer container), snmpv3. Egress: DHCP, DNS and NTP client.
-# SSH only as moducop with a key, sudo with password, no serial console login.
+# SSH only as moducop or ci4rail with a key, sudo with password, no serial console login.
 # The matching customization is os-customizations/standalone.
 name: standalone
 customization: standalone
@@ -14,6 +14,12 @@ ssh_access:
   username: moducop
   key_file: standalone-moducop-test.key  # relative to this directory
   sudo_password: example-moducop-password
+# Further key users of the customization, with the same rights as ssh_access.
+# Checked by the tests but not used as harness login. TEST credentials only.
+extra_ssh_users:
+  - username: ci4rail
+    key_file: standalone-ci4rail-test.key
+    sudo_password: example-ci4rail-password
 https:
   port: 443
   marker: ci4rail-profile-https-ok

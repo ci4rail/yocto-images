@@ -6,13 +6,14 @@ USER customization installed through the core API or Mender
 - Firewall (`etc/nftables.conf`): ingress ssh, https 443, snmpv3, ICMP. Egress DHCP,
   DNS and NTP client, ICMP.
 - No mender server connection, tailscale, avahi or snmptrapd.
-- SSH only as `moducop` with a key (`etc/default/dropbear`: `-s` no password
-  logins, `-w` no root login). `moducop` may use `sudo` with its password.
+- SSH only as `moducop` or `ci4rail` with a key (`etc/default/dropbear`: `-s` no
+  password logins, `-w` no root login). Both may use `sudo` with their password.
 - No login on the serial console (drop-in for `serial-getty@.service`).
 
-The account `moducop` comes from the Core OS image (recipe `moducop-user` in
-meta-ci4rail-bsp). It has no password, no key and no sudo rights until this
-customization provides them.
+The accounts `moducop` and `ci4rail` come from the Core OS image (recipes
+`moducop-user` and `ci4rail-user` in meta-ci4rail-bsp). They have no password, no
+key and no sudo rights until a customization provides them. In production, the
+factory customization provides the `ci4rail` files.
 
 ## Replace the example credentials per customer
 
@@ -20,6 +21,8 @@ customization provides them.
 |---|---|
 | `etc/ssh/authorized_keys/moducop` | public key of the pytest suite's test key |
 | `etc/ci4rail/user-passwords/moducop` | crypt hash of `example-moducop-password` |
+| `etc/ssh/authorized_keys/ci4rail` | public key of the pytest suite's ci4rail test key |
+| `etc/ci4rail/user-passwords/ci4rail` | crypt hash of `example-ci4rail-password` |
 | `etc/snmp/snmpd.conf` | SNMPv3 user `ci4rail-example` |
 
 Create a password hash with `openssl passwd -6`. The password itself never goes on

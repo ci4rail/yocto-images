@@ -6,6 +6,7 @@ import re
 import shlex
 import subprocess
 import time
+import uuid
 
 import paramiko
 import yaml
@@ -47,16 +48,49 @@ def load_config(path):
     return cfg
 
 
+LOGIN_KEYS = ("username", "password", "key_file", "key_only", "sudo_password")
+# Root's PATH and home for commands run through sudo (dropbear gives other users /usr/bin:/bin).
+SUDO_PREFIX = "export HOME=/root PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin; cd /root; "
+
+
 class Host:
-    def __init__(self, config, log_dir, name, jump=None):
+    """A shell on the TC or the target.
+
+    `alternatives` are further SSH logins (username, password or key_file,
+    key_only, sudo_password) tried when the configured one is rejected, e.g.
+    because a customer profile only allows a sudo user. The login that worked
+    last is tried first. With a sudo_password, commands run as root via sudo.
+    """
+
+    def __init__(self, config, log_dir, name, jump=None, alternatives=()):
         self.config, self.name = config, name
         # Reach this host through another one (the TC is inside the LAN that
         # customer firewall profiles allow; the CI runner usually is not).
         self.jump = jump if jump is not None and not jump.local else None
         self.local = config.get("local", False)
         self.log = Path(log_dir) / f"{name}.log"
+        login = {k: config[k] for k in LOGIN_KEYS if k in config}
+        self.logins = [login] + [dict(a) for a in alternatives if dict(a) != login]
+        self.login = self.logins[0]
+
+    @property
+    def sudo(self):
+        return not self.local and bool(self.login.get("sudo_password"))
 
     def connect(self):
+        """Connect with the last working login first, then the others in order."""
+        error = None
+        for login in sorted(self.logins, key=lambda l: l is not self.login):
+            try:
+                client = self._connect(login)
+            except paramiko.AuthenticationException as exc:
+                error = exc
+                continue
+            self.login = login
+            return client
+        raise error
+
+    def _connect(self, login):
         c = paramiko.SSHClient()
         jump_client = None
         if self.config.get("allow_unknown_host_key", False):
@@ -81,10 +115,11 @@ class Host:
             c.connect(
                 hostname,
                 port=port,
-                username=opts.get("username", entry.get("user", getpass.getuser())),
-                password=opts.get("password"),
-                key_filename=str(Path(opts["key_file"]).expanduser()) if opts.get("key_file") else entry.get("identityfile"),
-                allow_agent=not bool(opts.get("password")), look_for_keys=not bool(opts.get("password")),
+                username=login.get("username", entry.get("user", getpass.getuser())),
+                password=login.get("password"),
+                key_filename=str(Path(login["key_file"]).expanduser()) if login.get("key_file") else entry.get("identityfile"),
+                allow_agent=not (login.get("password") or login.get("key_only")),
+                look_for_keys=not (login.get("password") or login.get("key_only")),
                 timeout=15, auth_timeout=15, banner_timeout=15, sock=proxy,
             )
         except Exception:
@@ -112,10 +147,15 @@ class Host:
             status, out, err = p.returncode, p.stdout, p.stderr
         else:
             with self.connect() as client:
+                remote, data = command, input
+                if self.sudo:
+                    # -k: always ask, so the password line is never left for the command's stdin.
+                    remote = f"sudo -k -S -p '' /bin/sh -c {quote(SUDO_PREFIX + command)}"
+                    data = self.login["sudo_password"] + "\n" + (input or "")
                 channel = client.get_transport().open_session(timeout=15)
-                channel.exec_command(command)
-                if input is not None:
-                    channel.sendall(input.encode())
+                channel.exec_command(remote)
+                if data is not None:
+                    channel.sendall(data.encode())
                 channel.shutdown_write()
                 start, stdout, stderr = time.monotonic(), bytearray(), bytearray()
                 while True:
@@ -151,26 +191,45 @@ class Host:
         if self.local:
             import shutil
             shutil.copyfile(source, destination)
-        else:
-            with self.connect() as client, client.open_sftp() as sftp:
+            return
+        with self.connect() as client, client.open_sftp() as sftp:
+            if not self.sudo:
                 sftp.put(str(source), destination)
+                return
+            # The sudo user cannot write root's paths: stage in /tmp, then copy as root.
+            staged = f"/tmp/yocto-put-{uuid.uuid4().hex}"
+            try:
+                sftp.put(str(source), staged)
+                self.run(f"cp {quote(staged)} {quote(destination)}")
+            finally:
+                self.run(f"rm -f {quote(staged)}", check=False)
 
     def get(self, source, destination):
         if self.local:
             import shutil
             shutil.copyfile(source, destination)
-        else:
-            with self.connect() as client, client.open_sftp() as sftp:
+            return
+        with self.connect() as client, client.open_sftp() as sftp:
+            if not self.sudo:
                 sftp.get(source, str(destination))
+                return
+            staged = f"/tmp/yocto-get-{uuid.uuid4().hex}"
+            try:
+                self.run(f"cp {quote(source)} {quote(staged)} && chown {quote(self.login['username'])} {quote(staged)}")
+                sftp.get(staged, str(destination))
+            finally:
+                self.run(f"rm -f {quote(staged)}", check=False)
 
 
 class Station:
-    def __init__(self, cfg, results):
+    def __init__(self, cfg, results, target_logins=()):
+        """`target_logins`: SSH logins that customer profiles may leave as the only way in."""
         self.cfg = cfg
         self.results = Path(results).resolve()
         self.results.mkdir(parents=True, exist_ok=True)
         self.tc = Host(cfg["tc"], self.results, "tc")
-        self.dut = Host(cfg["target"], self.results, "dut", jump=self.tc if cfg["target"].get("via_tc") else None)
+        self.dut = Host(cfg["target"], self.results, "dut", jump=self.tc if cfg["target"].get("via_tc") else None,
+                        alternatives=target_logins)
 
     def security(self, command, timeout=600):
         return self.tc.run(

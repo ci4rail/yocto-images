@@ -30,9 +30,9 @@ Hardware tests in `yocto_tests/test_functional.py` cover SSH password authentica
 
 Hardware security tests in `yocto_tests/test_security.py` cover TCP and UDP attack surface against the baseline, Nmap vulnerability-script output, privileged network services, nftables egress counters, and malformed TCP/UDP traffic followed by an availability check. The checks use `config/security_baseline.yaml`; the Nmap test checks vulnerability strings rather than CVSS scores.
 
-`yocto_tests/test_secure_boot.py` checks the closed staging state (dm-verity, read-only root). `yocto_tests/test_profiles.py` verifies an installed profile (`--profile`): services, firewall, HTTPS, SNMPv3, internet reachability. `unit/test_profiles.py` covers profile merging, payloads and versioning.
+`yocto_tests/test_secure_boot.py` checks the closed staging state (dm-verity, read-only root). `yocto_tests/test_profiles.py` verifies an installed profile (`--profile`): services, firewall, HTTPS, SNMPv3, internet reachability, and for standalone the SSH restriction to the key user `moducop`, sudo with password and no serial console login. `unit/test_profiles.py` covers profile merging, payloads and versioning.
 
-`unit/test_harness.py` covers configuration and closed-device guards, shell quoting and sensitive output, station lock cleanup, network inventory parsing, nftables counters, package allowlisting, installer machine selection and timeout cleanup, power-cycle relay behavior, and reflashed SSH host-key policy. Unit tests do not require target hardware.
+`unit/test_harness.py` covers configuration and closed-device guards, shell quoting and sensitive output, station lock cleanup, network inventory parsing, nftables counters, package allowlisting, installer machine selection and timeout cleanup, power-cycle relay behavior, reflashed SSH host-key policy, and target login fallback with sudo. Unit tests do not require target hardware.
 
 # Test setup configuration
 
@@ -55,6 +55,9 @@ Run through `run.sh` or a Python virtual environment. Hardware runs need `--stat
 - Customer profiles (`config/profiles/*.yaml`, payloads in `../os-customizations/`)
   are installed with `--profile` through the core API during the test; the
   profile's `security_baseline` overrides the common baseline.
+- A profile's `ssh_access` (user, test key, sudo password) is the fallback
+  target login while that profile blocks the station's root login; the harness
+  then runs target commands through sudo.
 - TC system utilities are managed separately through Ansible. The TC user
   has Docker access without sudo and noninteractive sudo access.
 - Keep the existing security baseline, performance thresholds and password

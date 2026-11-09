@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from yocto_tests.profiles import effective_baseline, ensure_profile, load_profile
+from yocto_tests.profiles import effective_baseline, ensure_profile, load_profile, target_logins
 from yocto_tests.station import Station, load_config
 
 _config = None
@@ -44,7 +44,7 @@ def station(request):
     cfg = load_config(path)
     if request.config.getoption("--image"):
         cfg["image_file"] = request.config.getoption("--image")
-    s = Station(cfg, request.config.getoption("--results"))
+    s = Station(cfg, request.config.getoption("--results"), target_logins=target_logins())
     with prepare(s, skip_flash=request.config.getoption("--skip-flash")):
         from yocto_tests.ota import provision_factory
         provision_factory(s)

@@ -47,8 +47,8 @@ def test_standalone_baseline_only_allows_ssh_https_snmp():
     baseline = profiles.effective_baseline(COMMON, profiles.load_profile("standalone"))
     assert baseline["allowed_tcp_ports"] == [22, 443]
     assert baseline["allowed_udp_ports"] == [161]
-    assert baseline["egress_monitor"]["allowed_udp_dports"] == [67, 123]
-    assert baseline["egress_monitor"]["allowed_tcp_dports"] == []
+    assert baseline["egress_monitor"]["allowed_udp_dports"] == [53, 67, 123]
+    assert baseline["egress_monitor"]["allowed_tcp_dports"] == [53]
     assert baseline["abuse_test"]["udp_ports"] == [161]
 
 
@@ -170,3 +170,43 @@ def test_ensure_profile_deploys_when_other_customization_is_installed(tmp_path, 
     [(endpoint, expected)] = api.deployed
     assert endpoint == "/software/core-os-customization"
     assert expected["version"] == profiles.payload_version(profile)
+
+
+def test_standalone_ssh_access_matches_customization():
+    import paramiko
+    import subprocess
+    profile = profiles.load_profile("standalone")
+    access = profiles.ssh_access(profile)
+    etc = profiles.etc_dir(profile)
+    key = paramiko.Ed25519Key.from_private_key_file(access["key_file"])
+    authorized = (etc / "ssh/authorized_keys" / access["username"]).read_text()
+    assert f"{key.get_name()} {key.get_base64()}" in authorized
+    stored = (etc / "ci4rail/user-passwords" / access["username"]).read_text().strip()
+    salt = stored.split("$")[2]
+    computed = subprocess.run(["openssl", "passwd", "-6", "-salt", salt, access["sudo_password"]],
+                              check=True, capture_output=True, text=True).stdout.strip()
+    assert computed == stored
+    assert profiles.target_logins() == [access]
+
+
+def test_standalone_payload_has_no_symlink_outside_etc():
+    etc = profiles.etc_dir(profiles.load_profile("standalone"))
+    for path in etc.rglob("*"):
+        if path.is_symlink():
+            target = (path.parent / path.readlink()).resolve()
+            assert target.is_relative_to(etc.resolve()), f"{path} -> {path.readlink()}"
+
+
+def test_payload_modes(tmp_path, monkeypatch):
+    from yocto_tests import customization
+    monkeypatch.setattr(customization, "artifact_command", lambda command: None)
+    monkeypatch.setattr(customization, "sign_artifact", lambda *args: None)
+    etc = profiles.etc_dir(profiles.load_profile("standalone"))
+    customization.build_customization("mender-artifact", "v", "dev", tmp_path, {}, etc=etc)
+    with tarfile.open(tmp_path / "customization.tar") as tar:
+        members = {m.name: m for m in tar.getmembers()}
+    assert all(m.uid == 0 and m.gid == 0 for m in members.values())
+    assert all(not m.mode & 0o022 for m in members.values() if not m.issym())
+    assert members["etc/ci4rail/user-passwords/moducop"].mode == 0o600
+    assert members["etc/sudoers.d/moducop"].mode == 0o440
+    assert members["etc/systemd/system/sysinit.target.wants/ci4rail-user-passwords.service"].issym()

@@ -269,3 +269,95 @@ def test_target_connection_runs_through_jump_host(monkeypatch, tmp_path):
 def test_local_jump_host_is_ignored(tmp_path):
     from yocto_tests.station import Host
     assert Host({"host": "x"}, tmp_path, "dut", jump=Host({"local": True}, tmp_path, "tc")).jump is None
+
+
+class _Channel:
+    def __init__(self, sent):
+        self.sent = sent
+
+    def exec_command(self, command):
+        self.sent["command"] = command
+
+    def sendall(self, data):
+        self.sent["input"] = data
+
+    def shutdown_write(self):
+        pass
+
+    def recv_ready(self):
+        return False
+
+    def recv_stderr_ready(self):
+        return False
+
+    def exit_status_ready(self):
+        return True
+
+    def recv_exit_status(self):
+        return 0
+
+
+def _fake_ssh(monkeypatch, accepted, sent):
+    """paramiko.SSHClient stand-in that only accepts the usernames in `accepted`."""
+    from yocto_tests import station as st
+
+    class Client:
+        def set_missing_host_key_policy(self, policy):
+            pass
+
+        def connect(self, hostname, **kwargs):
+            sent.setdefault("attempts", []).append(kwargs["username"])
+            if kwargs["username"] not in accepted:
+                raise st.paramiko.AuthenticationException("rejected")
+            sent["kwargs"] = kwargs
+
+        def get_transport(self):
+            return SimpleNamespace(open_session=lambda timeout: _Channel(sent))
+
+        def close(self):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.close()
+
+    monkeypatch.setattr(st.paramiko, "SSHClient", Client)
+    monkeypatch.setattr(st.Path, "home", lambda: Path("/nonexistent"))
+
+
+def test_target_login_falls_back_and_runs_through_sudo(monkeypatch, tmp_path):
+    sent = {}
+    _fake_ssh(monkeypatch, {"moducop"}, sent)
+    user = {"username": "moducop", "key_file": "/k", "key_only": True, "sudo_password": "pw"}
+    host = Host({"host": "192.0.2.7", "username": "root", "password": "rootpw", "allow_unknown_host_key": True},
+                tmp_path, "dut", alternatives=[user])
+    host.run("echo $HOME", input="data")
+    assert sent["attempts"] == ["root", "moducop"]
+    assert sent["kwargs"]["allow_agent"] is False and sent["kwargs"]["look_for_keys"] is False
+    assert sent["command"].startswith("sudo -k -S -p '' /bin/sh -c ")
+    assert "export HOME=/root" in sent["command"] and sent["command"].endswith("echo $HOME'")
+    assert sent["input"] == b"pw\ndata"
+    assert "pw" not in (tmp_path / "dut.log").read_text()
+    # The working login is tried first from now on.
+    host.run("true")
+    assert sent["attempts"] == ["root", "moducop", "moducop"]
+
+
+def test_target_login_without_sudo_runs_plain(monkeypatch, tmp_path):
+    sent = {}
+    _fake_ssh(monkeypatch, {"root"}, sent)
+    host = Host({"host": "192.0.2.7", "username": "root", "password": "rootpw", "allow_unknown_host_key": True},
+                tmp_path, "dut", alternatives=[{"username": "moducop", "key_only": True, "sudo_password": "pw"}])
+    host.run("true")
+    assert sent["attempts"] == ["root"] and sent["command"] == "true" and "input" not in sent
+
+
+def test_target_login_all_rejected(monkeypatch, tmp_path):
+    from yocto_tests import station as st
+    _fake_ssh(monkeypatch, set(), {})
+    host = Host({"host": "192.0.2.7", "username": "root", "password": "x", "allow_unknown_host_key": True},
+                tmp_path, "dut", alternatives=[{"username": "moducop", "key_only": True}])
+    with pytest.raises(st.paramiko.AuthenticationException):
+        host.connect()

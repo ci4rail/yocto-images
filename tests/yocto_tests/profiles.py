@@ -40,6 +40,20 @@ def load_profile(name):
     return profile
 
 
+def ssh_access(profile):
+    """The profile's only SSH login as a Host login, or None when root stays allowed."""
+    access = profile.get("ssh_access")
+    if not access:
+        return None
+    return {"username": access["username"], "key_file": str(PROFILE_DIR / access["key_file"]),
+            "key_only": True, "sudo_password": access["sudo_password"]}
+
+
+def target_logins():
+    """Logins of all profiles: a previous test step may have left any of them installed."""
+    return [login for login in (ssh_access(load_profile(name)) for name in profile_names()) if login]
+
+
 def merge(base, override):
     """Merge override into base: dicts merge, anything else (lists, null) replaces."""
     result = copy.deepcopy(base)

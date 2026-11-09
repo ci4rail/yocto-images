@@ -108,11 +108,19 @@ and `null` replace); without `--profile` the common baseline applies unchanged.
 | Profile | Ingress | Egress |
 |---|---|---|
 | internet-connected | ssh from `tailscale0` and 192.168.24.0/24, ICMP | open (mender, tailscale, internet) |
-| standalone | ssh, https 443, snmpv3 (udp 161), ICMP | DHCP client, NTP client, replies |
+| standalone | ssh, https 443, snmpv3 (udp 161), ICMP | DHCP, DNS and NTP client, replies |
 
 Both disable avahi/mDNS; standalone also disables tailscaled and snmptrapd. The SNMPv3
 user and passphrases in `os-customizations/standalone/etc/snmp/snmpd.conf` are
 examples. Adapt the LAN prefix in the nftables files per site.
+
+standalone allows SSH only as `moducop` with a key (no root, no passwords), gives
+`moducop` sudo with its password and disables serial console login. The profile's
+`ssh_access` names the test key (`config/profiles/standalone-moducop-test.key`,
+staging only) and the sudo password. The harness collects the `ssh_access` of all
+profiles: when the station's own login is rejected, it logs in with one of them
+and runs every target command through `sudo`. Steps 3 and 4 therefore work while
+standalone is installed.
 
 Run one step locally:
 

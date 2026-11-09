@@ -3,12 +3,13 @@
 Run with --profile <name>; every test skips without it. The security suite
 (test_security.py) then checks the profile's baseline from the outside.
 """
+import paramiko
 import pytest
 
 from .core_api import CoreAPI
 from .customization import ENDPOINT, NAME
-from .profiles import https_ok, payload_version
-from .station import quote
+from .profiles import https_ok, payload_version, ssh_access
+from .station import LOGIN_KEYS, Host, quote
 
 pytestmark = [pytest.mark.hardware, pytest.mark.profile]
 
@@ -136,13 +137,59 @@ def test_ntp_client(station, profile):
     assert code == 0 and "System clock wrong" in out, out
 
 
-def test_dhcp_client_allowed(station, profile):
+def test_client_egress_allowed(station, profile):
     only(profile, "standalone")
-    # Replies come from udp/67 to udp/68; the request is an allowed egress.
+    # DHCP replies come from udp/67 to udp/68; the request is an allowed egress.
     ruleset = station.dut.run("nft list table inet ci4rail_fw")
     assert "udp sport 67 udp dport 68 accept" in ruleset
     assert "udp sport 68 udp dport 67 accept" in ruleset
+    assert "udp dport 53 accept" in ruleset and "tcp dport 53 accept" in ruleset, "DNS client"
     assert "udp dport 123 accept" in ruleset
+
+
+def target_host(station, login, name):
+    """A DUT host that only tries `login`."""
+    config = {k: v for k, v in station.cfg["target"].items() if k not in LOGIN_KEYS}
+    return Host({**config, **login}, station.results, name, jump=station.dut.jump)
+
+
+def login_accepted(station, login):
+    try:
+        target_host(station, login, "dut-login-check").connect().close()
+    except paramiko.AuthenticationException:
+        return False
+    return True
+
+
+def test_ssh_only_key_user(station, profile):
+    only(profile, "standalone")
+    access = ssh_access(profile)
+    station_login = {k: v for k, v in station.cfg["target"].items() if k in LOGIN_KEYS}
+    assert login_accepted(station, access), f"{access['username']} cannot log in with its key"
+    assert not login_accepted(station, station_login), "The station's (root) login is still accepted"
+    assert not login_accepted(station, {**access, "username": "root"}), "root accepts the user's key"
+    assert not login_accepted(station, {"username": access["username"], "password": access["sudo_password"]}), \
+        "Password login is accepted"
+
+
+def test_sudo_needs_password(station, profile):
+    only(profile, "standalone")
+    access = ssh_access(profile)
+    user = target_host(station, {**access, "sudo_password": None}, "dut-user")
+    assert user.run("id -un").strip() == access["username"]
+    with pytest.raises(RuntimeError):
+        user.run("sudo -n true")
+    with pytest.raises(RuntimeError):
+        target_host(station, {**access, "sudo_password": "wrong-password"}, "dut-wrong-sudo").run("true")
+    assert station.dut.run("id -un").strip() == "root"
+
+
+def test_no_serial_console_login(station, profile):
+    only(profile, "standalone")
+    dut = station.dut
+    units = dut.run("systemctl list-units --all --plain --no-legend 'serial-getty@*'", check=False)
+    assert not [line for line in units.splitlines() if " active " in line], units
+    assert not dut.run("pgrep getty", check=False).strip(), "A getty is running"
 
 
 def test_default_has_no_leftovers(station, profile):
@@ -152,3 +199,6 @@ def test_default_has_no_leftovers(station, profile):
     dut.run("test ! -e /etc/nftables.conf && ! grep -q ci4rail-example /etc/snmp/snmpd.conf")
     dut.run("test ! -e /etc/systemd/system/tailscaled.service.d/10-disable.conf")
     dut.run("test ! -e /etc/systemd/system/avahi-daemon.service.d/10-disable.conf")
+    dut.run("test ! -e /etc/sudoers.d/moducop && test ! -e /etc/ssh/authorized_keys/moducop")
+    dut.run("test ! -e /etc/systemd/system/serial-getty@.service.d/10-disable.conf")
+    dut.run("grep -qx 'DROPBEAR_EXTRA_ARGS=\"\"' /etc/default/dropbear")

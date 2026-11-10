@@ -35,7 +35,8 @@ at boot, before dropbear starts.
 
 Package the payload with root ownership, without group or other write
 permissions (dropbear ignores a group-writable `authorized_keys`), with mode 0600
-for `etc/ci4rail/user-passwords/*` and `etc/NetworkManager/system-connections/*`
+for `etc/ci4rail/user-passwords/*`, `etc/snmp/*` (the SNMPv3 passphrases in
+`snmpd.conf`) and `etc/NetworkManager/system-connections/*`
 (NetworkManager ignores connection files readable by others), and 0440 for
 `etc/sudoers.d/*`. The test suite
 does this in `tests/yocto_tests/customization.py`.

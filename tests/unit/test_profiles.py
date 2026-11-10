@@ -220,6 +220,8 @@ def test_payload_modes(tmp_path, monkeypatch):
     assert members["etc/sudoers.d/ci4rail"].mode == 0o440
     assert members["etc/systemd/system/sysinit.target.wants/ci4rail-user-passwords.service"].issym()
     assert members["etc/NetworkManager/system-connections/end0.nmconnection"].mode == 0o600
+    assert members["etc/snmp/snmpd.conf"].mode == 0o600
+    assert members["etc/snmp"].mode & 0o777 == 0o755
     assert members["etc/systemd/system/multi-user.target.wants/ci4rail-end0-fallback.service"].issym()
 
 

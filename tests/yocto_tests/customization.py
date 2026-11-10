@@ -12,9 +12,11 @@ NAME = "core-os-customization"
 
 # git keeps no file modes, and the checkout's umask may leave files group-writable
 # (dropbear then ignores authorized_keys). Modes for files that need stricter ones:
-# NetworkManager ignores connection files readable by others.
+# NetworkManager ignores connection files readable by others. snmpd.conf holds the
+# SNMPv3 passphrases (createUser); snmpd runs as root.
 PAYLOAD_MODES = {"etc/ci4rail/user-passwords/": 0o600, "etc/sudoers.d/": 0o440,
-                 "etc/NetworkManager/system-connections/": 0o600}
+                 "etc/NetworkManager/system-connections/": 0o600,
+                 "etc/snmp/": 0o600}
 
 
 def payload_mode(member):

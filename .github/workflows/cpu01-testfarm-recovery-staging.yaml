@@ -2,8 +2,6 @@ name: CPU01 Recovery Staging
 
 on:
   push:
-    branches:
-      - tdx-inst-bundle
   workflow_dispatch:
     inputs:
       minio_bucket:

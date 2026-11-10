@@ -1,10 +1,6 @@
 name: CPU01plus Testfarm Recovery Staging
 
 on:
-  push:
-    branches:
-      - tdx-inst-bundle
-      - secure-boot-ci-test # TODO: temporary, to rebuild the cpu01plus bundle
   workflow_dispatch:
     inputs:
       minio_bucket:

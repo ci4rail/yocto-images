@@ -219,3 +219,27 @@ def test_payload_modes(tmp_path, monkeypatch):
     assert members["etc/ci4rail/user-passwords/ci4rail"].mode == 0o600
     assert members["etc/sudoers.d/ci4rail"].mode == 0o440
     assert members["etc/systemd/system/sysinit.target.wants/ci4rail-user-passwords.service"].issym()
+    assert members["etc/NetworkManager/system-connections/end0.nmconnection"].mode == 0o600
+    assert members["etc/systemd/system/multi-user.target.wants/ci4rail-end0-fallback.service"].issym()
+
+
+def test_standalone_end0_fallback_matches_customization():
+    import configparser
+    profile = profiles.load_profile("standalone")
+    etc = profiles.etc_dir(profile)
+    conf = dict(line.split("=", 1) for line in
+                (etc / "ci4rail/end0-fallback/end0-fallback.conf").read_text().splitlines()
+                if line and not line.startswith("#"))
+    fallback = profile["end0_fallback"]
+    assert conf["FALLBACK_ADDRESS"] == fallback["address"]
+    assert int(conf["FALLBACK_TIMEOUT"]) == fallback["timeout"]
+    # The test's TC address is in the fallback subnet but not the fallback address itself.
+    import ipaddress
+    target, tc = ipaddress.ip_interface(fallback["address"]), ipaddress.ip_interface(fallback["tc_address"])
+    assert tc.network == target.network and tc.ip != target.ip
+    nm = configparser.ConfigParser(interpolation=None)
+    nm.read_string((etc / "NetworkManager/system-connections/end0.nmconnection").read_text())
+    assert nm["connection"]["interface-name"] == "end0"
+    assert nm["ipv4"]["method"] == "auto"
+    assert nm["ipv4"]["dhcp-timeout"] == "2147483647", "DHCP must keep trying while the fallback is used"
+    assert "ci4rail-end0-fallback" in profile["services_active"]

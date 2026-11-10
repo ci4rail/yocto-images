@@ -5,7 +5,7 @@
 name: standalone
 customization: standalone
 customer_container: true
-services_active: [snmpd]
+services_active: [snmpd, ci4rail-end0-fallback]
 services_inactive: [tailscaled, avahi-daemon, snmptrapd, mender-updated, mender-authd, mender-connect]
 # The only SSH login the customization leaves. The tests use it while the profile is
 # installed. Must match etc/ssh/authorized_keys/moducop and the hash in
@@ -20,6 +20,13 @@ extra_ssh_users:
   - username: ci4rail
     key_file: standalone-ci4rail-test.key
     sudo_password: example-ci4rail-password
+# end0 uses DHCP and, while no lease is available, a static fallback address.
+# Must match etc/ci4rail/end0-fallback/end0-fallback.conf of the customization.
+end0_fallback:
+  address: 192.168.250.1/24
+  timeout: 30
+  # Address the TC adds to its interface toward the target to reach the fallback.
+  tc_address: 192.168.250.2/24
 https:
   port: 443
   marker: ci4rail-profile-https-ok

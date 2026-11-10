@@ -3,7 +3,9 @@
 Run with --profile <name>; every test skips without it. The security suite
 (test_security.py) then checks the profile's baseline from the outside.
 """
+import ipaddress
 import re
+import time
 
 import paramiko
 import pytest
@@ -11,6 +13,7 @@ import pytest
 from .core_api import CoreAPI
 from .customization import ENDPOINT, NAME
 from .profiles import https_ok, key_users, payload_version
+from .setup import power_cycle
 from .station import LOGIN_KEYS, Host, quote
 
 pytestmark = [pytest.mark.hardware, pytest.mark.profile]
@@ -220,3 +223,92 @@ def test_default_has_no_leftovers(station, profile):
                 f" && test ! -e /etc/ci4rail/user-passwords/{user}")
     dut.run("test ! -e /etc/systemd/system/serial-getty@.service.d/10-disable.conf")
     dut.run("grep -qx 'DROPBEAR_EXTRA_ARGS=\"\"' /etc/default/dropbear")
+
+
+# Drops DHCP replies on end0. A netdev ingress hook: NetworkManager's DHCP client
+# receives on a packet socket, which the inet input hook does not see. Not
+# persistent: a reboot removes it.
+DHCP_BLOCK = """table netdev yocto_test_dhcp_block {
+    chain ingress {
+        type filter hook ingress device "end0" priority -500;
+        ip protocol udp udp sport 67 udp dport 68 counter drop
+    }
+}
+"""
+UNREACHABLE = (OSError, EOFError, paramiko.SSHException, RuntimeError, TimeoutError)
+
+
+def wait_for(check, timeout, interval=3):
+    """Call check until it returns something true; None after timeout."""
+    deadline = time.monotonic() + timeout
+    while True:
+        try:
+            result = check()
+        except UNREACHABLE:
+            result = None
+        if result or time.monotonic() > deadline:
+            return result or None
+        time.sleep(interval)
+
+
+def end0_ipv4(host):
+    return host.run("ip -4 -o addr show dev end0")
+
+
+def blocked_replies(host):
+    out = host.run("nft list chain netdev yocto_test_dhcp_block ingress")
+    return int(re.search(r"counter packets (\d+)", out).group(1))
+
+
+def test_end0_dhcp_with_static_fallback(station, profile):
+    """end0 takes the static fallback address only while DHCP has no lease.
+
+    Blocks DHCP replies on the target, reaches it on the fallback address
+    through the TC, then unblocks and waits for the DHCP address to return.
+    """
+    only(profile, "standalone")
+    fallback = profile["end0_fallback"]
+    address = ipaddress.ip_interface(fallback["address"])
+    dut, tc = station.dut, station.tc
+    marker = f" inet {address.with_prefixlen} "
+
+    lease = end0_ipv4(dut)
+    assert " dynamic " in lease, f"end0 has no DHCP address: {lease}"
+    assert marker not in lease, f"Fallback address is used despite a DHCP lease: {lease}"
+
+    target = tc.run(f"getent ahostsv4 {quote(station.cfg['target']['host'])}").split()[0]
+    tc_dev = re.search(r" dev (\S+)", tc.run(f"ip -o route get {quote(target)}")).group(1)
+    tc_address = f"{quote(fallback['tc_address'])} dev {quote(tc_dev)}"
+    config = {k: v for k, v in station.cfg["target"].items() if k not in LOGIN_KEYS}
+    # The fallback subnet is only reachable from the TC.
+    at_fallback = Host({**config, **dut.login, "host": str(address.ip)}, station.results,
+                       "dut-fallback", jump=tc)
+
+    tc.run(f"sudo -n ip addr add {tc_address}")
+    try:
+        dut.run("nft -f -", input=DHCP_BLOCK)
+        # Restart DHCP; the old lease and with it this SSH connection go away.
+        dut.run("nohup sh -c 'sleep 2; nmcli connection up end0' </dev/null >/dev/null 2>&1 &")
+        state = wait_for(lambda: (lambda a: marker in a and a)(end0_ipv4(at_fallback)),
+                         fallback["timeout"] + 90)
+        assert state, f"Target not reachable on its fallback address {address.ip}"
+        assert " dynamic " not in state, state
+        # DHCP keeps trying: the router's answers to new requests keep arriving.
+        first = blocked_replies(at_fallback)
+        assert wait_for(lambda: blocked_replies(at_fallback) > first, 150, interval=5), \
+            "No further DHCP replies: the target stopped requesting a lease"
+
+        at_fallback.run("nft delete table netdev yocto_test_dhcp_block")
+        assert wait_for(lambda: dut.run("true", timeout=20) == "", 180, interval=5) is not None, \
+            "Target did not get its DHCP address back"
+        state = wait_for(lambda: (lambda a: marker not in a and a)(end0_ipv4(dut)), 30)
+        assert state, "Fallback address stays after the DHCP lease returned"
+        assert " dynamic " in state, state
+    finally:
+        tc.run(f"sudo -n ip addr del {tc_address}", check=False)
+        if wait_for(lambda: dut.run("true", timeout=20) == "", 10) is None:
+            # Unreachable on the DHCP address: a reboot drops the DHCP block.
+            power_cycle(station.cfg)
+            station.wait_boot()
+        else:
+            dut.run("nft delete table netdev yocto_test_dhcp_block 2>/dev/null", check=False)

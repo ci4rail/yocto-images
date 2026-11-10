@@ -124,6 +124,15 @@ profiles: when the station's own login is rejected, it logs in with one of them
 and runs every target command through `sudo`. Steps 3 and 4 therefore work while
 standalone is installed.
 
+standalone gives end0 a static fallback address (`end0_fallback` in the profile)
+while DHCP has no lease. `test_end0_dhcp_with_static_fallback` drops DHCP replies
+on the target with a temporary nftables netdev table, adds `tc_address` to the TC's
+interface toward the target (`sudo -n ip addr add`) and connects to the fallback
+address from the TC. It checks that DHCP keeps trying, then removes the block and
+waits for the DHCP address to return and the fallback address to go away. It takes
+about four minutes; if the target stays unreachable, the test power cycles it,
+which also removes the block.
+
 Run one step locally:
 
 ```sh

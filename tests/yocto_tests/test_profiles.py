@@ -206,8 +206,13 @@ def test_no_serial_console_login(station, profile):
     units = dut.run("systemctl list-units --all --plain --no-legend 'serial-getty@*'", check=False)
     assert not [line for line in units.splitlines() if " active " in line], units
     # getty@tty1 on the (unused) virtual terminal is fine: the device has no graphics output.
-    gettys = dut.run("pgrep -a getty", check=False).strip().splitlines()
-    serial = [line for line in gettys if not re.search(r"\btty\d+\b", line)]
+    # getty@.service passes "-" as tty on the command line and opens /dev/ttyN via
+    # TTYPath=, so look at the terminal the process actually has on stdin.
+    gettys = dut.run(
+        "for p in $(pgrep getty); do echo \"$(readlink /proc/$p/fd/0) $(tr '\\0' ' ' </proc/$p/cmdline)\"; done",
+        check=False,
+    ).strip().splitlines()
+    serial = [line for line in gettys if not re.match(r"/dev/tty\d+ ", line)]
     assert not serial, f"A serial console getty is running: {serial}"
 
 

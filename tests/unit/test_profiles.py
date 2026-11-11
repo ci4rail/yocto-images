@@ -245,3 +245,14 @@ def test_standalone_end0_fallback_matches_customization():
     assert nm["ipv4"]["method"] == "auto"
     assert nm["ipv4"]["dhcp-timeout"] == "2147483647", "DHCP must keep trying while the fallback is used"
     assert "ci4rail-end0-fallback" in profile["services_active"]
+
+
+def test_dhcp_ntp_servers_parses_chrony_sources():
+    from yocto_tests.test_profiles import dhcp_ntp_servers
+
+    class FakeHost:
+        def run(self, command, timeout=60, check=True):
+            assert "/run/chrony-dhcp/*.sources" in command
+            return "server 192.168.24.1 iburst\nserver 192.168.24.2 iburst\n\nEXIT=0"
+
+    assert dhcp_ntp_servers(FakeHost()) == ["192.168.24.1", "192.168.24.2"]

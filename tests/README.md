@@ -393,8 +393,10 @@ This uses the existing Makefile/configuration/cache and `kasfile-sb-staging.yaml
 with the developer artifact suffix disabled so Artifact and `/etc/issue` versions
 match.
 
-Set `core_api_core_os_artifact` in station YAML to the resulting `.mender` file
-under `<platform>-standard-image/install/images/` on the pytest runner. The test
+Set `core_api_core_os_artifact` in station YAML (or pass `--core-os-artifact`) to the
+resulting `.mender` file under `<platform>-standard-image/install/images/` on the pytest
+runner. CI builds this artifact in `build-staging-image` (version `<version>.smoke`) and
+runs the test as step `5-core-api-updates` of `ci-run.sh`. The test
 skips when this setting is absent, fails for a missing/invalid artifact, and
 verifies its staging signature and distinct version before changing the target.
 Both the initial image and update must include an API server that supports

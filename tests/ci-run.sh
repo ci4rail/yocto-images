@@ -6,6 +6,8 @@
 #   2 internet-connected profile   (customization deployed, profile + security checks)
 #   3 standalone profile           (customization replaced, profile + security checks)
 #   4 default profile              (customization removed again: no leftovers)
+#   5 core API updates             (application, customization and CoreOS update through the core API;
+#                                   only with CORE_OS_ARTIFACT, a staging .mender with a newer version)
 #
 # One flash, then every step reuses the target (--skip-flash). Results: results/<step>/ and
 # results/<step>.xml. Later steps run even if earlier ones fail, except when flashing fails.
@@ -33,9 +35,14 @@ step 0-flash-secureboot "secureboot" ${flash_args[@]+"${flash_args[@]}"} "$@" ||
     echo "Flashing or secure boot sanity failed; skipping remaining steps"
     exit 1
 }
+# test_core_api_updates installs a new CoreOS: run it last (step 5) so steps 1-4 test the flashed image.
 step 1-default "hardware and not security and not secureboot and not profile and not destructive" \
-    --skip-flash "$@" || status=1
+    --skip-flash --deselect yocto_tests/test_core_api_server.py::test_core_api_updates "$@" || status=1
 step 2-internet-connected "profile or security" --skip-flash --profile internet-connected "$@" || status=1
 step 3-standalone "profile or security" --skip-flash --profile standalone "$@" || status=1
 step 4-default-profile "profile" --skip-flash --profile default "$@" || status=1
+if [[ -n "${CORE_OS_ARTIFACT:-}" ]]; then
+    step 5-core-api-updates "hardware" --skip-flash --core-os-artifact "${CORE_OS_ARTIFACT}" \
+        yocto_tests/test_core_api_server.py::test_core_api_updates "$@" || status=1
+fi
 exit $status

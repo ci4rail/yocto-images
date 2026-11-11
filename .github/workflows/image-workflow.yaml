@@ -259,10 +259,6 @@ jobs:
             > ${image_folder}/${name}-fuse-cmds.txt
           cat ${image_folder}/${name}-fuse-cmds.txt
 
-      - name: Store Cache for Yocto Builds
-        if: github.event_name == 'pull_request'
-        run: scripts/ci-yocto-cache.sh store
-
       - name: Upload staging build artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -273,6 +269,41 @@ jobs:
             ~/${{ needs.calculate-version.outputs.image_folder }}/*-secure-staging-fuse-cmds.txt
             !~/${{ needs.calculate-version.outputs.image_folder }}/Standard-Image-*
           if-no-files-found: error
+
+      # A second build of the same staging image with a newer version: the CoreOS update
+      # artifact for test_core_api_updates. Only the version-dependent tasks rebuild (sstate).
+      # Runs after the upload above, so its TEZI tar and .mender stay out of the staging artifacts.
+      - name: Build Secure Staging Yocto (CoreOS update smoke version)
+        env:
+          MENDER_TENANT_TOKEN: ${{ secrets.mender_tenant_token }}
+          # Like tests/scripts/build-core-api-smoke-image.sh: no name suffix, artifact name
+          # <image dir>-<version>, so the artifact version matches the /etc/issue version the API reports.
+          IMAGE_NAME_SUFFIX: ""
+          IMAGE_GIT_VERSION: ${{ needs.calculate-version.outputs.version }}.smoke
+          MENDER_ARTIFACT_NAME: ${{ env.IMAGE_DIR }}-${{ needs.calculate-version.outputs.version }}.smoke
+        run: |
+          image_folder=~/${{ needs.calculate-version.outputs.image_folder }}
+          touch "${RUNNER_TEMP}/smoke-build-start"
+          scripts/ci-kas-build.sh ${{ inputs.staging_kasfile }}
+          # The versioned .mender of this build (the unversioned Standard-Image-* duplicate is skipped).
+          mapfile -t artifacts < <(find "${image_folder}" -maxdepth 1 -name '*.mender' \
+            ! -name 'Standard-Image-*' -newer "${RUNNER_TEMP}/smoke-build-start")
+          test "${#artifacts[@]}" -eq 1 || { echo "Expected exactly one smoke .mender, found: ${artifacts[*]}"; exit 1; }
+          mkdir -p ~/install/core-api-smoke
+          cp "${artifacts[0]}" ~/install/core-api-smoke/core-os-smoke.mender
+
+      - name: Upload CoreOS update smoke artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: staging-core-os-smoke-${{ inputs.machine }}-${{ github.run_id }}
+          path: ~/install/core-api-smoke/core-os-smoke.mender
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
+
+      - name: Store Cache for Yocto Builds
+        if: github.event_name == 'pull_request'
+        run: scripts/ci-yocto-cache.sh store
 
   test-staging:
     # Runs on a GitHub-hosted runner. The test bundle (pytest suite + staging image) is uploaded
@@ -294,6 +325,11 @@ jobs:
           name: staging-build-artifacts-${{ inputs.machine }}-${{ github.run_id }}
           path: ${{ runner.temp }}/staging-image
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: staging-core-os-smoke-${{ inputs.machine }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/core-os-smoke
+
       - name: Assemble test bundle
         run: |
           # The build emits the versioned TEZI tar plus an unversioned "Standard-Image-Staging-*" duplicate; use the versioned one.
@@ -304,11 +340,14 @@ jobs:
           tests/scripts/package.sh "${bundle}/yocto-pytest-package.tar.gz"
           # The rootfs inside is uncompressed (~1.4 GB): zstd shrinks the bundle ~5x, speeding up the TC download.
           zstd -T0 -10 -q -o "${bundle}/image.tezi.tar.zst" "${images[0]}"
+          # CoreOS update for test_core_api_updates (mender payloads are already compressed).
+          cp "${RUNNER_TEMP}/core-os-smoke/core-os-smoke.mender" "${bundle}/core-os-smoke.mender"
           cp tests/scripts/test-script.sh "${bundle}/test-script.sh"
           chmod +x "${bundle}/test-script.sh"
           {
             echo "STATION_CONFIG=${{ inputs.station_config }}"
             echo "IMAGE_FILE=image.tezi.tar.zst"
+            echo "CORE_OS_ARTIFACT=core-os-smoke.mender"
           } > "${bundle}/bundle.env"
 
       - name: Upload test bundle

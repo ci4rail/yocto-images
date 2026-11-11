@@ -44,9 +44,9 @@ boot_timeout: 300
 ota_signing_material_dir: staging
 # Declare the hardware attached to this station (see station.example.yaml).
 # Hardware attached to this station (see station.example.yaml).
-features: [gnss]
+features: [gnss, modem, wifi, sdcard]
 emmc_read_bps: 1000000
 emmc_write_bps: 1000000
 gpsdclient: /root/bin/gpsdclient_v0.1.0/gpsdclient
-# Optional: an NTP server reachable from the target, enables the NTP client test.
-# ntp_server: 192.168.24.12
+# NTP client test (standalone profile): the testfarm router hands out an NTP server via DHCP option 42.
+ntp_from_dhcp: true

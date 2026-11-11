@@ -133,12 +133,30 @@ def test_snmpv3_without_privacy_rejected(station, profile):
     assert code != 0, "SNMPv3 without encryption was answered"
 
 
+def dhcp_ntp_servers(dut):
+    """NTP servers the NetworkManager dispatcher wrote from DHCP option 42."""
+    out, _ = status(dut, "cat /run/chrony-dhcp/*.sources")
+    return [line.split()[1] for line in out.splitlines() if line.startswith("server ")]
+
+
 def test_ntp_client(station, profile):
     only(profile, "standalone")
+    dut = station.dut
+    if station.cfg.get("ntp_from_dhcp"):
+        # Whole chain: DHCP option 42 -> NM dispatcher -> chrony sourcedir -> firewall egress -> sync.
+        servers = dhcp_ntp_servers(dut)
+        assert servers, "DHCP provided no NTP server (/run/chrony-dhcp/*.sources missing or empty)"
+        out, code = status(dut, "chronyc -n sources")
+        assert code == 0 and all(server in out for server in servers), out
+        out, code = status(dut, "chronyc -n waitsync 24 0 0 5", timeout=180)
+        assert code == 0, f"chronyd did not synchronize to {servers}:\n{out}"
+        tracking = dut.run("chronyc -n tracking")
+        assert any(f"({server})" in tracking for server in servers), tracking
+        return
     server = station.cfg.get("ntp_server")
     if not server:
-        pytest.skip("Set ntp_server in the station configuration to query a reachable NTP server")
-    out, code = status(station.dut, f"chronyd -Q 'server {server} iburst'", timeout=120)
+        pytest.skip("Set ntp_from_dhcp or ntp_server in the station configuration")
+    out, code = status(dut, f"chronyd -Q 'server {server} iburst'", timeout=120)
     assert code == 0 and "System clock wrong" in out, out
 
 

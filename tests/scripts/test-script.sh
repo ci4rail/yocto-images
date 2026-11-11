@@ -6,6 +6,7 @@
 #   bundle.env                    STATION_CONFIG (inside the pytest package), IMAGE_FILE
 #   yocto-pytest-package.tar.gz   output of tests/scripts/package.sh
 #   <IMAGE_FILE>                  staging TEZI image to flash (zstd-compressed if *.zst; needs zstd on the TC)
+#   <CORE_OS_ARTIFACT>            optional: staging CoreOS .mender with a newer version (core API update test)
 #
 # Credentials are not part of the bundle: provide TARGET_PASSWORD, DOCKER_PASSWORD and
 # RELAY_UID (CPU01Plus) in the env file of the TC, default /etc/yocto-tests.env.
@@ -35,6 +36,9 @@ if [[ "${IMAGE_FILE}" == *.zst ]]; then
 fi
 
 echo "test ${test_id}: station ${STATION_CONFIG}, image ${IMAGE_FILE}"
+if [[ -n "${CORE_OS_ARTIFACT:-}" ]]; then
+    export CORE_OS_ARTIFACT="${bundle}/${CORE_OS_ARTIFACT}"
+fi
 rc=0
 (cd "${suite}" && ./ci-run.sh --station "${STATION_CONFIG}" --image "${image}") || rc=$?
 

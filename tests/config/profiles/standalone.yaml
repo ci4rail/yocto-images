@@ -44,14 +44,14 @@ security_baseline:
   egress_monitor:
     observation_seconds: 15
     allowed_ipv4_cidrs:
-      - 192.168.24.0/24     # LAN: replies to ssh/https/snmp clients, local NTP server. TODO: adapt
+      - 192.168.24.0/24     # LAN: replies to ssh/https/snmp clients. TODO: adapt
       - 255.255.255.255/32  # DHCP discover
       - 224.0.0.0/4
     allowed_ipv6_cidrs:
       - fe80::/10
       - ff00::/8
     allowed_tcp_dports: [53]           # DNS client
-    allowed_udp_dports: [53, 67, 123]  # DNS client, DHCP client, NTP client
+    allowed_udp_dports: [53, 67, 123]  # DNS client, DHCP client, NTP client (any destination)
     allowed_udp_sports: []
   abuse_test:
     tcp_ports: [22, 443]

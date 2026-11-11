@@ -17,6 +17,8 @@ def pytest_addoption(parser):
     parser.addoption("--profile", help="Customer profile (config/profiles): install its os-customization "
                      "before the tests and apply its security baseline")
     parser.addoption("--results", default="results", help="Directory for station logs")
+    parser.addoption("--core-os-artifact", help="Staging CoreOS .mender with a newer version for "
+                     "test_core_api_updates, overrides core_api_core_os_artifact")
 
 
 def pytest_configure(config):
@@ -44,6 +46,8 @@ def station(request):
     cfg = load_config(path)
     if request.config.getoption("--image"):
         cfg["image_file"] = request.config.getoption("--image")
+    if request.config.getoption("--core-os-artifact"):
+        cfg["core_api_core_os_artifact"] = request.config.getoption("--core-os-artifact")
     s = Station(cfg, request.config.getoption("--results"), target_logins=target_logins())
     with prepare(s, skip_flash=request.config.getoption("--skip-flash")):
         from yocto_tests.ota import provision_factory

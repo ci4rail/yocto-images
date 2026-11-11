@@ -1,7 +1,6 @@
 name: CPU01 Recovery Staging
 
 on:
-  push:
   workflow_dispatch:
     inputs:
       minio_bucket:

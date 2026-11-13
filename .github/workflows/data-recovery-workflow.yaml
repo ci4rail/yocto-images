@@ -122,11 +122,11 @@ jobs:
         run: |
           target=tools
           if [ "$SIGNING_MODE" = production ]; then target=production; fi
-          docker build --target "$target" -t recovery-tools -f migration/ci/Dockerfile migration/ci
+          docker build --network host --target "$target" -t recovery-tools -f migration/ci/Dockerfile migration/ci
 
       - name: Download TEZI and compile installer DTB
         run: |
-          docker run --rm --user "$(id -u):$(id -g)" \
+          docker run --rm --network host --user "$(id -u):$(id -g)" \
             -e GIT_CONFIG_GLOBAL=/dev/null -e GIT_CONFIG_SYSTEM=/dev/null -v "$GITHUB_WORKSPACE:/work:ro" -v "$RECOVERY_WORK:/build" \
             recovery-tools python3 migration/ci/recovery.py prepare \
             --platform "$PLATFORM" --mode "$SIGNING_MODE" --work /build
@@ -138,7 +138,7 @@ jobs:
           AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         run: |
-          docker run --rm --user "$(id -u):$(id -g)" \
+          docker run --rm --network host --user "$(id -u):$(id -g)" \
             -e GIT_CONFIG_GLOBAL=/dev/null -e GIT_CONFIG_SYSTEM=/dev/null -v "$GITHUB_WORKSPACE:/work:ro" -v "$RECOVERY_WORK:/build" \
             -e RECOVERY_ROOT_PASSWORD_HASH \
             -e AZURE_CLIENT_ID -e AZURE_TENANT_ID -e AZURE_SUBSCRIPTION_ID \
@@ -154,7 +154,7 @@ jobs:
           MINIO_ACCESS_KEY: ${{ secrets.RECOVERY_MINIO_ACCESS_KEY }}
           MINIO_SECRET_KEY: ${{ secrets.RECOVERY_MINIO_SECRET_KEY }}
         run: |
-          docker run --rm --user "$(id -u):$(id -g)" \
+          docker run --rm --network host --user "$(id -u):$(id -g)" \
             -e GIT_CONFIG_GLOBAL=/dev/null -e GIT_CONFIG_SYSTEM=/dev/null -v "$GITHUB_WORKSPACE:/work:ro" -v "$RECOVERY_WORK:/build" \
             -e MINIO_ACCESS_KEY -e MINIO_SECRET_KEY -e MINIO_BUCKET -e MINIO_PREFIX \
             -e RECOVERY_VERSION -e GITHUB_RUN_ID -e GITHUB_RUN_ATTEMPT \

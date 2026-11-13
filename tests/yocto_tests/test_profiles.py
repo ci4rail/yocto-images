@@ -70,9 +70,12 @@ def test_internet_reachability(station, profile):
         out, code = status(station.dut, f"getent hosts {quote(host)}")
         if code:
             failures.append(f"DNS {host}: {out}")
+    # Any HTTP status proves egress reached the server; a remote 5xx (e.g. example.com
+    # returning 503) is the server's problem, not the target's.
     for url in reach["https"]:
         out, code = status(station.dut, f"curl -sS -o /dev/null --max-time 20 --write-out '%{{http_code}}' {quote(url)}")
-        if code or not out.strip().endswith(("200", "301", "302", "401", "403", "404")):
+        http = out.strip()[-3:]
+        if code or not http.isdigit() or http == "000":
             failures.append(f"HTTPS {url}: {out}")
     assert not failures, "\n".join(failures)
 

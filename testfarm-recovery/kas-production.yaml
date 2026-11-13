@@ -1,0 +1,34 @@
+header:
+  version: 11
+  includes:
+    - kas-common.yaml
+repos:
+  src/meta-akv-signing:
+    url: https://github.com/ci4rail/meta-akv-signing.git
+    commit: 0759e3c060991f82c5d51ba67b8776fbf491f838
+local_conf_header:
+  testfarm-signing: |
+    AKV_SIGNING_ENABLE = "1"
+    BB_ENV_PASSTHROUGH_ADDITIONS:append = " AZURE_APP_ID AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_FEDERATED_TOKEN_FILE AZURE_AUTHORITY_HOST ACTIONS_ID_TOKEN_REQUEST_URL ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+    FIT_SIGN_ALG = "rsa3072"
+    FIT_SIGN_NUMBITS = "3072"
+    UBOOT_FIT_SIGN_ALG = "rsa3072"
+    UBOOT_FIT_SIGN_NUMBITS = "3072"
+    AZURE_FIT_KEY_ID = "https://vault-firmware-signing.vault.azure.net/keys/moducop-cpu01-fit"
+    AKV_HAB_CSF_KEY_ID = "https://vault-firmware-signing.vault.azure.net/keys/moducop-cpu01-csf-1-1"
+    AKV_HAB_IMG_KEY_ID = "https://vault-firmware-signing.vault.azure.net/keys/moducop-cpu01-img-1-1"
+    AKV_HAB_SRK_CERT_FILES = "\
+      /work/secure-boot-material/production/crts/SRK1_sha256_3072_65537_v3_ca_crt.pem \
+      /work/secure-boot-material/production/crts/SRK2_sha256_3072_65537_v3_ca_crt.pem \
+      /work/secure-boot-material/production/crts/SRK3_sha256_3072_65537_v3_ca_crt.pem \
+      /work/secure-boot-material/production/crts/SRK4_sha256_3072_65537_v3_ca_crt.pem \
+    "
+env:
+  AZURE_APP_ID: ""
+  AZURE_CLIENT_ID: ""
+  AZURE_TENANT_ID: ""
+  AZURE_SUBSCRIPTION_ID: ""
+  AZURE_FEDERATED_TOKEN_FILE: ""
+  AZURE_AUTHORITY_HOST: "https://login.microsoftonline.com"
+  ACTIONS_ID_TOKEN_REQUEST_URL: ""
+  ACTIONS_ID_TOKEN_REQUEST_TOKEN: ""

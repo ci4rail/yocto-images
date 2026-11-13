@@ -1,9 +1,6 @@
 name: CPU01 Recovery Staging
 
 on:
-  push:
-    branches:
-      - secure-boot-migration-image
   workflow_dispatch:
     inputs:
       minio_bucket:

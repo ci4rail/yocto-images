@@ -1,0 +1,153 @@
+From: Ci4Rail <engineering@ci4rail.com>
+Subject: [PATCH] usb: sdp: use control-only writes in CPU01 recovery SPL
+
+The CPU01 testfarm reports that UUU 1.4.127 times out when the 2024.07
+SPL advertises interrupt OUT, while EP0 writes boot the same signed image.
+Advertise only interrupt IN in SPL and keep HID SET_REPORT for commands
+and data. Do not allocate, enable or queue an OUT endpoint in this mode.
+This restores the host transport selection used with the older SPL.
+
+Applied only by the CPU01 testfarm recovery recipe. U-Boot proper retains
+its descriptors and endpoint handling. HAB loading/authentication and the
+ChipIdea controller driver are unchanged; this is a compatibility fix,
+not a diagnosis of the controller issue.
+
+Upstream-Status: Inappropriate [CPU01 testfarm recovery compatibility]
+
+--- a/drivers/usb/gadget/f_sdp.c
++++ b/drivers/usb/gadget/f_sdp.c
+@@ -77,6 +77,15 @@
+ 
+ #define SDP_EXIT 1
+ 
++/* CPU01 recovery SPL: UUU 1.4.127 must write via HID SET_REPORT on EP0.
++ * Keep interrupt IN for status and leave U-Boot proper's SDP unchanged.
++ */
++#ifdef CONFIG_SPL_BUILD
++#define SDP_HAS_OUT_EP 0
++#else
++#define SDP_HAS_OUT_EP 1
++#endif
++
+ struct sdp_command {
+ 	u16 cmd;
+ 	u32 addr;
+@@ -141,7 +150,7 @@
+ 	.bLength =		sizeof(sdp_intf_runtime),
+ 	.bDescriptorType =	USB_DT_INTERFACE,
+ 	.bAlternateSetting =	0,
+-	.bNumEndpoints =	2,
++	.bNumEndpoints =	1 + SDP_HAS_OUT_EP,
+ 	.bInterfaceClass =	USB_CLASS_HID,
+ 	.bInterfaceSubClass =	0,
+ 	.bInterfaceProtocol =	0,
+@@ -205,7 +214,9 @@
+ 	(struct usb_descriptor_header *)&sdp_intf_runtime,
+ 	(struct usb_descriptor_header *)&sdp_hid_desc,
+ 	(struct usb_descriptor_header *)&in_desc,
++#if SDP_HAS_OUT_EP
+ 	(struct usb_descriptor_header *)&out_desc,
++#endif
+ 	NULL,
+ };
+ 
+@@ -213,7 +224,9 @@
+ 	(struct usb_descriptor_header *)&sdp_intf_runtime,
+ 	(struct usb_descriptor_header *)&sdp_hid_desc,
+ 	(struct usb_descriptor_header *)&in_hs_desc,
++#if SDP_HAS_OUT_EP
+ 	(struct usb_descriptor_header *)&out_hs_desc,
++#endif
+ 	NULL,
+ };
+ 
+@@ -535,7 +548,7 @@
+ 		return id;
+ 	sdp_intf_runtime.bInterfaceNumber = id;
+ 
+-	struct usb_ep *ep_in, *ep_out;
++	struct usb_ep *ep_in, *ep_out = NULL;
+ 
+ 	/* allocate instance-specific endpoints */
+ 	ep_in = usb_ep_autoconfig(gadget, &in_desc);
+@@ -544,16 +557,19 @@
+ 		goto error;
+ 	}
+ 
+-	ep_out = usb_ep_autoconfig(gadget, &out_desc);
+-	if (!ep_out) {
+-		rv = -ENODEV;
+-		goto error;
++	if (SDP_HAS_OUT_EP) {
++		ep_out = usb_ep_autoconfig(gadget, &out_desc);
++		if (!ep_out) {
++			rv = -ENODEV;
++			goto error;
++		}
+ 	}
+ 
+ 	if (gadget_is_dualspeed(gadget)) {
+ 		/* Assume endpoint addresses are the same for both speeds */
+ 		in_hs_desc.bEndpointAddress = in_desc.bEndpointAddress;
+-		out_hs_desc.bEndpointAddress = out_desc.bEndpointAddress;
++		if (SDP_HAS_OUT_EP)
++			out_hs_desc.bEndpointAddress = out_desc.bEndpointAddress;
+ 	}
+ 
+ 	sdp->in_ep = ep_in; /* Store IN EP for enabling @ setup */
+@@ -627,25 +643,30 @@
+ 
+ 	if (gadget_is_dualspeed(gadget) && gadget->speed == USB_SPEED_HIGH) {
+ 		result = usb_ep_enable(sdp->in_ep, &in_hs_desc);
+-		result |= usb_ep_enable(sdp->out_ep, &out_hs_desc);
++		if (SDP_HAS_OUT_EP)
++			result |= usb_ep_enable(sdp->out_ep, &out_hs_desc);
+ 	} else {
+ 		result = usb_ep_enable(sdp->in_ep, &in_desc);
+-		result |= usb_ep_enable(sdp->out_ep, &out_desc);
++		if (SDP_HAS_OUT_EP)
++			result |= usb_ep_enable(sdp->out_ep, &out_desc);
+ 	}
+ 	if (result)
+ 		return result;
+ 
+ 	sdp->in_req = sdp_start_ep(sdp->in_ep, true);
+ 	sdp->in_req->context = sdp;
+-	sdp->out_req = sdp_start_ep(sdp->out_ep, false);
+-	sdp->out_req->context = sdp;
++	if (SDP_HAS_OUT_EP) {
++		sdp->out_req = sdp_start_ep(sdp->out_ep, false);
++		sdp->out_req->context = sdp;
++	}
+ 
+ 	sdp->in_ep->driver_data = cdev; /* claim */
+-	sdp->out_ep->driver_data = cdev; /* claim */
++	if (SDP_HAS_OUT_EP)
++		sdp->out_ep->driver_data = cdev; /* claim */
+ 
+ 	sdp->altsetting = alt;
+ 	sdp->state = SDP_STATE_IDLE;
+-	sdp->ep_int_enable = true;
++	sdp->ep_int_enable = SDP_HAS_OUT_EP;
+ 
+ 	return 0;
+ }
+@@ -662,7 +683,8 @@
+ 	struct f_sdp *sdp = func_to_sdp(f);
+ 
+ 	usb_ep_disable(sdp->in_ep);
+-	usb_ep_disable(sdp->out_ep);
++	if (SDP_HAS_OUT_EP)
++		usb_ep_disable(sdp->out_ep);
+ 
+ 	if (sdp->in_req) {
+ 		free(sdp->in_req->buf);
+@@ -939,7 +961,7 @@
+ #else
+ 		flag = sdp_handle_in_ep(NULL, NULL);
+ #endif
+-		if (sdp_func->ep_int_enable)
++		if (SDP_HAS_OUT_EP && sdp_func->ep_int_enable)
+ 			sdp_handle_out_ep();
+ 	}
+ }

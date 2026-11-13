@@ -16,8 +16,8 @@ local_conf_header:
     TDX_IMX_HAB_CST_BUILD_FROM_SOURCE = "1"
     DM_VERITY_IMAGE = "ci4rail-base-image"
     TDX_IMX_HAB_CST_KEY_SIZE = "3072"
-    TDX_IMX_HAB_CST_DIR = "/work/secure-boot-material/staging"
-    UBOOT_SIGN_KEYDIR = "/work/secure-boot-material/staging/keys/fit"
+    TDX_IMX_HAB_CST_DIR = "/secure-boot-material/staging"
+    UBOOT_SIGN_KEYDIR = "/secure-boot-material/staging/keys/fit"
     FIT_GENERATE_KEYS = "0"
     
 

@@ -53,6 +53,11 @@ io4edge_devices: [S101-CPU01UC, S101-IOU01-USB-EXT-1, S101-IOU03-USB-EXT-3, S101
 io4edge_ips: [192.168.200.10, 192.168.201.10, 192.168.203.10, 192.168.205.10, 192.168.206.10, 192.168.207.10]
 # Core API staging smoke test: a version-only rebuild of the installed image.
 # Omit core_api_core_os_artifact to skip this smoke test.
-# core_api_core_os_artifact: /absolute/path/to/new-staging-version.mender # runner path
+# core_api_core_os_artifact: /absolute/path/to/new-staging-version.mender # runner path (or --core-os-artifact)
 # core_api_url: http://127.0.0.1:8090/api/v1 # reached from the DUT via SSH
 # core_api_update_timeout: 900 # per deployment, includes automatic reboot/commit
+# NTP client test (standalone profile): either the DHCP server provides an NTP server
+# (option 42; the test checks chrony's DHCP sources and waits for sync) ...
+# ntp_from_dhcp: true
+# ... or query this NTP server once with chronyd -Q.
+# ntp_server: 192.168.24.10

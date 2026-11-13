@@ -1,21 +1,40 @@
 import sys
+import time
 from pathlib import Path
 
 import pytest
 
+from yocto_tests.profiles import effective_baseline, ensure_profile, load_profile, target_logins
 from yocto_tests.station import Station, load_config
+
+_config = None
 
 
 def pytest_addoption(parser):
     parser.addoption("--station", help="Station YAML configuration")
     parser.addoption("--image", help="Local TEZI tar path, overrides configuration")
     parser.addoption("--skip-flash", action="store_true", help="Reuse the installed target image")
+    parser.addoption("--profile", help="Customer profile (config/profiles): install its os-customization "
+                     "before the tests and apply its security baseline")
     parser.addoption("--results", default="results", help="Directory for station logs")
+    parser.addoption("--core-os-artifact", help="Staging CoreOS .mender with a newer version for "
+                     "test_core_api_updates, overrides core_api_core_os_artifact")
 
 
 def pytest_configure(config):
     if sys.prefix == sys.base_prefix:
         raise pytest.UsageError("Run pytest inside a virtual environment, e.g. tests/run.sh")
+    global _config
+    _config = config
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_logstart(nodeid, location):
+    # With -v, announce each test on a full line so remote logs show the running test.
+    if _config is not None and _config.option.verbose > 0:
+        reporter = _config.pluginmanager.get_plugin("terminalreporter")
+        if reporter is not None:
+            reporter.write_line(f"[{time.strftime('%H:%M:%S')}] start {nodeid}")
 
 
 @pytest.fixture(scope="session")
@@ -27,7 +46,9 @@ def station(request):
     cfg = load_config(path)
     if request.config.getoption("--image"):
         cfg["image_file"] = request.config.getoption("--image")
-    s = Station(cfg, request.config.getoption("--results"))
+    if request.config.getoption("--core-os-artifact"):
+        cfg["core_api_core_os_artifact"] = request.config.getoption("--core-os-artifact")
+    s = Station(cfg, request.config.getoption("--results"), target_logins=target_logins())
     with prepare(s, skip_flash=request.config.getoption("--skip-flash")):
         from yocto_tests.ota import provision_factory
         provision_factory(s)
@@ -43,6 +64,23 @@ def feature(station):
 
 
 @pytest.fixture(scope="session")
-def baseline():
+def profile(request):
+    """The profile selected with --profile, or None."""
+    name = request.config.getoption("--profile")
+    return load_profile(name) if name else None
+
+
+@pytest.fixture(scope="session", autouse=True)
+def active_profile(request, tmp_path_factory):
+    """Install the selected profile's customization once; a no-op without --profile."""
+    selected = request.getfixturevalue("profile")
+    if selected is not None:
+        ensure_profile(request.getfixturevalue("station"), selected, tmp_path_factory.mktemp("profile"))
+    return selected
+
+
+@pytest.fixture(scope="session")
+def baseline(profile):
     import yaml
-    return yaml.safe_load((Path(__file__).parent / "config/security_baseline.yaml").read_text())["security_baseline"]
+    common = yaml.safe_load((Path(__file__).parent / "config/security_baseline.yaml").read_text())["security_baseline"]
+    return effective_baseline(common, profile)

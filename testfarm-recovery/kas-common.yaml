@@ -1,0 +1,33 @@
+header:
+  version: 11
+  includes:
+    - ../kas-includes/kasfile-general.yaml
+    - ../kas-includes/kasfile-tdxbsp.yaml
+repos:
+  src/meta-ci4rail-bsp:
+    commit: cb4d0fa4320b3dda1bd75ad73705361d77de34dc
+  # Required by meta-ci4rail-bsp, without enabling Mender image/boot policy.
+  src/meta-mender:
+    url: https://github.com/mendersoftware/meta-mender
+    commit: f7225aefdb89e5979679925f5a97aa3b17086c2b
+    layers:
+      meta-mender-core:
+  src/meta-mender-community:
+    url: https://github.com/ci4rail/meta-mender-community
+    commit: 7f0c873c2610013aba1d26fbc6879aa8dfa42745
+    layers:
+      meta-mender-toradex-nxp:
+  testfarm-layer:
+    path: meta-testfarm-recovery
+machine: moducop-cpu01
+distro: tdx-xwayland
+target: u-boot-toradex
+local_conf_header:
+  testfarm-recovery: |
+    INHERIT += "tdx-signed"
+    TDX_IMX_HAB_CST_BUILD_FROM_SOURCE = "1"
+    FIT_GENERATE_KEYS = "0"
+    TDX_UBOOT_HARDENING_ENABLE_FB_PROT = "1"
+    # Separate bootloader build, no OS or migration image policy changes.
+    UBOOT_CONFIG = "sd"
+    RM_WORK_EXCLUDE += "u-boot-toradex"

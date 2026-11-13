@@ -1,0 +1,3 @@
+# EXAMPLE: test key of the pytest suite (tests/config/profiles/standalone-ci4rail-test.key).
+# Replace with the factory's public key(s), one per line.
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJzULNBeP4fIEEtI1S3RXDF7s6h00mF2LPd/UJhe9eXq ci4rail standalone profile TEST KEY - staging only

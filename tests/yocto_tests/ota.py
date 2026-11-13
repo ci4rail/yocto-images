@@ -1,4 +1,5 @@
 """Shared OTA signing and factory provisioning for hardware tests."""
+import hashlib
 import json
 from pathlib import Path
 import subprocess
@@ -8,11 +9,15 @@ import uuid
 
 import paramiko
 
+from .core_api import STAGING_KEYS
 from .station import quote
 
 
 def signing_material(cfg):
     value = cfg.get("ota_signing_material_dir")
+    if value == "staging":
+        # The repository's staging keys, or the copy bundled in the pytest package.
+        return STAGING_KEYS
     return Path(value).expanduser().resolve() if value else None
 
 
@@ -42,6 +47,10 @@ def sign_artifact(tool, artifact, cfg, kind):
             assert result.returncode == 0, result.stdout + result.stderr
 
 
+def sha256_file(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
 def provision_factory(s):
     keys = signing_material(s.cfg)
     if keys is None:
@@ -52,6 +61,11 @@ def provision_factory(s):
     for kind in ("core-os", "application"):
         signing_key(s.cfg, kind)
     dut = s.dut
+    # Later pytest invocations on the same flash (--skip-flash) must not reinstall the
+    # factory layer: that costs a reboot and may drop installed customizations.
+    if all(sha256_file(keys / name) in dut.run(f"sha256sum /etc/ota/{name} 2>/dev/null", check=False)
+           for name in names):
+        return
     remote = "/data/yocto-ota-" + uuid.uuid4().hex
     # install-factory replaces the layer: copy it first to retain existing files.
     dut.run(f"set -e\nmkdir -p {remote}/etc\n"

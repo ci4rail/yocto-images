@@ -180,9 +180,17 @@ def test_modem(station, feature, record_property):
         dut.run(f"nmcli c delete {name}", check=False)
 
 
+def testing_image(station):
+    """Pull the testing container separately so registry speed does not eat the test's own timeout."""
+    image = quote(station.cfg["testing_image"])
+    station.dut.run(f"docker image inspect {image} >/dev/null 2>&1 || docker pull -q {image}", timeout=600)
+    return image
+
+
 def fio(station, path, read, write, mounts, record_property, size="100M"):
     size_arg = f"--size={size}" if size else ""
-    output = station.dut.run(f"docker run --rm --privileged {mounts} {quote(station.cfg['testing_image'])} "
+    image = testing_image(station)
+    output = station.dut.run(f"docker run --rm --privileged {mounts} {image} "
                             f"fio --rw=readwrite --name={quote(path)} {size_arg} --runtime=10 "
                             "--direct=1 --output-format=json", timeout=210)
     result = json.loads(output)
@@ -247,9 +255,10 @@ def test_serial(station, feature):
     feature("serial")
     output = station.dut.run("avahi-browse _ttynvt._tcp -t")
     assert station.cfg["serial_devices"], "No serial devices configured"
+    image = testing_image(station)
     for device in station.cfg["serial_devices"]:
         assert device.removeprefix("tty") in output
-        station.dut.run(f"docker run --rm --privileged -v /dev:/dev {quote(station.cfg['testing_image'])} "
+        station.dut.run(f"docker run --rm --privileged -v /dev:/dev {image} "
                         f"linux-serial-test -p {quote('/dev/' + device)} -b 115200 -x 5000 -v 15000 "
                         "-I 5000 -w 1024 --no-icount --ascii --stats --dump-err --stop-on-err --error-on-timeout",
                         timeout=100)

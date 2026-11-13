@@ -207,6 +207,58 @@ class RecoveryInputTests(unittest.TestCase):
             self.assertEqual(rows, [['/dev/emmc-boot0', '-0x2200', '0x2000'],
                                     ['/dev/emmc-boot0', '-0x4200', '0x2000']])
 
+    def test_runtime_variants_install_only_their_tools(self):
+        for embedded, present, absent in (
+                (False, {'backup-data.sh', 'restore-data.sh', 'mount-sd.sh'}, {'install-embedded.sh'}),
+                (True, {'install-embedded.sh'}, {'backup-data.sh', 'restore-data.sh', 'mount-sd.sh'})):
+            with self.subTest(embedded=embedded), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                (root / 'etc/network').mkdir(parents=True)
+                with patch.object(build, 'run') as run:
+                    build.configure_runtime(root, {'soc': 'fsl,imx8mm'}, embedded)
+                names = {p.name for p in (root / 'migration').iterdir()}
+                self.assertTrue(present <= names)
+                self.assertFalse(absent & names)
+                tool = 'local-http' if embedded else 'split-backup'
+                self.assertEqual(Path(run.call_args.args[-1]).name, tool)
+
+    def test_data_mode_requires_payload_and_recovery_inputs(self):
+        parser = build.argument_parser('data')
+        common = ['--platform', 'cpu01', '--tezi', 't', '--dtb', 'd',
+                  '--root-password-hash-file', 'h', '--output', 'o']
+        self.assertEqual(parser.parse_args(common + ['--payload', 'p']).payload, Path('p'))
+        with self.assertRaises(SystemExit), patch('sys.stderr'):
+            parser.parse_args(common)
+
+
+class DataRecoveryTests(unittest.TestCase):
+    def test_ramdisk_covers_squashfs_in_16_mib_steps(self):
+        self.assertEqual(build.data_ramdisk_kib(1), 16 * 1024)
+        self.assertEqual(build.data_ramdisk_kib(16 * build.MIB), 16 * 1024)
+        self.assertEqual(build.data_ramdisk_kib(350 * build.MIB + 1), 352 * 1024)
+
+    def test_fit_and_relocated_ramdisk_must_not_overlap(self):
+        # Measured payload: ~350 MiB squashfs in a ~370 MiB FIT.
+        build.check_data_memory(370 * build.MIB, 350 * build.MIB)
+        with self.assertRaisesRegex(ValueError, 'bootm region'):
+            build.check_data_memory(460 * build.MIB, 440 * build.MIB)
+
+    def test_data_script_boots_from_selected_partition_with_matching_ramdisk(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            with patch.object(build, 'run') as run:
+                build.data_boot_script(root, 'ttymxc0', 360448)
+            script = (root / 'data.cmd').read_text()
+            self.assertIn(f"setenv bootargs {build.recovery_bootargs('ttymxc0', 360448)}\n", script)
+            self.assertIn('ramdisk_size=360448', script)
+            self.assertIn('load mmc ${migration_part} 0x60000000 /migration/recovery.itb', script)
+            self.assertIn('bootm 0x60000000#recovery', script)
+            self.assertNotRegex(script, r'(?m)^\s*(saveenv|fuse|env save)')
+            self.assertEqual(Path(run.call_args.args[-1]).name, 'data.scr')
+
+    def test_sd_bootargs_remain_pinned(self):
+        self.assertTrue(build.recovery_bootargs('ttymxc0').endswith('ramdisk_size=393216'))
+
 
 @unittest.skipUnless(all(shutil.which(t) for t in ('mkimage', 'fdtget', 'fdtput', 'dtc', 'openssl')),
                      'FIT host tools required')

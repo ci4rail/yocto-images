@@ -10,7 +10,7 @@
 [x] merge changes from scarthgap branch
 
 [x] disable kernel messages on console
-[ ] nftables
+[x] nftables
 [x] persistent logging
 [ ] watchdog support (via systemd)
 [ ] initially LEDs off
@@ -18,18 +18,23 @@
 [x] migration image SDCard staging
 [x] migration image SDCard production
 
-[ ] ci: add non-secure build
-[ ] ci: add staging build
-[ ] ci: add integration test for staging
+[x] ci: add non-secure build
+[x] ci: add staging build
+[x] ci: add integration test for staging
+[x] ci: staging test passes on closed device
 
-[ ] test moducop-core-api-server
-  
-[ ] support CPU01plus
+[x] test moducop-core-api-server
+[x] app-signing: support production images in ci
+ 
+[x] support CPU01plus
 
 [ ] oss clearing
 [ ] cvs scanning
 
 [ ] update yocto.sh
+
+
+----
 
 [ ] os-customization mender: fix: /usr/share/mender/inventory/os-customization' doesn't have the 'mender-inventory-' prefix, skipping"
 

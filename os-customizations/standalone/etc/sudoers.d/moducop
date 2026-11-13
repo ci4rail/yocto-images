@@ -1,0 +1,2 @@
+# moducop may run any command as root after entering its own password.
+moducop ALL=(ALL:ALL) ALL

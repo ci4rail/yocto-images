@@ -1,0 +1,24 @@
+# Customer profile: device installed on vehicles with internet access
+# (mender server, tailscale servers, other internet services via LTE).
+# The matching customization is os-customizations/internet-connected.
+name: internet-connected
+customization: internet-connected
+customer_container: false
+services_active: [tailscaled]
+services_inactive: [avahi-daemon]
+# Checked on the target: egress must work.
+reachability:
+  dns: [hosted.mender.io, controlplane.tailscale.com]
+  https:
+    - https://hosted.mender.io
+    - https://controlplane.tailscale.com/key?v=71
+    - https://example.com
+# Overrides for config/security_baseline.yaml (dicts merge, lists and null replace).
+security_baseline:
+  allowed_tcp_ports: [22]   # ssh from LAN (the test computer is in the LAN) and tailscale0
+  allowed_udp_ports: []     # no mDNS
+  allowed_root_network_processes: [sshd, dropbear, systemd, snmpd, snmptrapd, tailscaled]
+  egress_monitor: null      # egress is open: nothing to monitor
+  abuse_test:
+    tcp_ports: [22]
+    udp_ports: []

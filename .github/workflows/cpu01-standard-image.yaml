@@ -5,13 +5,24 @@ on:
       - scarthgap-secure-boot
     paths:
       - "cpu01-standard-image/kasfile-common.yaml"
+      - "cpu01-standard-image/kasfile-nonsecure.yaml"
       - "cpu01-standard-image/kasfile-sb-production.yaml"
+      - "cpu01-standard-image/kasfile-sb-staging.yaml"
+      - "kas-includes/kasfile-ota-protection.yaml"
+      - "os-customizations/**"
+      - "ota-signing-material/staging/**"
+      - "ota-signing-material/production/**"
+      - "secure-boot-material/**"
+      - "tests/**"
       - "kas-includes/kasfile-tdxbsp.yaml"
       - "kas-includes/kasfile-mender.yaml"
       - "kas-includes/kasfile-mender-tdxbsp.yaml"
       - "kas-includes/kasfile-general.yaml"
       - ".github/workflows/cpu01-standard-image.yaml"
       - ".github/workflows/image-workflow.yaml"
+      - ".github/workflows/data-recovery-workflow.yaml"
+      - ".github/actions/**"
+      - "scripts/ci-*.sh"
   release:
     types: [published]
 
@@ -29,12 +40,15 @@ jobs:
       output_type: "tar"
       image_start: "Moducop-CPU01_Standard-Image"
       test_name: "cpu01-standard-image test"
+      station_config: "config/station-ci-cpu01.yaml"
+      test_station: "croco-rpi:1883"
     secrets:
       docker_password: ${{ secrets.DOCKER_PASSWORD }}
       mender_tenant_token: ${{ secrets.MENDER_TENANT_TOKEN }}
-      minio_access_key: ${{ secrets.MINIO_ACCESS_KEY }}
-      minio_secret_key: ${{ secrets.MINIO_SECRET_KEY }}
       mender_user_email: ${{ secrets.MENDER_USER_EMAIL }}
       mender_password: ${{ secrets.MENDER_PASSWORD }}
       private_token: ${{ secrets.FW_CI_TOKEN }}
       tailscale_auth_key: ${{ secrets.YODA_TAILSCALE_AUTHKEY }}
+      recovery_minio_access_key: ${{ secrets.MINIO_ACCESS_KEY }}
+      recovery_minio_secret_key: ${{ secrets.MINIO_SECRET_KEY }}
+      recovery_root_password_hash: ${{ secrets.RECOVERY_ROOT_PASSWORD_HASH }}

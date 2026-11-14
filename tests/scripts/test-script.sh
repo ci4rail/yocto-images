@@ -8,7 +8,7 @@
 #   <IMAGE_FILE>                  staging TEZI image to flash (zstd-compressed if *.zst; needs zstd on the TC)
 #   <CORE_OS_ARTIFACT>            optional: staging CoreOS .mender with a newer version (core API update test)
 #
-# Credentials are not part of the bundle: provide TARGET_PASSWORD, DOCKER_PASSWORD and
+# Credentials are not part of the bundle: provide TARGET_PASSWORD, DOCKER_PASSWORD, WIFI_SSID, WIFI_PASSWORD and
 # RELAY_UID (CPU01Plus) in the env file of the TC, default /etc/yocto-tests.env.
 set -euo pipefail
 test_id=${1:?testId}

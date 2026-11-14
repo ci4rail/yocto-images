@@ -57,7 +57,7 @@ are skipped.
 | Network | `test_ethernet1` | iperf3 DUT ↔ TC on the main Ethernet | > 900 Mbit/s in both directions |
 | Network | `test_ethernet2` | ETH2 moved to a network namespace, DHCP, iperf3 to TC | Throughput > `eth2_mbps` (80 Mbit/s) |
 | Network | `test_modem` | LTE connection via NetworkManager, ping over modem | Within 300 s: packet loss < 50 %, mean RTT < 1500 ms |
-| Network | `test_wifi` | Connect to configured WLAN, iperf3 to TC | > 5 Mbit/s |
+| Network | `test_wifi` | Set antennas via `/etc/set_antenna_config` + `set-antenna-config.service`, connect to configured WLAN, iperf3 to TC | > 5 Mbit/s |
 | I/O | `test_serial` | ttynvt serial devices announced via mDNS, loopback test with `linux-serial-test` | All configured devices found, serial test passes without errors |
 | I/O | `test_io4edge` | io4edge devices reachable | Configured IPs present and pingable, devices announced via mDNS and pingable by name |
 | Storage | `test_emmc` | fio read/write on `/data` | `/data` is on eMMC; read/write bandwidth above configured minimum |

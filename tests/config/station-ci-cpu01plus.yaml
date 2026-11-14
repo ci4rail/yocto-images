@@ -1,6 +1,6 @@
 # Test farm station for the CI pipeline (staging images, secure boot closed device).
 # Runs on the TC itself, started by the test-scheduler (tests/scripts/test-script.sh).
-# Environment references come from the TC's env file (/etc/test-scheduler/yocto-tests.env).
+# Environment references come from the TC's env file (/etc/yocto-tests.env).
 platform: cpu01plus
 closed: true
 image_file: null # CI passes --image
@@ -47,6 +47,14 @@ ota_signing_material_dir: staging
 features: [gnss, modem, wifi, sdcard]
 emmc_read_bps: 1000000
 emmc_write_bps: 1000000
+sdcard: /dev/mmcblk1
+sdcard_read_bps: 1000000
+sdcard_write_bps: 1000000
+sim_apn: web.vodafone.de
+wifi_device: mlan0
+wifi_ssid: ${WIFI_SSID}
+wifi_password: ${WIFI_PASSWORD}
+wifi_antenna: '0x01 0x01'
 gpsdclient: /root/bin/gpsdclient_v0.1.0/gpsdclient
 # NTP client test (standalone profile): the testfarm router hands out an NTP server via DHCP option 42.
 ntp_from_dhcp: true

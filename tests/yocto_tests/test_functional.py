@@ -237,11 +237,17 @@ def test_sdcard(station, feature, record_property):
 def test_wifi(station, feature, record_property):
     feature("wifi")
     cfg, dut = station.cfg, station.dut
-    antenna = cfg["wifi_antenna"].split()
-    assert len(antenna) == 2 and all(re.fullmatch(r"0x[0-9a-fA-F]+", a) for a in antenna)
+    # Configure antennas as documented for users: TX/RX masks in
+    # /etc/set_antenna_config (0x01 WLAN1, 0x02 WLAN2, 0x03 both), applied by
+    # set-antenna-config.service. Restart the service instead of rebooting.
+    tx, rx = cfg["wifi_antenna"].split()
+    assert all(a in ("0x01", "0x02", "0x03") for a in (tx, rx)), cfg["wifi_antenna"]
+    antenna_config = "/etc/set_antenna_config"
+    original = dut.run(f"cat {antenna_config}")
     name = "yocto-wifi-" + uuid.uuid4().hex[:8]
     try:
-        dut.run(f"iw phy phy0 set antenna {' '.join(antenna)}")
+        dut.run(f"printf 'ANTENNA_CONFIG_TX=%s\\nANTENNA_CONFIG_RX=%s\\n' {tx} {rx} > {antenna_config}")
+        dut.run("systemctl restart set-antenna-config.service")
         dut.run(f"nmcli -w 60 device wifi connect {quote(cfg['wifi_ssid'])} "
                 f"password {quote(cfg['wifi_password'])} ifname {quote(cfg['wifi_device'])} name {name}",
                 secret=True, timeout=70)
@@ -249,6 +255,8 @@ def test_wifi(station, feature, record_property):
               bind=cfg["wifi_device"], seconds=45)
     finally:
         dut.run(f"nmcli c delete {name}", check=False)
+        dut.run(f"cat > {antenna_config}", input=original, check=False)
+        dut.run("systemctl restart set-antenna-config.service", check=False)
 
 
 def test_serial(station, feature):

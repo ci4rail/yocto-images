@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import tarfile
 import tempfile
 import time
 import uuid
@@ -45,6 +46,47 @@ def sign_artifact(tool, artifact, cfg, kind):
             result = subprocess.run([str(tool), "sign", "--force", "-k", str(converted), str(artifact)],
                                     capture_output=True, text=True, timeout=300)
             assert result.returncode == 0, result.stdout + result.stderr
+
+
+BAD_SIGNATURES = ("unsigned", "unknown-key")
+
+
+def break_signature(tool, artifact, mode):
+    """Make the OTA signature of artifact invalid for the device, in place.
+
+    "unsigned" drops manifest.sig; "unknown-key" re-signs with a throwaway key
+    that is neither the ci4rail nor the provisioned customer key.
+    """
+    assert mode in BAD_SIGNATURES, mode
+    artifact = Path(artifact)
+    with tempfile.TemporaryDirectory(prefix="yocto-badsig-", dir=artifact.parent) as directory:
+        if mode == "unsigned":
+            stripped = Path(directory) / "artifact.mender"
+            with tarfile.open(artifact) as source, tarfile.open(stripped, "w", format=tarfile.GNU_FORMAT) as target:
+                for member in source:
+                    if member.name != "manifest.sig":
+                        target.addfile(member, source.extractfile(member) if member.isfile() else None)
+            stripped.replace(artifact)
+        else:
+            generated, key = Path(directory) / "unknown.pem", Path(directory) / "unknown-traditional.pem"
+            for command in (["openssl", "genpkey", "-algorithm", "RSA", "-pkeyopt", "rsa_keygen_bits:3072",
+                             "-out", str(generated)],
+                            # Older artifact tools require traditional PEM instead of PKCS#8.
+                            ["openssl", "pkey", "-traditional", "-in", str(generated), "-out", str(key)],
+                            [str(tool), "sign", "--force", "-k", str(key), str(artifact)]):
+                result = subprocess.run(command, capture_output=True, text=True, timeout=300)
+                assert result.returncode == 0, result.stdout + result.stderr
+
+
+def assert_signature_invalid(tool, artifact, cfg):
+    """Neither device verification key (ci4rail, customer) accepts the artifact."""
+    keys = signing_material(cfg)
+    if keys is None:
+        return
+    for name in ("ci4rail-artifact-pub.pem", "customer-artifact-pub.pem"):
+        result = subprocess.run([str(tool), "validate", "-k", str(keys / name), str(artifact)],
+                                capture_output=True, text=True, timeout=300)
+        assert result.returncode != 0, f"{artifact} still validates with {name}"
 
 
 def sha256_file(path):

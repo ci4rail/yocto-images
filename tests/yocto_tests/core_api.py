@@ -121,3 +121,46 @@ class CoreAPI:
                     assert status in (502, 503), f"HTTP {status}: {response}"
             time.sleep(3)
         pytest.fail(f"Timed out waiting for {endpoint} to install {expected}: {last}")
+
+    def installed(self, endpoint):
+        """Installed name/version, or None for an entity the API does not know or has not installed."""
+        status, response = self.request(endpoint)
+        if status == 404:
+            return None
+        assert status == 200, f"HTTP {status}: {response}"
+        current = response.get("current") or {}
+        return current if current.get("version") else None
+
+    def deploy_rejected(self, endpoint, artifact, rejected, upload_rejection=False):
+        """Upload an artifact that must fail to install; the installed version must not change.
+
+        With upload_rejection, the API may also refuse the upload itself (HTTP 400).
+        """
+        print(f"Core API: deploying {endpoint} (must fail): {rejected}", flush=True)
+        original = self.installed(endpoint)
+        status, response = self.request(endpoint, artifact)
+        if upload_rejection and status == 400:
+            assert self.installed(endpoint) == original
+            return response
+        assert status == 202, f"Upload rejected: HTTP {status}: {response}"
+        deadline = time.monotonic() + self.timeout
+        last = response
+        while time.monotonic() < deadline:
+            try:
+                status, response = self.request(endpoint)
+            except (OSError, paramiko.SSHException, RuntimeError, TimeoutError) as exc:
+                # Failed boot of the new slot and rollback reboot the DUT.
+                last = str(exc)
+            else:
+                last = response
+                if status == 200:
+                    assert response.get("current") != rejected, f"Manipulated artifact was installed: {response}"
+                    code = response["deploy_status"]["code"]
+                    if code == "failure":
+                        assert self.installed(endpoint) == original, response
+                        return response
+                    assert code in ("waiting", "in_progress", "success", "never_deployed"), response
+                else:
+                    assert status in (502, 503), f"HTTP {status}: {response}"
+            time.sleep(3)
+        pytest.fail(f"Timed out waiting for {endpoint} to reject {rejected}: {last}")

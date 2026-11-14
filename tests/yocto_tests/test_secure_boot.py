@@ -1,7 +1,7 @@
 """Sanity checks of the secure-boot image state on a closed staging target.
 
-These run first, right after flashing. They do not prove enforcement of the
-boot chain (that would need negative boot tests with unsigned images).
+These run first, right after flashing. Boot chain enforcement for OTA updates is
+tested by test_core_api_server.py::test_core_os_rejects_manipulated_fit (step 5).
 """
 import pytest
 

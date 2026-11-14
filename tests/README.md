@@ -406,6 +406,26 @@ version banner in `/etc/issue`. Upstream main currently parses `-Image` and
 limitation will fail the initial API version check. The smoke test intentionally
 uses the reported version rather than substituting artifact metadata.
 
+Rejection of invalid OTA signatures is tested for all update types:
+`test_customization_rejects_bad_ota_signature` and `test_application_rejects_bad_ota_signature`
+(step 1) and `test_core_os_rejects_bad_ota_signature` (step 5, first). Each builds the artifact,
+then either removes `manifest.sig` (`unsigned`) or re-signs it with a throwaway RSA key
+(`unknown-key`), and checks on the runner that neither the ci4rail nor the customer key
+validates it. The core API may refuse the upload (HTTP 400) or accept it; the install must
+fail before anything is written, so the installed version, boot ID and boot slot stay unchanged.
+
+The same artifact drives the negative secure-boot test
+`test_core_os_rejects_manipulated_fit`, which runs before the update test in step 5.
+It repacks the CoreOS artifact on the runner with a manipulated boot FIT, either
+`unsigned` (configuration signature nodes renamed) or `wrong-signature` (signature values
+replaced with random bytes), gives it a distinct name and signs it with the valid staging
+OTA key. The core API must accept the upload, and the install must then fail: the update
+module writes the inactive slot, U-Boot refuses the FIT, and Mender rolls back. The test
+checks that the deploy status is `failure`, the reported CoreOS version is unchanged, the
+U-Boot slot variables are the same as before and root is still on dm-verity. Each variant
+costs a failed boot and a rollback; the runner needs about 1.5 GB free in its temporary
+directory for the unpacked payloads.
+
 ```sh
 cd tests
 .venv/bin/python -m pytest -s yocto_tests/test_core_api_server.py \

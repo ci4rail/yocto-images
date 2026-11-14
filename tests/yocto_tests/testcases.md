@@ -90,7 +90,9 @@ are skipped.
 | App via `mender-update` | `test_first_install_rollback` | Rollback of first install | App and its containers removed |
 | App via `mender-update` | `test_install_failure_automatically_rolls_back` [corrupt-image, invalid-manifest, start-failure, unhealthy] | Faulty artifacts | Install exits 1, client rolls back automatically, old version and artifact name kept |
 | App via `mender-update` | `test_commit_failure_automatically_rolls_back` | Unhealthy at commit | Commit exits 1, old version restored automatically |
-| Core API | `test_core_api_updates` | Application (old → new), os-customization and CoreOS rootfs update via core API | Each update reports the expected current version; app and customization survive the CoreOS reboot. Deselected here; runs in step 5 |
+| Core API | `test_customization_rejects_bad_ota_signature` [unsigned, unknown-key] | os-customization artifact without OTA signature, or signed with a key that is neither the ci4rail nor the customer key | Upload refused (HTTP 400) or deploy status `failure`; installed customization unchanged; no reboot, boot slot unchanged |
+| Core API | `test_application_rejects_bad_ota_signature` [unsigned, unknown-key] | New application artifact, signature as above | As above; application not installed and not listed in `/software/applications` |
+| Core API | `test_core_os_rejects_bad_ota_signature`, `test_core_os_rejects_manipulated_fit`, `test_core_api_updates` | CoreOS tests | Deselected here; run in step 5 |
 
 ---
 
@@ -168,15 +170,18 @@ step 3 remains installed (application update, not part of the customization).
 
 ---
 
-## Step 5 – `5-core-api-updates` (`--core-os-artifact`, only `test_core_api_updates`)
+## Step 5 – `5-core-api-updates` (`--core-os-artifact`, only the CoreOS tests of `test_core_api_server.py`)
 
 **DUT configuration:** default profile from step 4. Runs only when the bundle contains
 `CORE_OS_ARTIFACT`: a second staging build of the same commit with version
 `<version>.smoke` (job `build-staging-image`). Runs last because it replaces the
-flashed CoreOS.
+flashed CoreOS. The rejection tests repack this artifact under a new name and run first;
+they leave the flashed CoreOS active.
 
 | Test | Description | Pass criteria |
 |---|---|---|
+| `test_core_os_rejects_bad_ota_signature` [unsigned, unknown-key] | CoreOS artifact without OTA signature, or signed with a key that is neither the ci4rail nor the customer key | Upload refused (HTTP 400) or deploy status `failure`; CoreOS version unchanged; no reboot, boot slot unchanged |
+| `test_core_os_rejects_manipulated_fit` [unsigned, wrong-signature] | CoreOS artifact with valid OTA signature; boot FIT without configuration signatures, or with signature values replaced by random bytes | Upload accepted (HTTP 202), deploy status `failure` after U-Boot refuses the FIT and Mender rolls back; CoreOS version, `mender_boot_part` and `upgrade_available=0` unchanged; root on dm-verity |
 | `test_core_api_updates` | Application (old → new), os-customization and CoreOS rootfs update via core API | Each update reports the expected current version; app and customization survive the CoreOS reboot |
 
 ---

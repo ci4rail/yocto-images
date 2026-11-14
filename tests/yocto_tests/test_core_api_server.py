@@ -10,7 +10,9 @@ from .station import quote
 from .core_api import (STAGING_KEYS, CoreAPI, artifact_command,
                        core_version, staging_signing_key)
 from .customization import ENDPOINT, NAME, build_customization
-from .ota import signing_key, signing_material, sign_artifact
+from .fit import TAMPER_MODES, repack_core_artifact, tampered_core_artifact
+from .ota import (BAD_SIGNATURES, assert_signature_invalid, break_signature,
+                  signing_key, signing_material, sign_artifact)
 from .test_application_module import application_images, write
 from .test_application_mender_update import MenderApplication
 
@@ -18,6 +20,9 @@ pytestmark = pytest.mark.hardware
 
 
 class APIApplication(MenderApplication):
+    # Set to one of BAD_SIGNATURES to build artifacts the target must reject.
+    bad_signature = None
+
     def artifact(self, version="old", **kwargs):
         files = self.payload(version, **kwargs)
         write(self.dut, f"{files}/pack/manifests/.env", f"SOFTWARE_VERSION={version}\n")
@@ -39,13 +44,15 @@ class APIApplication(MenderApplication):
             "--software-version", version,
         ])
         sign_artifact(self.artifact_tool, output, self.station_config, "application")
+        if self.bad_signature:
+            break_signature(self.artifact_tool, output, self.bad_signature)
+            assert_signature_invalid(self.artifact_tool, output, self.station_config)
         remote = f"{files}/app.mender"
         self.dut.put(output, remote)
         return remote
 
 
-@pytest.fixture
-def core_api_smoke(station, tmp_path):
+def core_os_source(station):
     source = station.cfg.get("core_api_core_os_artifact")
     if not source:
         pytest.skip("Set core_api_core_os_artifact to a staging rebuild with a new image version")
@@ -53,6 +60,115 @@ def core_api_smoke(station, tmp_path):
     assert source.is_file(), f"CoreOS artifact not found: {source}"
     tool = shutil.which(station.cfg.get("mender_artifact_binary", "mender-artifact"))
     assert tool, "Install mender-artifact on the pytest runner"
+    return source, tool
+
+
+def boot_slot(dut):
+    return dut.run("fw_printenv mender_boot_part upgrade_available").split()
+
+
+def boot_id(dut):
+    return dut.run("cat /proc/sys/kernel/random/boot_id").strip()
+
+
+def device_type(dut):
+    values = dut.run("cat /var/lib/mender/device_type").splitlines()
+    return next(line.split("=", 1)[1] for line in values if line.startswith("device_type="))
+
+
+def assert_rejected_without_reboot(station, api, endpoint, remote, rejected):
+    """The Mender client must refuse the artifact before installing anything."""
+    boot = boot_id(station.dut)
+    slot = boot_slot(station.dut)
+    api.deploy_rejected(endpoint, remote, rejected, upload_rejection=True)
+    assert boot_id(station.dut) == boot, "Target rebooted for an artifact with an invalid OTA signature"
+    assert boot_slot(station.dut) == slot
+
+
+@pytest.fixture
+def remote_dir(station):
+    remote = "/data/core-api-reject-" + uuid.uuid4().hex
+    station.dut.run(f"mkdir -p {remote}")
+    try:
+        yield remote
+    finally:
+        station.dut.run(f"rm -rf {quote(remote)}", check=False)
+
+
+@pytest.mark.parametrize("mode", BAD_SIGNATURES)
+def test_core_os_rejects_bad_ota_signature(station, tmp_path, remote_dir, mode):
+    """CoreOS artifact unsigned or signed with an unknown key: no install, no reboot."""
+    source, tool = core_os_source(station)
+    artifact = repack_core_artifact(tool, source, tmp_path, station.cfg, f"ota-{mode}")
+    break_signature(tool, artifact, mode)
+    assert_signature_invalid(tool, artifact, station.cfg)
+    api = CoreAPI(station)
+    api.wait_ready()
+    station.dut.put(artifact, remote_dir + "/core.mender")
+    assert_rejected_without_reboot(station, api, "/software/core-os", remote_dir + "/core.mender",
+                                   core_version(artifact))
+
+
+@pytest.mark.parametrize("mode", BAD_SIGNATURES)
+def test_customization_rejects_bad_ota_signature(station, tmp_path, remote_dir, mode):
+    """os-customization artifact unsigned or signed with an unknown key: no install, no reboot."""
+    tool = shutil.which(station.cfg.get("mender_artifact_binary", "mender-artifact"))
+    assert tool, "Install mender-artifact on the pytest runner"
+    version = f"ota-{mode}-" + uuid.uuid4().hex[:8]
+    artifact = build_customization(tool, version, device_type(station.dut), tmp_path, station.cfg)
+    break_signature(tool, artifact, mode)
+    assert_signature_invalid(tool, artifact, station.cfg)
+    api = CoreAPI(station)
+    api.wait_ready()
+    station.dut.put(artifact, remote_dir + "/customization.mender")
+    assert_rejected_without_reboot(station, api, ENDPOINT, remote_dir + "/customization.mender",
+                                   {"name": NAME, "version": version})
+
+
+@pytest.mark.parametrize("mode", BAD_SIGNATURES)
+def test_application_rejects_bad_ota_signature(station, request, tmp_path, mode):
+    """Application artifact unsigned or signed with an unknown key: not installed."""
+    tool = shutil.which(station.cfg.get("mender_artifact_binary", "mender-artifact"))
+    assert tool, "Install mender-artifact on the pytest runner"
+    api = CoreAPI(station)
+    api.wait_ready()
+    root, images = request.getfixturevalue("application_images")
+    app = APIApplication(station, root, images, tool, tmp_path)
+    app.bad_signature = mode
+    try:
+        artifact = app.artifact("old")
+        assert_rejected_without_reboot(station, api, f"/software/application/{app.name}", artifact,
+                                       {"name": app.name, "version": "old"})
+        status, applications = api.request("/software/applications")
+        assert status == 200 and app.name not in applications, applications
+    finally:
+        app.close()
+
+
+@pytest.mark.parametrize("mode", TAMPER_MODES)
+def test_core_os_rejects_manipulated_fit(station, tmp_path, remote_dir, mode):
+    """A CoreOS artifact with a valid OTA signature but an unsigned or wrongly
+    signed boot FIT must not become active: U-Boot refuses the FIT and Mender
+    rolls back to the running slot."""
+    source, tool = core_os_source(station)
+    artifact = tampered_core_artifact(tool, source, mode, tmp_path, station.cfg)
+    keys = signing_material(station.cfg)
+    if keys:
+        artifact_command([tool, "validate", "-k", keys / "ci4rail-artifact-pub.pem", artifact])
+    rejected = core_version(artifact)
+    api = CoreAPI(station)
+    api.wait_ready()
+    slot = boot_slot(station.dut)
+    assert slot[1] == "upgrade_available=0", slot
+    station.dut.put(artifact, remote_dir + "/core.mender")
+    api.deploy_rejected("/software/core-os", remote_dir + "/core.mender", rejected)
+    assert boot_slot(station.dut) == slot, "Target did not return to the original boot slot"
+    station.dut.run("findmnt -no SOURCE / | grep -q '^/dev/\\(dm-\\|mapper/\\)'")
+
+
+@pytest.fixture
+def core_api_smoke(station, tmp_path):
+    source, tool = core_os_source(station)
     key = signing_key(station.cfg, "os-customization")
     api = CoreAPI(station)
     api.wait_ready()

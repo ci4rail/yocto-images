@@ -54,6 +54,8 @@ io4edge_ips: [192.168.200.10, 192.168.201.10, 192.168.203.10, 192.168.205.10, 19
 # Core API staging smoke test: a version-only rebuild of the installed image.
 # Omit core_api_core_os_artifact to skip this smoke test.
 # core_api_core_os_artifact: /absolute/path/to/new-staging-version.mender # runner path (or --core-os-artifact)
+# Scratch space for CoreOS repacks (~2 GB, deleted after each test); default: the artifact's directory.
+# core_os_work_dir: /var/tmp
 # core_api_url: http://127.0.0.1:8090/api/v1 # reached from the DUT via SSH
 # core_api_update_timeout: 900 # per deployment, includes automatic reboot/commit
 # NTP client test (standalone profile): either the DHCP server provides an NTP server

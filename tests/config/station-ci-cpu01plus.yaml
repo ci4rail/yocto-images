@@ -50,6 +50,8 @@ emmc_write_bps: 1000000
 sdcard: /dev/mmcblk1
 sdcard_read_bps: 1000000
 sdcard_write_bps: 1000000
+modem_model: SIMCOM_SIM7906E-M2
+modem_device: wwu1u1i5
 sim_apn: web.vodafone.de
 wifi_device: mlan0
 wifi_ssid: ${WIFI_SSID}

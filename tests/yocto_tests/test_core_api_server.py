@@ -63,6 +63,24 @@ def core_os_source(station):
     return source, tool
 
 
+@pytest.fixture
+def core_os_work(station):
+    """Source artifact, tool and a scratch directory for CoreOS-sized files.
+
+    Repacking unpacks the ~1.4 GB rootfs. pytest's tmp_path is on the TC's small
+    /tmp and keeps files until the session ends, so work next to the source
+    artifact (or in core_os_work_dir) and delete everything after each test.
+    """
+    source, tool = core_os_source(station)
+    base = Path(station.cfg.get("core_os_work_dir") or source.parent).expanduser()
+    work = base / ("yocto-coreos-" + uuid.uuid4().hex)
+    work.mkdir(parents=True)
+    try:
+        yield source, tool, work
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
 def boot_slot(dut):
     return dut.run("fw_printenv mender_boot_part upgrade_available").split()
 
@@ -96,10 +114,10 @@ def remote_dir(station):
 
 
 @pytest.mark.parametrize("mode", BAD_SIGNATURES)
-def test_core_os_rejects_bad_ota_signature(station, tmp_path, remote_dir, mode):
+def test_core_os_rejects_bad_ota_signature(station, core_os_work, remote_dir, mode):
     """CoreOS artifact unsigned or signed with an unknown key: no install, no reboot."""
-    source, tool = core_os_source(station)
-    artifact = repack_core_artifact(tool, source, tmp_path, station.cfg, f"ota-{mode}")
+    source, tool, work = core_os_work
+    artifact = repack_core_artifact(tool, source, work, station.cfg, f"ota-{mode}")
     break_signature(tool, artifact, mode)
     assert_signature_invalid(tool, artifact, station.cfg)
     api = CoreAPI(station)
@@ -140,18 +158,19 @@ def test_application_rejects_bad_ota_signature(station, request, tmp_path, mode)
         assert_rejected_without_reboot(station, api, f"/software/application/{app.name}", artifact,
                                        {"name": app.name, "version": "old"})
         status, applications = api.request("/software/applications")
-        assert status == 200 and app.name not in applications, applications
+        # The API encodes an empty application list as null.
+        assert status == 200 and app.name not in (applications or []), applications
     finally:
         app.close()
 
 
 @pytest.mark.parametrize("mode", TAMPER_MODES)
-def test_core_os_rejects_manipulated_fit(station, tmp_path, remote_dir, mode):
+def test_core_os_rejects_manipulated_fit(station, core_os_work, remote_dir, mode):
     """A CoreOS artifact with a valid OTA signature but an unsigned or wrongly
     signed boot FIT must not become active: U-Boot refuses the FIT and Mender
     rolls back to the running slot."""
-    source, tool = core_os_source(station)
-    artifact = tampered_core_artifact(tool, source, mode, tmp_path, station.cfg)
+    source, tool, work = core_os_work
+    artifact = tampered_core_artifact(tool, source, mode, work, station.cfg)
     keys = signing_material(station.cfg)
     if keys:
         artifact_command([tool, "validate", "-k", keys / "ci4rail-artifact-pub.pem", artifact])
@@ -167,8 +186,8 @@ def test_core_os_rejects_manipulated_fit(station, tmp_path, remote_dir, mode):
 
 
 @pytest.fixture
-def core_api_smoke(station, tmp_path):
-    source, tool = core_os_source(station)
+def core_api_smoke(station, core_os_work):
+    source, tool, work = core_os_work
     key = signing_key(station.cfg, "os-customization")
     api = CoreAPI(station)
     api.wait_ready()
@@ -177,7 +196,7 @@ def core_api_smoke(station, tmp_path):
     assert current["name"] == expected["name"], (current, expected)
     assert current["version"] != expected["version"], "CoreOS smoke rebuild must have a new /etc/issue version"
     # Re-sign a local copy; retain the supplied build artifact unchanged.
-    signed = tmp_path / "core.mender"
+    signed = work / "core.mender"
     shutil.copyfile(source, signed)
     sign_artifact(tool, signed, station.cfg, "core-os")
     keys = signing_material(station.cfg)

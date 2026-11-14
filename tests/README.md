@@ -423,8 +423,10 @@ OTA key. The core API must accept the upload, and the install must then fail: th
 module writes the inactive slot, U-Boot refuses the FIT, and Mender rolls back. The test
 checks that the deploy status is `failure`, the reported CoreOS version is unchanged, the
 U-Boot slot variables are the same as before and root is still on dm-verity. Each variant
-costs a failed boot and a rollback; the runner needs about 1.5 GB free in its temporary
-directory for the unpacked payloads.
+costs a failed boot and a rollback. The CoreOS tests work in a scratch directory next to
+the CoreOS artifact (override with `core_os_work_dir`), not in pytest's `tmp_path`, because
+`/tmp` on the TC is too small: about 2 GB must be free there, and each test deletes its
+files when it ends.
 
 ```sh
 cd tests

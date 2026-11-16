@@ -22,8 +22,8 @@ local_conf_header:
     TDX_IMX_HAB_CST_BUILD_FROM_SOURCE = "1"
     DM_VERITY_IMAGE = "ci4rail-base-image"
     # TDX_IMX_HAB_CST_KEY_SIZE = "3072"
-    # TDX_IMX_HAB_CST_DIR = "/work/secure-boot-material/staging"
-    # UBOOT_SIGN_KEYDIR = "/work/secure-boot-material/staging/keys/fit"
+    # TDX_IMX_HAB_CST_DIR = "/secure-boot-material/staging"
+    # UBOOT_SIGN_KEYDIR = "/secure-boot-material/staging/keys/fit"
     AKV_SIGNING_ENABLE = "1"
     BB_ENV_PASSTHROUGH_ADDITIONS:append = " AZURE_APP_ID AZURE_CLIENT_ID AZURE_TENANT_ID AZURE_SUBSCRIPTION_ID AZURE_FEDERATED_TOKEN_FILE AZURE_AUTHORITY_HOST ACTIONS_ID_TOKEN_REQUEST_URL ACTIONS_ID_TOKEN_REQUEST_TOKEN"
     FIT_SIGN_ALG = "rsa3072"
@@ -34,15 +34,18 @@ local_conf_header:
     AKV_HAB_CSF_KEY_ID = "https://vault-firmware-signing.vault.azure.net/keys/moducop-cpu01-csf-1-1"
     AKV_HAB_IMG_KEY_ID = "https://vault-firmware-signing.vault.azure.net/keys/moducop-cpu01-img-1-1"
     AKV_HAB_SRK_CERT_FILES = "\
-      /work/secure-boot-material/production/crts/SRK1_sha256_3072_65537_v3_ca_crt.pem \
-      /work/secure-boot-material/production/crts/SRK2_sha256_3072_65537_v3_ca_crt.pem \
-      /work/secure-boot-material/production/crts/SRK3_sha256_3072_65537_v3_ca_crt.pem \
-      /work/secure-boot-material/production/crts/SRK4_sha256_3072_65537_v3_ca_crt.pem \
+      /secure-boot-material/production/crts/SRK1_sha256_3072_65537_v3_ca_crt.pem \
+      /secure-boot-material/production/crts/SRK2_sha256_3072_65537_v3_ca_crt.pem \
+      /secure-boot-material/production/crts/SRK3_sha256_3072_65537_v3_ca_crt.pem \
+      /secure-boot-material/production/crts/SRK4_sha256_3072_65537_v3_ca_crt.pem \
     "
 
 
   ci4rail-ota-keys: |
     CI4RAIL_OTA_KEY_ENVIRONMENT = "production"
+    # Must match /ota-signing-material/production/ci4rail-artifact-pub.pem.
+    # The delegation key (moducop-ota-delegation) only signs customer keys; the build needs just its public key.
+    CI4RAIL_OTA_AZURE_KEY_ID = "https://vault-firmware-signing.vault.azure.net/keys/moducop-cpu01-ota-artifact"
 
 env:
   AZURE_APP_ID: ""

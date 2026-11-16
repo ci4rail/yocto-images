@@ -81,7 +81,8 @@ def iperf(station, server, client, address, minimum, record_property, prefix="",
     try:
         time.sleep(2)
         binding = f" --bind-dev={quote(bind)}" if bind else ""
-        output = client.run(f"iperf3 -J -c {quote(address)} -p {port} --connect-timeout 1000 "
+        # 15 s: a stale neighbour entry on the client needs ~8 s (DELAY + PROBE) to re-resolve.
+        output = client.run(f"iperf3 -J -c {quote(address)} -p {port} --connect-timeout 15000 "
                             f"--time {seconds}{binding}", timeout=seconds + 30)
         result = json.loads(output)
         assert "error" not in result, result.get("error")
@@ -103,19 +104,35 @@ def test_ethernet2(station, feature, record_property):
     interface = dut.run(f"ls {quote(station.cfg['eth2_path'] + '/net')}").strip()
     assert re.fullmatch(r"[\w.-]+", interface), "Expected one ETH2 interface"
     ns = "yocto" + uuid.uuid4().hex[:8]
+    iface = quote(interface)
+    # NetworkManager auto-configures ETH2 on the same subnet as ETH1. Two root-namespace
+    # addresses on one LAN cause ARP flux: the TC may cache ETH2's IP with ETH1's MAC and
+    # keep sending there after ETH2 moved into the namespace. Release the device first.
+    dut.run(f"nmcli device set {iface} managed no; ip addr flush dev {iface}", check=False)
     dut.run(f"ip netns add {ns}")
+    address = None
     try:
-        dut.run(f"ip link set {quote(interface)} netns {ns}")
-        dut.run(f"ip netns exec {ns} ip link set {quote(interface)} up")
-        dut.run(f"ip netns exec {ns} udhcpc -n -q -t 10 -i {quote(interface)}", timeout=90)
-        addresses = json.loads(dut.run(f"ip netns exec {ns} ip -j -4 addr show dev {quote(interface)}"))
+        dut.run(f"ip link set {iface} netns {ns}")
+        dut.run(f"ip netns exec {ns} ip link set {iface} up")
+        dut.run(f"ip netns exec {ns} udhcpc -n -q -t 10 -i {iface}", timeout=90)
+        addresses = json.loads(dut.run(f"ip netns exec {ns} ip -j -4 addr show dev {iface}"))
         address = next(a["local"] for a in addresses[0]["addr_info"] if a["scope"] == "global")
-        iperf(station, dut, station.tc, address, station.cfg["eth2_mbps"], record_property,
-              prefix=f"ip netns exec {ns} ")
+        # Drop any stale neighbour entry on the TC and announce the new owner of the address.
+        station.tc.run(f"sudo -n ip neigh flush to {quote(address)}", check=False)
+        dut.run(f"command -v arping >/dev/null && ip netns exec {ns} "
+                f"arping -U -c 3 -I {iface} {quote(address)}", timeout=15, check=False)
+        try:
+            iperf(station, dut, station.tc, address, station.cfg["eth2_mbps"], record_property,
+                  prefix=f"ip netns exec {ns} ")
+        except Exception:
+            # Diagnostics: compare the TC's cached MAC for the address with ETH2's and end0's.
+            station.tc.run(f"ip neigh show to {quote(address)}; ip route get {quote(address)}", check=False)
+            dut.run(f"ip -br link; ip netns exec {ns} ip -s link show dev {iface}", check=False)
+            raise
     finally:
-        dut.run(f"ip netns exec {ns} ip link set {quote(interface)} netns 1", check=False)
+        dut.run(f"ip netns exec {ns} ip link set {iface} netns 1", check=False)
         dut.run(f"ip netns del {ns}", check=False)
-        dut.run(f"ip link set {quote(interface)} up", check=False)
+        dut.run(f"ip link set {iface} up; nmcli device set {iface} managed yes", check=False)
 
 
 def test_gnss(station, feature):
@@ -180,9 +197,17 @@ def test_modem(station, feature, record_property):
         dut.run(f"nmcli c delete {name}", check=False)
 
 
+def testing_image(station):
+    """Pull the testing container separately so registry speed does not eat the test's own timeout."""
+    image = quote(station.cfg["testing_image"])
+    station.dut.run(f"docker image inspect {image} >/dev/null 2>&1 || docker pull -q {image}", timeout=600)
+    return image
+
+
 def fio(station, path, read, write, mounts, record_property, size="100M"):
     size_arg = f"--size={size}" if size else ""
-    output = station.dut.run(f"docker run --rm --privileged {mounts} {quote(station.cfg['testing_image'])} "
+    image = testing_image(station)
+    output = station.dut.run(f"docker run --rm --privileged {mounts} {image} "
                             f"fio --rw=readwrite --name={quote(path)} {size_arg} --runtime=10 "
                             "--direct=1 --output-format=json", timeout=210)
     result = json.loads(output)
@@ -229,27 +254,42 @@ def test_sdcard(station, feature, record_property):
 def test_wifi(station, feature, record_property):
     feature("wifi")
     cfg, dut = station.cfg, station.dut
-    antenna = cfg["wifi_antenna"].split()
-    assert len(antenna) == 2 and all(re.fullmatch(r"0x[0-9a-fA-F]+", a) for a in antenna)
+    # Configure antennas as documented for users: TX/RX masks in
+    # /etc/set_antenna_config (0x01 WLAN1, 0x02 WLAN2, 0x03 both), applied by
+    # set-antenna-config.service. Restart the service instead of rebooting.
+    tx, rx = cfg["wifi_antenna"].split()
+    assert all(a in ("0x01", "0x02", "0x03") for a in (tx, rx)), cfg["wifi_antenna"]
+    antenna_config = "/etc/set_antenna_config"
+    original = dut.run(f"cat {antenna_config}")
     name = "yocto-wifi-" + uuid.uuid4().hex[:8]
     try:
-        dut.run(f"iw phy phy0 set antenna {' '.join(antenna)}")
-        dut.run(f"nmcli -w 60 device wifi connect {quote(cfg['wifi_ssid'])} "
-                f"password {quote(cfg['wifi_password'])} ifname {quote(cfg['wifi_device'])} name {name}",
-                secret=True, timeout=70)
+        dut.run(f"printf 'ANTENNA_CONFIG_TX=%s\\nANTENNA_CONFIG_RX=%s\\n' {tx} {rx} > {antenna_config}")
+        dut.run("systemctl restart set-antenna-config.service")
+        # The password goes on stdin so it is never part of the command string.
+        dut.run(f"IFS= read -r password && nmcli -w 60 device wifi connect {quote(cfg['wifi_ssid'])} "
+                f"password \"$password\" ifname {quote(cfg['wifi_device'])} name {name}",
+                input=str(cfg["wifi_password"]) + "\n", secret=True, timeout=70)
+        # Radio state for diagnosing low throughput (signal, bit rate, channel); shown on failure.
+        device = quote(cfg["wifi_device"])
+        link = dut.run(f"iw dev {device} link 2>&1; nmcli -f IN-USE,SSID,CHAN,RATE,SIGNAL "
+                       f"device wifi list ifname {device} --rescan no", check=False)
+        print(f"Wi-Fi link:\n{link}", flush=True)
         iperf(station, station.tc, dut, cfg["tc"]["host"], 5, record_property,
               bind=cfg["wifi_device"], seconds=45)
     finally:
         dut.run(f"nmcli c delete {name}", check=False)
+        dut.run(f"cat > {antenna_config}", input=original, check=False)
+        dut.run("systemctl restart set-antenna-config.service", check=False)
 
 
 def test_serial(station, feature):
     feature("serial")
     output = station.dut.run("avahi-browse _ttynvt._tcp -t")
     assert station.cfg["serial_devices"], "No serial devices configured"
+    image = testing_image(station)
     for device in station.cfg["serial_devices"]:
         assert device.removeprefix("tty") in output
-        station.dut.run(f"docker run --rm --privileged -v /dev:/dev {quote(station.cfg['testing_image'])} "
+        station.dut.run(f"docker run --rm --privileged -v /dev:/dev {image} "
                         f"linux-serial-test -p {quote('/dev/' + device)} -b 115200 -x 5000 -v 15000 "
                         "-I 5000 -w 1024 --no-icount --ascii --stats --dump-err --stop-on-err --error-on-timeout",
                         timeout=100)

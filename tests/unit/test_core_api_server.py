@@ -105,3 +105,72 @@ def test_readiness_times_out(monkeypatch):
     monkeypatch.setattr("yocto_tests.test_core_api_server.time.monotonic", lambda: next(times))
     with pytest.raises(pytest.fail.Exception, match="did not become ready"):
         api.wait_ready()
+
+
+def rejecting_api(monkeypatch, replies):
+    monkeypatch.setattr("yocto_tests.test_core_api_server.time.sleep", lambda _: None)
+    api = CoreAPI(SimpleNamespace(dut=None, cfg={}))
+    replies = iter(replies)
+
+    def request(*args):
+        response = next(replies)
+        if isinstance(response, Exception):
+            raise response
+        return response
+
+    api.request = request
+    return api
+
+
+OLD = {"name": "cpu01-standard", "version": "v3.0.0"}
+BAD = {"name": "cpu01-standard", "version": "v3.0.0-unsigned"}
+
+
+def test_deploy_rejected_after_rollback_reboot(monkeypatch):
+    api = rejecting_api(monkeypatch, [
+        (200, {"current": OLD}), (202, None), RuntimeError("reboot disconnected SSH"), (503, None),
+        (200, {"current": OLD, "deploy_status": {"code": "in_progress"}}),
+        (200, {"current": OLD, "deploy_status": {"code": "failure", "message": "rolled back"}}),
+        (200, {"current": OLD}),
+    ])
+    assert api.deploy_rejected("/software/core-os", "/data/bad.mender", BAD)["deploy_status"]["code"] == "failure"
+
+
+def test_deploy_rejected_detects_installed_artifact(monkeypatch):
+    api = rejecting_api(monkeypatch, [
+        (200, {"current": OLD}), (202, None),
+        (200, {"current": BAD, "deploy_status": {"code": "success"}}),
+    ])
+    with pytest.raises(AssertionError, match="Manipulated artifact was installed"):
+        api.deploy_rejected("/software/core-os", "/data/bad.mender", BAD)
+
+
+def test_deploy_rejected_detects_changed_version(monkeypatch):
+    api = rejecting_api(monkeypatch, [
+        (200, {"current": OLD}), (202, None),
+        (200, {"current": OLD, "deploy_status": {"code": "failure"}}),
+        (200, {"current": {**OLD, "version": "v2.0.0"}}),
+    ])
+    with pytest.raises(AssertionError):
+        api.deploy_rejected("/software/core-os", "/data/bad.mender", BAD)
+
+
+def test_deploy_rejected_new_application_stays_uninstalled(monkeypatch):
+    app = {"name": "app1", "version": "old"}
+    api = rejecting_api(monkeypatch, [
+        (404, None), (202, None),
+        (200, {"current": {"name": "", "version": ""}, "deploy_status": {"code": "failure"}}),
+        (200, {"current": {"name": "", "version": ""}}),
+    ])
+    api.deploy_rejected("/software/application/app1", "/data/bad.mender", app)
+
+
+@pytest.mark.parametrize("upload_rejection", [True, False])
+def test_deploy_rejected_upload_refusal(monkeypatch, upload_rejection):
+    api = rejecting_api(monkeypatch, [(200, {"current": OLD}), (400, "artifact invalid"), (200, {"current": OLD})])
+    if upload_rejection:
+        api.deploy_rejected("/software/core-os", "/data/bad.mender", BAD, upload_rejection=True)
+    else:
+        # A valid OTA signature must pass the upload; the boot chain has to reject it.
+        with pytest.raises(AssertionError, match="Upload rejected"):
+            api.deploy_rejected("/software/core-os", "/data/bad.mender", BAD)

@@ -1,0 +1,2 @@
+# ci4rail may run any command as root after entering its own password.
+ci4rail ALL=(ALL:ALL) ALL

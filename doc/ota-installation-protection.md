@@ -1,8 +1,8 @@
 # OTA installation protection
 
-CPU01 staging and production include OTA protection. Non-secure builds do not
-include the client patch, policy, or keys. CPU01Plus secure boot remains separate
-platform work. CI workflows are unchanged.
+CPU01 and CPU01Plus staging and production include OTA protection. Non-secure
+builds do not include the client patch, policy, or keys. CPU01Plus shares the
+CPU01 OTA keys. CI workflows are unchanged.
 
 ## Enforcement
 

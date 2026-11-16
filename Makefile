@@ -55,6 +55,7 @@ KAS_ARGS := \
 		-v${ABS_IMAGE_DIR}:/work \
 		-v$(shell pwd)/kas-includes:/kas-includes \
 		-v$(shell pwd)/ota-signing-material:/ota-signing-material:ro \
+		-v$(shell pwd)/secure-boot-material:/secure-boot-material:ro \
 		-v$(ABS_DOWNLOAD_DIR):/downloads \
 		-v${ABS_SSTATE_DIR}:/sstate-cache \
 		-v${ABS_IMAGE_DIR}/install:/install \

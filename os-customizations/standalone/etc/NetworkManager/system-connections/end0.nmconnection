@@ -1,0 +1,18 @@
+# end0: DHCP that never gives up. While there is no lease, ci4rail-end0-fallback.service
+# adds the static fallback address from /etc/ci4rail/end0-fallback/end0-fallback.conf.
+# NetworkManager only reads this file with mode 0600, owned by root.
+[connection]
+id=end0
+type=ethernet
+interface-name=end0
+autoconnect=true
+
+[ipv4]
+method=auto
+# 2147483647 = infinity: keep sending DHCP requests while the fallback address is used.
+dhcp-timeout=2147483647
+may-fail=true
+
+[ipv6]
+method=auto
+addr-gen-mode=stable-privacy

@@ -1,0 +1,14 @@
+[Unit]
+Description=Static fallback address on end0 while DHCP has no lease
+After=NetworkManager.service
+ConditionPathExists=/etc/ci4rail/end0-fallback/end0-fallback.conf
+
+[Service]
+# Run through sh: the script needs no execute permission in the customization.
+ExecStart=/bin/sh /etc/ci4rail/end0-fallback/end0-fallback.sh
+ExecStopPost=/bin/sh /etc/ci4rail/end0-fallback/end0-fallback.sh stop
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -20,6 +20,21 @@ REPO = Path(__file__).resolve().parents[2]
 CONFIG = Path(__file__).with_name('platforms.json')
 BSP_PATCH = Path('recipes-kernel/linux/linux-toradex/0001-moducop-specific-dts.patch')
 AKV = Path('/opt/meta-akv-signing/scripts')
+# Kernel trees whose DT sources match a TEZI kernel; revisions are pinned in platforms.json.
+KERNEL_SOURCES = {
+    'upstream': {
+        'url': 'https://github.com/gregkh/linux.git',
+        'layer_url': 'https://git.toradex.com/meta-toradex-bsp-common.git',
+        'recipe': 'linux-toradex-upstream_6.6.bb',
+        'patch_dirs': ('linux-toradex-upstream-6.6', 'linux-toradex-upstream'),
+    },
+    'downstream': {
+        'url': 'https://git.toradex.com/linux-toradex.git',
+        'layer_url': 'https://git.toradex.com/meta-toradex-nxp.git',
+        'recipe': 'linux-toradex_6.6-2.2.x.bb',
+        'patch_dirs': ('linux-toradex-6.6-2.2.x', 'linux-toradex'),
+    },
+}
 
 
 def run(*args, **kwargs):
@@ -29,6 +44,9 @@ def run(*args, **kwargs):
 def settings(platform, mode):
     config = json.loads(CONFIG.read_text())
     profile = config['platforms'][platform]
+    if mode == 'nonsecure':
+        # Open development devices: unsigned FIT, no key material involved.
+        return config, profile, None
     signing = profile['signing'].get(mode)
     if not signing:
         raise ValueError(f'{platform}/{mode} has no reviewed signing configuration in {CONFIG.name}')
@@ -90,18 +108,20 @@ def prepare(config, profile, work):
         fetch(f"{profile['tezi_url']}/{name}", checksum, tezi / name)
     if json.loads((tezi / 'image.json').read_text())['version'] != config['tezi_version']:
         raise ValueError('Unexpected TEZI version')
+    # The DTB must match the kernel inside tezi.itb: bindings differ between kernels.
+    source = KERNEL_SOURCES[profile['kernel']]
+    pinned = config['kernels'][profile['kernel']]
     kernel, bsp = work / 'linux', work / 'bsp'
-    checkout('https://github.com/gregkh/linux.git', config['kernel_revision'], kernel,
+    checkout(source['url'], pinned['kernel_revision'], kernel,
              ('arch/arm64/boot/dts', 'include/dt-bindings', 'include/uapi'))
-    checkout('https://git.toradex.com/meta-toradex-bsp-common.git', config['bsp_revision'], bsp)
+    checkout(source['layer_url'], pinned['layer_revision'], bsp)
     recipes = bsp / 'recipes-kernel/linux'
-    recipe = (recipes / 'linux-toradex-upstream_6.6.bb').read_text()
-    if f'SRCREV_machine = "{config["kernel_revision"]}"' not in recipe:
+    recipe = (recipes / source['recipe']).read_text()
+    if f'SRCREV_machine = "{pinned["kernel_revision"]}"' not in recipe:
         raise ValueError('Kernel revision does not match pinned BSP recipe')
     # Preserve the recipe's patch order. Only DT sources are needed for cpp/dtc.
     for name in re.findall(r'file://([^\s]+\.patch)', recipe):
-        candidates = [recipes / directory / name for directory in
-                      ('linux-toradex-upstream-6.6', 'linux-toradex-upstream')]
+        candidates = [recipes / directory / name for directory in source['patch_dirs']]
         patch = next((p for p in candidates if p.is_file()), None)
         if patch is None:
             raise ValueError(f'Missing BSP patch: {name}')
@@ -184,38 +204,54 @@ def signing_arguments(signing, mode, work):
 
 def package(args, config, profile, signing):
     work = args.work.resolve()
-    extra, fingerprint = signing_arguments(signing, args.mode, work)
+    if signing is None:
+        extra, fingerprint = ['--allow-unsigned'], None
+    else:
+        extra, fingerprint = signing_arguments(signing, args.mode, work)
     password = os.environ.get('RECOVERY_ROOT_PASSWORD_HASH', '')
     password_file = work / 'root.hash'
     password_file.write_text(password)
     password_file.chmod(0o600)
     try:
-        run('python3', REPO / 'migration/build-recovery.py', '--platform', args.platform,
+        script, payload = 'build-recovery.py', []
+        if args.payload:
+            script, payload = 'build-data-recovery.py', ['--payload', args.payload.resolve()]
+        run('python3', REPO / 'migration' / script, '--platform', args.platform,
             '--tezi', work / 'tezi', '--dtb', work / 'board.dtb',
-            '--root-password-hash-file', password_file, '--output', work / 'output', *extra)
+            '--root-password-hash-file', password_file, '--output', work / 'output',
+            *payload, *extra)
     finally:
         password_file.unlink(missing_ok=True)
         (work / 'azure-token').unlink(missing_ok=True)
     fit = work / 'output/recovery.itb'
-    run('fit_check_sign', '-f', fit, '-k', work / 'trust.dtb', '-c', 'recovery')
+    if signing is not None:
+        run('fit_check_sign', '-f', fit, '-k', work / 'trust.dtb', '-c', 'recovery')
     manifest_path = work / 'output/build.json'
     manifest = json.loads(manifest_path.read_text())
     manifest.update(tezi_version=config['tezi_version'], tezi_url=profile['tezi_url'],
-                    kernel_revision=config['kernel_revision'], bsp_revision=config['bsp_revision'],
+                    kernel_source=profile['kernel'],
+                    kernel_revision=config['kernels'][profile['kernel']]['kernel_revision'],
+                    bsp_revision=config['kernels'][profile['kernel']]['layer_revision'],
                     ci4rail_bsp_revision=config['ci4rail_bsp_revision'],
                     board_patch_sha256=build.digest(work / 'ci4rail-bsp' / BSP_PATCH), signing_mode=args.mode,
-                    fit_spki_sha256=fingerprint, signature_verified=True,
+                    fit_spki_sha256=fingerprint, signature_verified=signing is not None,
                     git_commit=os.environ.get('GITHUB_SHA'), run_id=os.environ.get('GITHUB_RUN_ID'),
                     run_attempt=os.environ.get('GITHUB_RUN_ATTEMPT'),
                     version=os.environ.get('RECOVERY_VERSION'))
     build.write_json(manifest_path, manifest)
-    write_release_checksums(work / 'output')
+    write_release_checksums(work / 'output', published_files(args))
 
 
-def write_release_checksums(output):
-    # The local builder also emits boot scripts; CI publishes only these files.
+def published_files(args):
+    # The local builders also emit other files; CI publishes only these.
+    if args.payload:
+        return ('build.json', 'data.scr', 'recovery.itb')
+    return ('build.json', 'recovery.itb')
+
+
+def write_release_checksums(output, names=('build.json', 'recovery.itb')):
     (output / 'SHA256SUMS').write_text(''.join(
-        f'{build.digest(output / name)}  {name}\n' for name in ('build.json', 'recovery.itb')))
+        f'{build.digest(output / name)}  {name}\n' for name in names))
 
 
 def upload(args):
@@ -239,7 +275,7 @@ def upload(args):
     prefix = object_prefix(os.environ['MINIO_PREFIX'], args.platform, args.mode,
                            os.environ['RECOVERY_VERSION'],
                            os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT'])
-    for name in ('recovery.itb', 'build.json', 'SHA256SUMS'):
+    for name in (*published_files(args), 'SHA256SUMS'):
         path = args.work / 'output' / name
         client.upload_file(str(path), bucket, f'{prefix}/{name}')
     with open(os.environ['GITHUB_OUTPUT'], 'a') as target:
@@ -263,8 +299,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('validate', 'prepare', 'package', 'upload'))
     parser.add_argument('--platform', required=True, choices=('cpu01', 'cpu01plus'))
-    parser.add_argument('--mode', required=True, choices=('staging', 'production'))
+    parser.add_argument('--mode', required=True, choices=('nonsecure', 'staging', 'production'))
     parser.add_argument('--work', type=Path, required=True)
+    parser.add_argument('--payload', type=Path,
+                        help='Embed this .mender_tezi.tar: build the legacy /data recovery')
     args = parser.parse_args()
     config, profile, signing = settings(args.platform, args.mode)
     if args.action == 'validate':

@@ -1,0 +1,40 @@
+name: "Yocto build setup"
+description: "Prepare a yocto-runner job for a kas build: docker login, build folders and optionally restore the Yocto cache"
+
+inputs:
+  docker_registry:
+    required: false
+    default: ""
+  docker_username:
+    required: true
+  docker_password:
+    required: true
+  restore_cache:
+    description: "Restore downloads and sstate-cache from /yocto-cache: true|false"
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Log into Docker
+      shell: bash
+      env:
+        DOCKER_PASSWORD: ${{ inputs.docker_password }}
+      run: echo ${DOCKER_PASSWORD} | docker login ${{ inputs.docker_registry }} -u ${{ inputs.docker_username }} --password-stdin
+
+    - name: Create Folders for Yocto Build
+      shell: bash
+      run: |
+        mkdir -p ~/install ~/sstate-cache ~/downloads
+        rm -rf ~/install/*
+
+    - name: Install Rsync for Yocto-Cache Handling
+      if: inputs.restore_cache == 'true'
+      shell: bash
+      run: sudo apt-get update -y && sudo apt-get install -y rsync
+
+    - name: Get Cache for Yocto Builds
+      if: inputs.restore_cache == 'true'
+      shell: bash
+      run: scripts/ci-yocto-cache.sh restore

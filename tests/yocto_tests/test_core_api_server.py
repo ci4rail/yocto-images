@@ -1,135 +1,28 @@
 """Staging OTA smoke test through the installed core API (no direct client updates)."""
-import json
 from pathlib import Path
-import re
 import shutil
-import subprocess
-import tarfile
-import time
+import time  # noqa: F401  (unit tests patch time.sleep through this module)
 import uuid
 
-import paramiko
 import pytest
 
 from .station import quote
-from .ota import signing_key, signing_material, sign_artifact
+from .core_api import (STAGING_KEYS, CoreAPI, artifact_command,
+                       core_version, staging_signing_key)
+from .customization import ENDPOINT, NAME, build_customization
+from .fit import TAMPER_MODES, repack_core_artifact, tampered_core_artifact
+from .ota import (BAD_SIGNATURES, assert_signature_invalid, break_signature,
+                  signing_key, signing_material, sign_artifact)
 from .test_application_module import application_images, write
 from .test_application_mender_update import MenderApplication
 
 pytestmark = pytest.mark.hardware
-STAGING_KEYS = Path(__file__).resolve().parents[2] / "ota-signing-material/staging"
-if not STAGING_KEYS.is_dir():
-    STAGING_KEYS = Path(__file__).resolve().parents[1] / "staging-ota-keys"
-
-
-def artifact_command(command):
-    result = subprocess.run([str(arg) for arg in command], capture_output=True,
-                            text=True, timeout=300)
-    assert result.returncode == 0, result.stdout + result.stderr
-
-
-def staging_signing_key(keys, directory):
-    # Older mender-artifact releases cannot read the repository's PKCS#8 RSA
-    # key. Convert its encoding locally; the key and signature identity stay the same.
-    key = directory / "staging-signing.pem"
-    key.touch(mode=0o600)
-    artifact_command(["openssl", "pkey", "-traditional", "-in",
-                      keys / "ci4rail-artifact.key.pem", "-out", key])
-    return key
-
-
-def core_version(artifact):
-    """Read expected version from an Artifact; installed versions come only from HTTP."""
-    with tarfile.open(artifact) as outer:
-        header = next(member for member in outer
-                      if member.name in ("header.tar.gz", "header.tar"))
-        with tarfile.open(fileobj=outer.extractfile(header), mode="r|*") as inner:
-            for member in inner:
-                if member.name == "headers/0000/type-info":
-                    info = json.load(inner.extractfile(member))
-                    assert info["type"] == "bootfit-rootfs", "Use a paired staging FIT/rootfs artifact"
-                    provides = info["artifact_provides"]
-                    value = provides.get("rootfs-image.version") or provides["rootfs-image.bootfit-rootfs.version"]
-                    # Current builds use cpu01-standard-vX; legacy image names are
-                    # accepted by the server too. Split at the version boundary.
-                    match = re.fullmatch(r"(.+?)(?:-image)?(?:_|-)(v\d+\.\d+\.\d+.*)", value)
-                    assert match, f"Unrecognized CoreOS version: {value}"
-                    return {"name": match[1].lower().replace("_", "-"), "version": match[2]}
-    raise AssertionError("Artifact has no type-info")
-
-
-class CoreAPI:
-    def __init__(self, station):
-        self.dut = station.dut
-        self.url = station.cfg.get("core_api_url", "http://127.0.0.1:8090/api/v1").rstrip("/")
-        self.timeout = station.cfg.get("core_api_update_timeout", 900)
-        self.completed = False
-
-    def request(self, endpoint, artifact=None):
-        # Run curl on the DUT so the API need not be exposed to the test runner.
-        command = f"curl --silent --show-error --max-time {180 if artifact else 10} --write-out '\\n%{{http_code}}' "
-        if artifact is not None:
-            command += ("--request PUT --header 'Content-Type: application/octet-stream' "
-                        f"--data-binary {quote('@' + artifact)} ")
-        output = self.dut.run(command + quote(self.url + endpoint), timeout=200)
-        body, status = output.rsplit("\n", 1)
-        try:
-            response = json.loads(body) if body.strip() else None
-        except json.JSONDecodeError:
-            response = body
-        return int(status), response
-
-    def current(self, endpoint):
-        status, response = self.request(endpoint)
-        assert status == 200, response
-        return response["current"]
-
-    def wait_ready(self, timeout=120):
-        deadline = time.monotonic() + timeout
-        last = None
-        while time.monotonic() < deadline:
-            try:
-                status, response = self.request("/software/core-os")
-            except (OSError, paramiko.SSHException, RuntimeError, TimeoutError) as exc:
-                last = str(exc)
-            else:
-                if status == 200:
-                    return
-                last = (status, response)
-                assert status in (502, 503), f"Core API readiness: HTTP {status}: {response}"
-            time.sleep(3)
-        pytest.fail(f"Core API did not become ready within {timeout}s: {last}")
-
-    def deploy(self, endpoint, artifact, expected):
-        print(f"Core API: deploying {endpoint}: {expected}", flush=True)
-        status, response = self.request(endpoint, artifact)
-        assert status == 202, f"Upload rejected: HTTP {status}: {response}"
-        deadline = time.monotonic() + self.timeout
-        last = response
-        while time.monotonic() < deadline:
-            try:
-                status, response = self.request(endpoint)
-            except (OSError, paramiko.SSHException, RuntimeError, TimeoutError) as exc:
-                # CoreOS and customization updates reboot the DUT and API.
-                last = str(exc)
-            else:
-                last = response
-                if status == 200:
-                    code = response["deploy_status"]["code"]
-                    assert code != "failure", response
-                    if code == "success" and response["current"] == expected:
-                        # Query again after completion: verify the installed version,
-                        # not the version queued in the upload response.
-                        assert self.current(endpoint) == expected
-                        return
-                    assert code in ("waiting", "in_progress", "success", "never_deployed"), response
-                else:
-                    assert status in (502, 503), f"HTTP {status}: {response}"
-            time.sleep(3)
-        pytest.fail(f"Timed out waiting for {endpoint} to install {expected}: {last}")
 
 
 class APIApplication(MenderApplication):
+    # Set to one of BAD_SIGNATURES to build artifacts the target must reject.
+    bad_signature = None
+
     def artifact(self, version="old", **kwargs):
         files = self.payload(version, **kwargs)
         write(self.dut, f"{files}/pack/manifests/.env", f"SOFTWARE_VERSION={version}\n")
@@ -151,13 +44,15 @@ class APIApplication(MenderApplication):
             "--software-version", version,
         ])
         sign_artifact(self.artifact_tool, output, self.station_config, "application")
+        if self.bad_signature:
+            break_signature(self.artifact_tool, output, self.bad_signature)
+            assert_signature_invalid(self.artifact_tool, output, self.station_config)
         remote = f"{files}/app.mender"
         self.dut.put(output, remote)
         return remote
 
 
-@pytest.fixture
-def core_api_smoke(station, tmp_path):
+def core_os_source(station):
     source = station.cfg.get("core_api_core_os_artifact")
     if not source:
         pytest.skip("Set core_api_core_os_artifact to a staging rebuild with a new image version")
@@ -165,6 +60,134 @@ def core_api_smoke(station, tmp_path):
     assert source.is_file(), f"CoreOS artifact not found: {source}"
     tool = shutil.which(station.cfg.get("mender_artifact_binary", "mender-artifact"))
     assert tool, "Install mender-artifact on the pytest runner"
+    return source, tool
+
+
+@pytest.fixture
+def core_os_work(station):
+    """Source artifact, tool and a scratch directory for CoreOS-sized files.
+
+    Repacking unpacks the ~1.4 GB rootfs. pytest's tmp_path is on the TC's small
+    /tmp and keeps files until the session ends, so work next to the source
+    artifact (or in core_os_work_dir) and delete everything after each test.
+    """
+    source, tool = core_os_source(station)
+    base = Path(station.cfg.get("core_os_work_dir") or source.parent).expanduser()
+    work = base / ("yocto-coreos-" + uuid.uuid4().hex)
+    work.mkdir(parents=True)
+    try:
+        yield source, tool, work
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+
+def boot_slot(dut):
+    return dut.run("fw_printenv mender_boot_part upgrade_available").split()
+
+
+def boot_id(dut):
+    return dut.run("cat /proc/sys/kernel/random/boot_id").strip()
+
+
+def device_type(dut):
+    values = dut.run("cat /var/lib/mender/device_type").splitlines()
+    return next(line.split("=", 1)[1] for line in values if line.startswith("device_type="))
+
+
+def assert_rejected_without_reboot(station, api, endpoint, remote, rejected):
+    """The Mender client must refuse the artifact before installing anything."""
+    boot = boot_id(station.dut)
+    slot = boot_slot(station.dut)
+    api.deploy_rejected(endpoint, remote, rejected, upload_rejection=True)
+    assert boot_id(station.dut) == boot, "Target rebooted for an artifact with an invalid OTA signature"
+    assert boot_slot(station.dut) == slot
+
+
+@pytest.fixture
+def remote_dir(station):
+    remote = "/data/core-api-reject-" + uuid.uuid4().hex
+    station.dut.run(f"mkdir -p {remote}")
+    try:
+        yield remote
+    finally:
+        station.dut.run(f"rm -rf {quote(remote)}", check=False)
+
+
+@pytest.mark.parametrize("mode", BAD_SIGNATURES)
+def test_core_os_rejects_bad_ota_signature(station, core_os_work, remote_dir, mode):
+    """CoreOS artifact unsigned or signed with an unknown key: no install, no reboot."""
+    source, tool, work = core_os_work
+    artifact = repack_core_artifact(tool, source, work, station.cfg, f"ota-{mode}")
+    break_signature(tool, artifact, mode)
+    assert_signature_invalid(tool, artifact, station.cfg)
+    api = CoreAPI(station)
+    api.wait_ready()
+    station.dut.put(artifact, remote_dir + "/core.mender")
+    assert_rejected_without_reboot(station, api, "/software/core-os", remote_dir + "/core.mender",
+                                   core_version(artifact))
+
+
+@pytest.mark.parametrize("mode", BAD_SIGNATURES)
+def test_customization_rejects_bad_ota_signature(station, tmp_path, remote_dir, mode):
+    """os-customization artifact unsigned or signed with an unknown key: no install, no reboot."""
+    tool = shutil.which(station.cfg.get("mender_artifact_binary", "mender-artifact"))
+    assert tool, "Install mender-artifact on the pytest runner"
+    version = f"ota-{mode}-" + uuid.uuid4().hex[:8]
+    artifact = build_customization(tool, version, device_type(station.dut), tmp_path, station.cfg)
+    break_signature(tool, artifact, mode)
+    assert_signature_invalid(tool, artifact, station.cfg)
+    api = CoreAPI(station)
+    api.wait_ready()
+    station.dut.put(artifact, remote_dir + "/customization.mender")
+    assert_rejected_without_reboot(station, api, ENDPOINT, remote_dir + "/customization.mender",
+                                   {"name": NAME, "version": version})
+
+
+@pytest.mark.parametrize("mode", BAD_SIGNATURES)
+def test_application_rejects_bad_ota_signature(station, request, tmp_path, mode):
+    """Application artifact unsigned or signed with an unknown key: not installed."""
+    tool = shutil.which(station.cfg.get("mender_artifact_binary", "mender-artifact"))
+    assert tool, "Install mender-artifact on the pytest runner"
+    api = CoreAPI(station)
+    api.wait_ready()
+    root, images = request.getfixturevalue("application_images")
+    app = APIApplication(station, root, images, tool, tmp_path)
+    app.bad_signature = mode
+    try:
+        artifact = app.artifact("old")
+        assert_rejected_without_reboot(station, api, f"/software/application/{app.name}", artifact,
+                                       {"name": app.name, "version": "old"})
+        status, applications = api.request("/software/applications")
+        # The API encodes an empty application list as null.
+        assert status == 200 and app.name not in (applications or []), applications
+    finally:
+        app.close()
+
+
+@pytest.mark.parametrize("mode", TAMPER_MODES)
+def test_core_os_rejects_manipulated_fit(station, core_os_work, remote_dir, mode):
+    """A CoreOS artifact with a valid OTA signature but an unsigned or wrongly
+    signed boot FIT must not become active: U-Boot refuses the FIT and Mender
+    rolls back to the running slot."""
+    source, tool, work = core_os_work
+    artifact = tampered_core_artifact(tool, source, mode, work, station.cfg)
+    keys = signing_material(station.cfg)
+    if keys:
+        artifact_command([tool, "validate", "-k", keys / "ci4rail-artifact-pub.pem", artifact])
+    rejected = core_version(artifact)
+    api = CoreAPI(station)
+    api.wait_ready()
+    slot = boot_slot(station.dut)
+    assert slot[1] == "upgrade_available=0", slot
+    station.dut.put(artifact, remote_dir + "/core.mender")
+    api.deploy_rejected("/software/core-os", remote_dir + "/core.mender", rejected)
+    assert boot_slot(station.dut) == slot, "Target did not return to the original boot slot"
+    station.dut.run("findmnt -no SOURCE / | grep -q '^/dev/\\(dm-\\|mapper/\\)'")
+
+
+@pytest.fixture
+def core_api_smoke(station, core_os_work):
+    source, tool, work = core_os_work
     key = signing_key(station.cfg, "os-customization")
     api = CoreAPI(station)
     api.wait_ready()
@@ -173,7 +196,7 @@ def core_api_smoke(station, tmp_path):
     assert current["name"] == expected["name"], (current, expected)
     assert current["version"] != expected["version"], "CoreOS smoke rebuild must have a new /etc/issue version"
     # Re-sign a local copy; retain the supplied build artifact unchanged.
-    signed = tmp_path / "core.mender"
+    signed = work / "core.mender"
     shutil.copyfile(source, signed)
     sign_artifact(tool, signed, station.cfg, "core-os")
     keys = signing_material(station.cfg)
@@ -206,30 +229,13 @@ def test_core_api_updates(station, core_api_smoke, request, tmp_path):
         status, applications = api.request("/software/applications")
         assert status == 200 and app.name in applications, applications
         version = "smoke-" + uuid.uuid4().hex
-        payload = tmp_path / "customization"
-        payload.mkdir()
-        (payload / "etc").mkdir()
-        (payload / "manifest.json").write_text(json.dumps({
-            "format_version": 1, "version": version,
-            "health_checks": [{"type": "command", "command": ["true"]}],
-        }))
-        archive = tmp_path / "customization.tar"
-        with tarfile.open(archive, "w") as tar:
-            tar.add(payload / "manifest.json", arcname="manifest.json")
-            tar.add(payload / "etc", arcname="etc")
-        artifact = tmp_path / "customization.mender"
-        artifact_command([tool, "write", "module-image", "-T", "os-customization",
-                          "-n", version, "-t", app.device_type, "-f", archive,
-                          "-o", artifact])
-        sign_artifact(tool, artifact, station.cfg, "os-customization")
+        artifact = build_customization(tool, version, app.device_type, tmp_path, station.cfg)
         station.dut.put(artifact, remote + "/customization.mender")
-        api.deploy("/software/core-os-customization", remote + "/customization.mender",
-                   {"name": "core-os-customization", "version": version})
+        api.deploy(ENDPOINT, remote + "/customization.mender", {"name": NAME, "version": version})
         api.deploy("/software/core-os", remote + "/core.mender", expected)
         # The committed non-rootfs updates must survive the CoreOS reboot too.
         assert api.current(f"/software/application/{app.name}") == {"name": app.name, "version": "new"}
-        assert api.current("/software/core-os-customization") == {
-            "name": "core-os-customization", "version": version}
+        assert api.current(ENDPOINT) == {"name": NAME, "version": version}
         api.completed = True
     finally:
         if api.completed:

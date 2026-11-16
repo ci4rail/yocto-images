@@ -1,0 +1,7 @@
+# No customization: image defaults. Used to check that removing a customization
+# restores the defaults.
+name: default
+customization: default
+customer_container: false
+services_active: [tailscaled]
+services_inactive: []

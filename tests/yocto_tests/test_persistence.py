@@ -9,7 +9,10 @@ from .station import quote
 
 pytestmark = pytest.mark.hardware
 
-MAX_LOG_BYTES = 100_000_000
+# The image configures journald with SystemMaxUse=100M; systemd's M is MiB. Other files
+# in /var/log (messages, wtmp) get a small allowance on top.
+JOURNAL_LIMIT_BYTES = 100 * 1024 * 1024
+MAX_LOG_BYTES = JOURNAL_LIMIT_BYTES + 2 * 1024 * 1024
 MAX_JOURNAL_DISK_BYTES = 100 * 1024 * 1024
 FILL_CHUNK_BYTES = 32 * 1024 * 1024
 
@@ -20,7 +23,8 @@ def journal_files(station):
 
 
 def log_bytes(station):
-    return int(station.dut.run("du -sb /var/log | cut -f1").strip())
+    # Allocated disk space: that is what journald's SystemMaxUse limits, not apparent file size.
+    return int(station.dut.run("du -sB1 /var/log | cut -f1").strip())
 
 
 def test_persistent_logging(station):
@@ -37,7 +41,7 @@ def test_persistent_logging(station):
     dut.run("journalctl --rotate")
     after = journal_files(station)
     assert after - before, "Journal rotation did not create a new active file"
-    assert log_bytes(station) <= MAX_LOG_BYTES, "/var/log exceeds 100 MB after rotation"
+    assert log_bytes(station) <= MAX_LOG_BYTES, "/var/log exceeds the 100 MiB journal limit after rotation"
 
     # Schedule reboot after the SSH command exits so connection loss is expected.
     dut.run("nohup sh -c 'sleep 2; systemctl reboot' >/dev/null 2>&1 </dev/null &")
@@ -56,7 +60,7 @@ def test_persistent_logging(station):
     previous = dut.run(f"journalctl -b {quote(boot_id.replace('-', ''))} "
                        "-t yocto-pytest --no-pager -o cat")
     assert marker in previous, "Journal entry did not survive reboot"
-    assert log_bytes(station) <= MAX_LOG_BYTES, "/var/log exceeds 100 MB after reboot"
+    assert log_bytes(station) <= MAX_LOG_BYTES, "/var/log exceeds the 100 MiB journal limit after reboot"
 
 
 def test_journal_size_limit_under_load(station, record_property):

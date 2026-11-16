@@ -1,9 +1,6 @@
-name: CPU01plus Recovery Staging
+name: CPU01plus Testfarm Recovery Staging
 
 on:
-  push:
-    branches:
-      - secure-boot-migration-image
   workflow_dispatch:
     inputs:
       minio_bucket:
@@ -17,7 +14,7 @@ permissions:
 
 jobs:
   recovery:
-    uses: ./.github/workflows/recovery-workflow.yaml
+    uses: ./.github/workflows/testfarm-recovery.yaml
     with:
       platform: cpu01plus
       signing_mode: staging

@@ -7,6 +7,9 @@ import pytest
 from yocto_tests.profiles import effective_baseline, ensure_profile, load_profile, target_logins
 from yocto_tests.station import Station, load_config
 
+# pytester: unit tests run pytest on generated test files.
+pytest_plugins = ["pytester"]
+
 _config = None
 
 

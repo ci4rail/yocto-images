@@ -248,9 +248,15 @@ def test_wifi(station, feature, record_property):
     try:
         dut.run(f"printf 'ANTENNA_CONFIG_TX=%s\\nANTENNA_CONFIG_RX=%s\\n' {tx} {rx} > {antenna_config}")
         dut.run("systemctl restart set-antenna-config.service")
-        dut.run(f"nmcli -w 60 device wifi connect {quote(cfg['wifi_ssid'])} "
-                f"password {quote(cfg['wifi_password'])} ifname {quote(cfg['wifi_device'])} name {name}",
-                secret=True, timeout=70)
+        # The password goes on stdin so it is never part of the command string.
+        dut.run(f"IFS= read -r password && nmcli -w 60 device wifi connect {quote(cfg['wifi_ssid'])} "
+                f"password \"$password\" ifname {quote(cfg['wifi_device'])} name {name}",
+                input=str(cfg["wifi_password"]) + "\n", secret=True, timeout=70)
+        # Radio state for diagnosing low throughput (signal, bit rate, channel); shown on failure.
+        device = quote(cfg["wifi_device"])
+        link = dut.run(f"iw dev {device} link 2>&1; nmcli -f IN-USE,SSID,CHAN,RATE,SIGNAL "
+                       f"device wifi list ifname {device} --rescan no", check=False)
+        print(f"Wi-Fi link:\n{link}", flush=True)
         iperf(station, station.tc, dut, cfg["tc"]["host"], 5, record_property,
               bind=cfg["wifi_device"], seconds=45)
     finally:

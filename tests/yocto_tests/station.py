@@ -14,6 +14,17 @@ import yaml
 ERROR_TAIL_LINES = 50
 
 
+class Secret(str):
+    """A string whose repr is redacted.
+
+    pytest prints the arguments of every frame in a failure traceback, and CI
+    logs are public, so secret command input must not show up there.
+    """
+
+    def __repr__(self):
+        return "'<redacted>'"
+
+
 def quote(value):
     return shlex.quote(str(value))
 
@@ -139,6 +150,10 @@ class Host:
         return c
 
     def run(self, command, timeout=60, check=True, input=None, secret=False):
+        if secret:
+            # Rebind the arguments: pytest's traceback shows the frame's current values.
+            command = Secret(command)
+            input = None if input is None else Secret(input)
         if self.local:
             # Serial console noise in installer output is not valid UTF-8.
             p = subprocess.run(["bash", "-c", command], input=input, text=True,

@@ -44,6 +44,30 @@ def test_shell_quoting_and_sensitive_output(tmp_path):
     assert 'secret-value' not in host.log.read_text()
 
 
+def test_secret_arguments_not_in_pytest_traceback(pytester, monkeypatch):
+    """pytest prints frame arguments on failure; CI logs are public."""
+    # Secrets come from the environment, as in CI, so they are not in the printed source.
+    monkeypatch.setenv('COMMAND_SECRET', 'secret-in-command')
+    monkeypatch.setenv('INPUT_SECRET', 'secret-in-input')
+    pytester.makepyfile(f'''
+        import os
+        import sys
+        sys.path.insert(0, {str(Path(__file__).resolve().parents[1])!r})
+        from yocto_tests.station import Host
+
+        def test_fail(tmp_path):
+            host = Host({{'local': True}}, tmp_path, 'local')
+            host.run('true ' + os.environ['COMMAND_SECRET'] + '; cat; exit 1',
+                     input=os.environ['INPUT_SECRET'], secret=True)
+    ''')
+    result = pytester.runpytest_subprocess()
+    result.assert_outcomes(failed=1)
+    output = result.stdout.str()
+    assert 'sensitive command failed' in output
+    assert 'secret-in-command' not in output
+    assert 'secret-in-input' not in output
+
+
 def test_failed_command_error_keeps_only_output_tail(tmp_path):
     host = Host({'local': True}, tmp_path, 'local')
     with pytest.raises(RuntimeError) as error:

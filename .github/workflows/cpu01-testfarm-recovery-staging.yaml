@@ -1,4 +1,4 @@
-name: CPU01 Recovery Staging
+name: CPU01 Testfarm Recovery Staging
 
 on:
   workflow_dispatch:

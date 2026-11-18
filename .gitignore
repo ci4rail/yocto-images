@@ -13,3 +13,4 @@ secret.env
 */.kas_shell_history
 *.tgz
 tmp/
+oss-clearing

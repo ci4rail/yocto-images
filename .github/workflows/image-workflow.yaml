@@ -282,14 +282,26 @@ jobs:
 
       - name: Push Images to Minio
         if: inputs.simulate_build == 'false'
-        uses: hkdobrev/minio-deploy-action@v1.1
-        with:
-          endpoint: https://minio.ci4rail.com
-          access_key: ${{ secrets.minio_access_key }}
-          secret_key: ${{ secrets.minio_secret_key }}
-          bucket: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
-          source_dir: minio
-          target_dir: "/"
+        # MinIO no longer distributes the mc binary (dl.min.io returns 410 Gone),
+        # so use the community-maintained fork https://github.com/pgsty/mc (binary: mcli)
+        env:
+          MCLI_RELEASE: RELEASE.2026-11-12T00-00-00Z
+          MCLI_VERSION: 20261112000000.0.0
+          MCLI_SHA256: 68875c7fdd06a76af12b74753506df65226d1bec65a405d2617d76448c229ba2
+          MINIO_ENDPOINT: https://minio.ci4rail.com
+          MINIO_ACCESS_KEY: ${{ secrets.minio_access_key }}
+          MINIO_SECRET_KEY: ${{ secrets.minio_secret_key }}
+          MINIO_BUCKET: ${{ inputs.machine }}-${{ inputs.image_type }}${{ needs.calculate-version.outputs.name_suffix }}
+        run: |
+          mcli_dir=$(mktemp -d)
+          tarball=mcli_${MCLI_VERSION}_linux_amd64.tar.gz
+          curl -fsSL -o ${mcli_dir}/${tarball} https://github.com/pgsty/mc/releases/download/${MCLI_RELEASE}/${tarball}
+          echo "${MCLI_SHA256}  ${mcli_dir}/${tarball}" | sha256sum -c -
+          tar -xzf ${mcli_dir}/${tarball} -C ${mcli_dir} mcli
+          mcli="${mcli_dir}/mcli --config-dir ${mcli_dir}/config"
+          ${mcli} alias set deploy "${MINIO_ENDPOINT}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
+          ${mcli} mirror --overwrite minio "deploy/${MINIO_BUCKET}/"
+          rm -rf ${mcli_dir}
 
       - name: Push Images to Mender
         if: inputs.have_mender == 'true' && inputs.simulate_build == 'false'

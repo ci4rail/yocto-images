@@ -4,8 +4,12 @@ USER customization installed through the core API or Mender
 (`tests/config/profiles/standalone.yaml` holds the matching test expectations).
 
 - Firewall (`etc/nftables.conf`): ingress ssh, https 443, snmpv3, ICMP. Egress DHCP,
-  DNS and NTP client, ICMP.
-- No mender server connection, tailscale, avahi or snmptrapd.
+  DNS and NTP client, ICMP. The internal USB network links to the io4edge modules
+  (`usb_io_ctrl`, `usb_ext1`..`usb_ext8`) are open in both directions.
+- avahi (mDNS) runs only on the io4edge links and publishes nothing
+  (`etc/avahi/avahi-daemon.conf`). io4edge-cli and the core API need it to find the
+  io4edge modules, e.g. for firmware updates.
+- No mender server connection, tailscale or snmptrapd.
 - SSH only as `moducop` or `ci4rail` with a key (`etc/default/dropbear`: `-s` no
   password logins, `-w` no root login). Both may use `sudo` with their password.
 - No login on the serial console (drop-in for `serial-getty@.service`).

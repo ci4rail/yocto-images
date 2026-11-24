@@ -1,12 +1,13 @@
 # Customer profile: closed standalone device, no internet.
 # Ingress: ssh, https (customer container), snmpv3. Egress: DHCP, DNS and NTP client.
 # SSH only as moducop or ci4rail with a key, sudo with password, no serial console login.
+# The internal io4edge links are open; avahi runs only there (io4edge discovery).
 # The matching customization is os-customizations/standalone.
 name: standalone
 customization: standalone
 customer_container: true
-services_active: [snmpd, ci4rail-end0-fallback]
-services_inactive: [tailscaled, avahi-daemon, snmptrapd, mender-updated, mender-authd, mender-connect]
+services_active: [snmpd, ci4rail-end0-fallback, avahi-daemon]
+services_inactive: [tailscaled, snmptrapd, mender-updated, mender-authd, mender-connect]
 # The only SSH login the customization leaves. The tests use it while the profile is
 # installed. Must match etc/ssh/authorized_keys/moducop and the hash in
 # etc/ci4rail/user-passwords/moducop of the customization. TEST credentials only.
@@ -46,6 +47,8 @@ security_baseline:
     allowed_ipv4_cidrs:
       - 192.168.24.0/24     # LAN: replies to ssh/https/snmp clients. TODO: adapt
       - 255.255.255.255/32  # DHCP discover
+      - 192.168.200.0/21    # internal io4edge links usb_io_ctrl, usb_ext1..7
+      - 192.168.208.0/24    # internal io4edge link usb_ext8
       - 224.0.0.0/4
     allowed_ipv6_cidrs:
       - fe80::/10

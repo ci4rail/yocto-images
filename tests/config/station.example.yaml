@@ -51,6 +51,12 @@ wifi_antenna: '0x01 0x01'
 serial_devices: [ttyS101-CPU01UC-com]
 io4edge_devices: [S101-CPU01UC, S101-IOU01-USB-EXT-1, S101-IOU03-USB-EXT-3, S101-IOU03-USB-EXT-5, S101-IOU04-USB-EXT-6, S101-IOU04-USB-EXT-7]
 io4edge_ips: [192.168.200.10, 192.168.201.10, 192.168.203.10, 192.168.205.10, 192.168.206.10, 192.168.207.10]
+# io4edge firmware update through the core API (test_io4edge_update):
+# the CPU01 microcontroller swaps between firmware 1.1.0 and 1.1.1-rc.1 and back.
+io4edge_update_device: S101-CPU01UC
+# Optional: directory with fw-cpu01uc-default-<version>.fwpkg. Without it, or for a missing
+# file, the packages are downloaded with the GitHub CLI (private repository: authenticate gh).
+# io4edge_firmware_dir: ~/io4edge-firmware
 # Core API staging smoke test: a version-only rebuild of the installed image.
 # Omit core_api_core_os_artifact to skip this smoke test.
 # core_api_core_os_artifact: /absolute/path/to/new-staging-version.mender # runner path (or --core-os-artifact)

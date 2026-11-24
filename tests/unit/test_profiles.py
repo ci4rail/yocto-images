@@ -256,3 +256,28 @@ def test_dhcp_ntp_servers_parses_chrony_sources():
             return "server 192.168.24.1 iburst\nserver 192.168.24.2 iburst\n\nEXIT=0"
 
     assert dhcp_ntp_servers(FakeHost()) == ["192.168.24.1", "192.168.24.2"]
+
+
+IO4EDGE_LINKS = {"usb_io_ctrl"} | {f"usb_ext{n}" for n in range(1, 9)}
+
+
+@pytest.mark.parametrize("name", ["internet-connected", "standalone"])
+def test_profile_opens_the_io4edge_links_only(name):
+    profile = profiles.load_profile(name)
+    etc = profiles.etc_dir(profile)
+    rules = (etc / "nftables.conf").read_text()
+    # internet-connected has no output chain: egress is open.
+    directions = ("iifname", "oifname") if "hook output" in rules else ("iifname",)
+    for direction in directions:
+        assert f'{direction} "usb_io_ctrl" accept' in rules
+        assert f'{direction} "usb_ext*" accept' in rules
+    conf = (etc / "avahi/avahi-daemon.conf").read_text().splitlines()
+    allowed = next(line for line in conf if line.startswith("allow-interfaces="))
+    assert set(allowed.split("=", 1)[1].split(",")) == IO4EDGE_LINKS
+    assert "disable-publishing=yes" in conf
+    assert not (etc / "systemd/system/avahi-daemon.service.d").exists()
+    assert not (etc / "systemd/system/avahi-daemon.socket.d").exists()
+    assert "avahi-daemon" in profile["services_active"]
+    # mDNS must stay closed toward the LAN.
+    baseline = profiles.effective_baseline(COMMON, profile)
+    assert 5353 not in baseline["allowed_udp_ports"]

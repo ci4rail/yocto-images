@@ -100,17 +100,21 @@ are skipped.
 
 **DUT configuration:** os-customization `internet-connected` installed via core API
 (DUT rebooted). Ingress: SSH from `tailscale0` and the LAN 192.168.24.0/24, ICMP.
-Egress open (Mender, Tailscale, internet). avahi/mDNS disabled, tailscaled active.
+Ingress from the internal io4edge links (`usb_io_ctrl`, `usb_ext1..8`) is open.
+Egress open (Mender, Tailscale, internet). avahi runs only on the io4edge links and
+publishes nothing; tailscaled active.
 Root SSH login still allowed. Security baseline: TCP 22 only, no UDP ports,
 no egress monitoring.
 
 | Area | Test | Description | Pass criteria |
 |---|---|---|---|
 | Profile | `test_customization_installed` | Installed customization version | Core API reports the profile's payload version; `/etc/ci4rail-profile` = `internet-connected` |
-| Profile | `test_services` | Service states | `tailscaled` active, `avahi-daemon` not active |
+| Profile | `test_services` | Service states | `tailscaled`, `avahi-daemon` active |
 | Profile | `test_firewall` | Firewall table present | `nft list table inet ci4rail_fw` succeeds |
 | Profile | `test_icmp_allowed` | Ping DUT from TC | Ping succeeds |
 | Profile | `test_internet_reachability` | DNS and HTTPS from the DUT | Mender and Tailscale hosts resolve; Mender, Tailscale, example.com answer over HTTPS |
+| Profile | `test_io4edge_links_open` | Firewall and avahi for the io4edge links | `usb_io_ctrl`/`usb_ext*` accepted on ingress (egress is open); avahi `allow-interfaces` exactly the io4edge links, `disable-publishing=yes` |
+| Profile | `test_io4edge_update` | io4edge firmware update via core API | As in step 3 |
 | Security | `test_attack_surface` [tcp, udp] | nmap port scan from TC | Open ports equal baseline: TCP `[22]`, UDP none |
 | Security | `test_vulnerabilities` | nmap `vuln` NSE scripts on all open ports | No vulnerability or CVE reported |
 | Security | `test_service_privileges` | Processes owning listening sockets (`lsof`) | Root-owned network services only from the allowed list |
@@ -125,7 +129,8 @@ no egress monitoring.
 TLS, host network, port 443) is deployed as an application update. Then os-customization
 `standalone` replaces `internet-connected` (DUT rebooted). Ingress: SSH, HTTPS 443,
 SNMPv3 (UDP 161), ICMP. Egress: only DHCP, DNS and NTP client and replies.
-tailscaled, avahi, snmptrapd and the Mender daemons disabled. SSH only as `moducop` or
+tailscaled, snmptrapd and the Mender daemons disabled. The internal io4edge links
+(`usb_io_ctrl`, `usb_ext1..8`) are open; avahi runs only on them and publishes nothing. SSH only as `moducop` or
 `ci4rail` with key (no root, no passwords), sudo with password, no serial console login.
 end0 has a static fallback address (192.168.250.1/24) while DHCP has no lease. The harness
 logs in as `moducop` and runs commands through `sudo`.
@@ -133,7 +138,7 @@ logs in as `moducop` and runs commands through `sudo`.
 | Area | Test | Description | Pass criteria |
 |---|---|---|---|
 | Profile | `test_customization_installed` | Installed customization version | Core API reports the profile's payload version; `/etc/ci4rail-profile` = `standalone` |
-| Profile | `test_services` | Service states | `snmpd`, `ci4rail-end0-fallback` active; `tailscaled`, `avahi-daemon`, `snmptrapd`, `mender-updated`, `mender-authd`, `mender-connect` not active |
+| Profile | `test_services` | Service states | `snmpd`, `ci4rail-end0-fallback`, `avahi-daemon` active; `tailscaled`, `snmptrapd`, `mender-updated`, `mender-authd`, `mender-connect` not active |
 | Profile | `test_firewall` | Firewall table present | `inet ci4rail_fw` exists |
 | Profile | `test_icmp_allowed` | Ping DUT from TC | Ping succeeds |
 | Profile | `test_https_service` | Customer container over HTTPS | Reachable from TC on 443 with marker text; on DUT loopback `/` answers, unknown URL gives 404 |
@@ -143,6 +148,8 @@ logs in as `moducop` and runs commands through `sudo`.
 | Profile | `test_snmpv3_without_privacy_rejected` | SNMPv3 authNoPriv | No answer |
 | Profile | `test_ntp_client` | NTP server from DHCP (`ntp_from_dhcp`): option 42 → NetworkManager dispatcher → `/run/chrony-dhcp/*.sources` → chronyd | Sources file lists a server, `chronyc sources` shows it, `chronyc waitsync` succeeds and `chronyc tracking` references it. With only `ntp_server` set: one-shot `chronyd -Q` query |
 | Profile | `test_client_egress_allowed` | Firewall ruleset content | Rules for DHCP (both directions), DNS (UDP/TCP 53) and NTP (UDP 123) present |
+| Profile | `test_io4edge_links_open` | Firewall and avahi for the io4edge links | `usb_io_ctrl`/`usb_ext*` accepted in both directions; avahi `allow-interfaces` exactly the io4edge links, `disable-publishing=yes` |
+| Profile | `test_io4edge_update` | io4edge firmware update via core API (`io4edge_update_device`, CPU01 microcontroller) | Core API lists the device (`io4edge-cli scan` via avahi); its firmware is swapped from 1.1.0 to 1.1.1-rc.1 and back (or the reverse) through `PUT /software/io4edge/{device}`, each reaching `success` with the expected version; redeploying the installed version gives HTTP 409. Packages from the private release via `gh`, SHA-256 pinned |
 | Profile | `test_ssh_only_key_users` | SSH login matrix | Station root login rejected; each key user logs in with own key only; root rejects user keys; password login rejected |
 | Profile | `test_sudo_with_password` | sudo for key users | `sudo -n` and wrong password fail; correct password gives root |
 | Profile | `test_no_serial_console_login` | Gettys | No `serial-getty@` unit active, no getty on a serial tty |
@@ -150,7 +157,7 @@ logs in as `moducop` and runs commands through `sudo`.
 | Security | `test_attack_surface` [tcp, udp] | nmap port scan from TC | Open ports: TCP `[22, 443]`, UDP `[161]` |
 | Security | `test_vulnerabilities` | nmap `vuln` NSE scripts | No vulnerability or CVE reported |
 | Security | `test_service_privileges` | Root-owned listening processes | Only `sshd`, `dropbear`, `systemd`, `snmpd`, `nginx` |
-| Security | `test_egress` | Temporary nft output counters for 15 s | No packets outside LAN, DHCP broadcast, multicast, link-local and DNS/DHCP/NTP ports |
+| Security | `test_egress` | Temporary nft output counters for 15 s | No packets outside LAN, io4edge links, DHCP broadcast, multicast, link-local and DNS/DHCP/NTP ports |
 | Security | `test_protocol_abuse` | Malformed TCP (22, 443) and UDP (161) traffic | Open ports unchanged afterwards; SSH still reachable |
 
 ---
@@ -166,7 +173,8 @@ step 3 remains installed (application update, not part of the customization).
 | `test_customization_installed` | Installed customization version | Core API reports the default payload version; `/etc/ci4rail-profile` = `default` |
 | `test_services` | Service states | `tailscaled` active |
 | `test_firewall` | Firewall table absent | `inet ci4rail_fw` does not exist |
-| `test_default_has_no_leftovers` | Files of previous profiles removed | No `/etc/nftables.conf`, no example SNMP user, no tailscale/avahi/serial-getty disable drop-ins, no sudoers/authorized keys/password files for `moducop`/`ci4rail`, dropbear without extra args |
+| `test_io4edge_update` | io4edge firmware update via core API, without firewall | As in step 3 |
+| `test_default_has_no_leftovers` | Files of previous profiles removed | No `/etc/nftables.conf`, no example SNMP user, no tailscale/avahi/serial-getty disable drop-ins, no avahi interface restriction, no sudoers/authorized keys/password files for `moducop`/`ci4rail`, dropbear without extra args |
 
 ---
 

@@ -3,11 +3,17 @@
 umask 077
 # Boot-time kernel messages split the sulogin prompt on the serial console; dmesg keeps them.
 echo 1 > /proc/sys/kernel/printk
-mkdir -p /run/migration /run/lock /run/media /var/volatile/log /var/run/dbus
-/etc/init.d/udev start
-/sbin/ifup lo
-dbus-daemon --system
-avahi-daemon --daemonize
+mkdir -p /run/migration /run/lock /run/media /var/volatile/log
+# System daemons need world-traversable runtime dirs: avahi drops to its own
+# user and cannot reach the D-Bus socket in a 0700 /run/dbus.
+(
+    umask 022
+    mkdir -p /var/run/dbus
+    /etc/init.d/udev start
+    /sbin/ifup lo
+    dbus-daemon --system
+    avahi-daemon --daemonize
+)
 (
     udevadm settle --timeout=30
     /sbin/ifup eth0 >/run/migration/dhcp.log 2>&1 &

@@ -226,7 +226,9 @@ downloading; this change does not deploy or configure that separate service.
 ## Coverage and baseline
 
 Ports cover SSH authentication, Docker/Compose, both Ethernet interfaces,
-GNSS, LTE, eMMC, SD card, Wi-Fi, serial loopback, io4edge discovery, TCP/UDP
+GNSS, LTE, eMMC, SD card, Wi-Fi, serial loopback, io4edge discovery, io4edge
+firmware update through the core API (CPU01 microcontroller, firmware from the private
+`ci4rail/fw_esp_cpu01uc_default` releases via the runner's authenticated `gh`), TCP/UDP
 attack surface, Nmap vulnerability scripts, root network services, nftables
 egress, and malformed TCP/UDP traffic. Persistence tests check journal rotation,
 log survival across a reboot, a 100 MB `/var/log` usage limit, a 100 MB persistent

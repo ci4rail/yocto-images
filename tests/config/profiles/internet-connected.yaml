@@ -4,8 +4,9 @@
 name: internet-connected
 customization: internet-connected
 customer_container: false
-services_active: [tailscaled]
-services_inactive: [avahi-daemon]
+# avahi runs only on the internal io4edge links (io4edge discovery).
+services_active: [tailscaled, avahi-daemon]
+services_inactive: []
 # Checked on the target: egress must work.
 reachability:
   dns: [hosted.mender.io, controlplane.tailscale.com]
@@ -16,7 +17,7 @@ reachability:
 # Overrides for config/security_baseline.yaml (dicts merge, lists and null replace).
 security_baseline:
   allowed_tcp_ports: [22]   # ssh from LAN (the test computer is in the LAN) and tailscale0
-  allowed_udp_ports: []     # no mDNS
+  allowed_udp_ports: []     # no mDNS toward the LAN (avahi only on the io4edge links)
   allowed_root_network_processes: [sshd, dropbear, systemd, snmpd, snmptrapd, tailscaled]
   egress_monitor: null      # egress is open: nothing to monitor
   abuse_test:

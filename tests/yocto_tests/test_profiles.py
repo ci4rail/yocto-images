@@ -173,6 +173,27 @@ def test_client_egress_allowed(station, profile):
     assert "udp dport 123 accept" in ruleset
 
 
+def test_io4edge_links_open(station, profile):
+    """The internal io4edge links are open and avahi serves only them.
+
+    test_io4edge_update proves the access end to end; nmap (test_security) proves
+    that mDNS stays closed on end0.
+    """
+    only(profile, "internet-connected", "standalone")
+    ruleset = station.dut.run("nft list table inet ci4rail_fw")
+    rules = ['iifname "usb_io_ctrl" accept', 'iifname "usb_ext*" accept']
+    if "hook output" in ruleset:  # standalone restricts egress, internet-connected does not
+        rules += ['oifname "usb_io_ctrl" accept', 'oifname "usb_ext*" accept']
+    for rule in rules:
+        assert rule in ruleset, rule
+    conf = station.dut.run("cat /etc/avahi/avahi-daemon.conf")
+    allowed = re.search(r"^allow-interfaces=(.*)$", conf, re.M)
+    assert allowed, "avahi is not restricted to the io4edge links"
+    interfaces = {name.strip() for name in allowed[1].split(",")}
+    assert interfaces == {"usb_io_ctrl"} | {f"usb_ext{n}" for n in range(1, 9)}, interfaces
+    assert re.search(r"^disable-publishing=yes$", conf, re.M), conf
+
+
 def target_host(station, login, name):
     """A DUT host that only tries `login`."""
     config = {k: v for k, v in station.cfg["target"].items() if k not in LOGIN_KEYS}
@@ -244,6 +265,7 @@ def test_default_has_no_leftovers(station, profile):
     dut.run("test ! -e /etc/nftables.conf && ! grep -q ci4rail-example /etc/snmp/snmpd.conf")
     dut.run("test ! -e /etc/systemd/system/tailscaled.service.d/10-disable.conf")
     dut.run("test ! -e /etc/systemd/system/avahi-daemon.service.d/10-disable.conf")
+    dut.run("! grep -q '^allow-interfaces=' /etc/avahi/avahi-daemon.conf")
     for user in ("moducop", "ci4rail"):
         dut.run(f"test ! -e /etc/sudoers.d/{user} && test ! -e /etc/ssh/authorized_keys/{user}"
                 f" && test ! -e /etc/ci4rail/user-passwords/{user}")

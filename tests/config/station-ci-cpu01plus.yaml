@@ -60,3 +60,7 @@ wifi_antenna: '0x01 0x01'
 gpsdclient: /root/bin/gpsdclient_v0.1.0/gpsdclient
 # NTP client test (standalone profile): the testfarm router hands out an NTP server via DHCP option 42.
 ntp_from_dhcp: true
+
+# io4edge firmware update through the core API (test_io4edge_update): the CPU01 microcontroller.
+# The firmware packages are downloaded with the TC's authenticated GitHub CLI.
+io4edge_update_device: S101-CPU01UC

@@ -275,6 +275,36 @@ def wifi_failure_diagnostics(dut, cfg, device, since, capture):
     print(text, flush=True)
 
 
+WIFI_ATTEMPTS = 3
+
+
+def wifi_connect_and_measure(station, record_property, name):
+    """One Wi-Fi attempt: connect, print link state, measure throughput. Raises on failure."""
+    cfg, dut = station.cfg, station.dut
+    device = quote(cfg["wifi_device"])
+    capture = "/tmp/wifi-connect-capture.txt"
+    since = dut.run("date +%s").strip()
+    # Capture association/DHCP traffic during the connect, printed only if it fails.
+    dut.run(f"rm -f {capture}; command -v tcpdump >/dev/null && "
+            f"(setsid timeout 80 tcpdump -n -e -l -i {device} 'arp or port 67 or port 68 or ether proto 0x888e' "
+            f"> {capture} 2>&1 < /dev/null &) ; sleep 1", check=False)
+    # The password goes on stdin so it is never part of the command string.
+    try:
+        dut.run(f"IFS= read -r password && nmcli -w 60 device wifi connect {quote(cfg['wifi_ssid'])} "
+                f"password \"$password\" ifname {device} name {name}",
+                input=str(cfg["wifi_password"]) + "\n", secret=True, timeout=70)
+    except (RuntimeError, TimeoutError):
+        wifi_failure_diagnostics(dut, cfg, device, since, capture)
+        raise
+    dut.run("pkill -x tcpdump", check=False)
+    # Radio state for diagnosing low throughput (signal, bit rate, channel); shown on failure.
+    link = dut.run(f"iw dev {device} link 2>&1; nmcli -f IN-USE,SSID,CHAN,RATE,SIGNAL "
+                   f"device wifi list ifname {device} --rescan no", check=False)
+    print(f"Wi-Fi link:\n{link}".replace(str(cfg["wifi_ssid"]), "<ssid>"), flush=True)
+    iperf(station, station.tc, dut, cfg["tc"]["host"], 5, record_property,
+          bind=cfg["wifi_device"], seconds=45)
+
+
 def test_wifi(station, feature, record_property):
     feature("wifi")
     cfg, dut = station.cfg, station.dut
@@ -286,31 +316,23 @@ def test_wifi(station, feature, record_property):
     antenna_config = "/etc/set_antenna_config"
     original = dut.run(f"cat {antenna_config}")
     name = "yocto-wifi-" + uuid.uuid4().hex[:8]
-    device = quote(cfg["wifi_device"])
-    capture = "/tmp/wifi-connect-capture.txt"
     try:
         dut.run(f"printf 'ANTENNA_CONFIG_TX=%s\\nANTENNA_CONFIG_RX=%s\\n' {tx} {rx} > {antenna_config}")
         dut.run("systemctl restart set-antenna-config.service")
-        since = dut.run("date +%s").strip()
-        # Capture association/DHCP traffic during the connect, printed only if it fails.
-        dut.run(f"rm -f {capture}; command -v tcpdump >/dev/null && "
-                f"(setsid timeout 80 tcpdump -n -e -l -i {device} 'arp or port 67 or port 68 or ether proto 0x888e' "
-                f"> {capture} 2>&1 < /dev/null &) ; sleep 1", check=False)
-        # The password goes on stdin so it is never part of the command string.
-        try:
-            dut.run(f"IFS= read -r password && nmcli -w 60 device wifi connect {quote(cfg['wifi_ssid'])} "
-                    f"password \"$password\" ifname {device} name {name}",
-                    input=str(cfg["wifi_password"]) + "\n", secret=True, timeout=70)
-        except (RuntimeError, TimeoutError):
-            wifi_failure_diagnostics(dut, cfg, device, since, capture)
-            raise
-        dut.run("pkill -x tcpdump", check=False)
-        # Radio state for diagnosing low throughput (signal, bit rate, channel); shown on failure.
-        link = dut.run(f"iw dev {device} link 2>&1; nmcli -f IN-USE,SSID,CHAN,RATE,SIGNAL "
-                       f"device wifi list ifname {device} --rescan no", check=False)
-        print(f"Wi-Fi link:\n{link}", flush=True)
-        iperf(station, station.tc, dut, cfg["tc"]["host"], 5, record_property,
-              bind=cfg["wifi_device"], seconds=45)
+        # Wi-Fi in the test farm is intermittently unreliable (DHCP timeouts, low throughput):
+        # retry the connect and throughput measurement; only the last failure fails the test.
+        for attempt in range(1, WIFI_ATTEMPTS + 1):
+            record_property("wifi_attempts", attempt)
+            try:
+                wifi_connect_and_measure(station, record_property, name)
+                break
+            except Exception as error:
+                if attempt == WIFI_ATTEMPTS:
+                    raise
+                print(f"Wi-Fi attempt {attempt}/{WIFI_ATTEMPTS} failed, retrying: "
+                      f"{type(error).__name__}: {str(error)[:500]}", flush=True)
+                dut.run(f"nmcli c delete {name}", check=False)
+                time.sleep(10)
     finally:
         dut.run(f"nmcli c delete {name}", check=False)
         dut.run(f"cat > {antenna_config}", input=original, check=False)
